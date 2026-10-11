@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   RESULT, TILE_PX, TOOL_GROUPS, TOOL_LABELS, SHORTCUTS,
   resultMessage, supportsTools, readCatalog, groupCatalog, groupOf, shortcutFor,
-  toolIdForShortcut, formatCost, outlineRect, hoverVerdict,
+  toolIdForShortcut, formatCost, outlineRect, hoverVerdict, shortcutRows, costLabel,
 } from "../tools.js";
 import { MockCity, MOCK_TOOLS } from "./mock-engine.mjs";
 
@@ -174,5 +174,50 @@ describe("hover outline geometry and verdict", () => {
     assert.deepEqual(fp3, [9, 9, 3, 3]);
     const fp6 = [...city.tool_footprint(MOCK_TOOLS.findIndex((t) => t.key === "airport"), 10, 10)];
     assert.deepEqual(fp6, [8, 8, 6, 6]);
+  });
+});
+
+describe("keyboard help rows", () => {
+  test("one row per shortcut the engine reports, upper-cased and sorted, then Échap", () => {
+    const rows = shortcutRows(readCatalog(new MockCity(1)));
+    const keys = rows.map((r) => r.key);
+    assert.equal(keys.at(-1), "Échap");
+    const shortcutKeys = keys.slice(0, -1);
+    assert.equal(shortcutKeys.length, Object.keys(SHORTCUTS).filter((k) => MOCK_TOOLS.some((t) => t.key === k)).length);
+    assert.deepEqual([...shortcutKeys], [...shortcutKeys].sort((a, b) => a.localeCompare(b, "fr")));
+    assert.deepEqual(rows.find((r) => r.key === "B"), { key: "B", label: "Bulldozer" });
+    assert.deepEqual(rows.find((r) => r.key === "1"), { key: "1", label: "Zone résidentielle" });
+  });
+
+  test("a tool without a shortcut gets no row", () => {
+    const rows = shortcutRows([{ id: 0, key: "hydro_dam", label: "hydro_dam", shortcut: null }]);
+    assert.deepEqual(rows, [{ key: "Échap", label: "Abandonner l'outil choisi" }]);
+  });
+});
+
+describe("cost on the hover label", () => {
+  test("when the placement is Ok, the preview's cost is shown, even zero (never the catalog price)", () => {
+    assert.equal(costLabel(Int32Array.of(1, 45), 10), "45 $");
+    assert.equal(costLabel(Int32Array.of(1, 0), 10), "gratuit");
+  });
+
+  test("otherwise the preview's cost if it has one, else the catalog price", () => {
+    assert.equal(costLabel(Int32Array.of(-2, 500), 100), "500 $");
+    assert.equal(costLabel(Int32Array.of(0, 0), 100), "100 $");
+    assert.equal(costLabel(Int32Array.of(-1, 0), 100), "100 $");
+  });
+
+  test("the mock's preview cost on trees is what tool_down charges (terrain adds cost)", () => {
+    const city = new MockCity(1, { rubble: 0 });
+    const res = MOCK_TOOLS.findIndex((t) => t.key === "residential");
+    // a 3x3 residential on the trees at (20..22, 20..22)
+    for (let x = 20; x < 23; x++) for (let y = 20; y < 23; y++) city.tool_down(MOCK_TOOLS.findIndex((t) => t.key === "forest"), x, y);
+    const [result, cost] = city.tool_preview(res, 21, 21);
+    assert.equal(result, 1);
+    assert.equal(cost, 100 + 9 * 10, "catalog 100 plus 10 per tree tile");
+    assert.equal(costLabel(city.tool_preview(res, 21, 21), 100), "190 $");
+    const before = city.funds();
+    assert.equal(city.tool_down(res, 21, 21), 1);
+    assert.equal(before - city.funds(), cost);
   });
 });

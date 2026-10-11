@@ -20,17 +20,30 @@
   <button id="play" aria-pressed="false">▶ Lecture</button>
   <label>Vitesse <input id="speed" type="range" min="1" max="3" value="2"></label>
   <label><input id="disasters" type="checkbox"> Catastrophes</label>
+  <div id="newcity" class="newcity" hidden>
+    <button id="newcity-btn" type="button">Nouvelle ville</button>
+    <label>Graine <input id="seed" type="text" inputmode="numeric" autocomplete="off" placeholder="au hasard" size="11"></label>
+    <span id="new-msg" role="status"></span>
+  </div>
   <span id="status" role="status">Chargement…</span>
 </header>
 <nav id="palette" aria-label="Outils de construction" hidden></nav>
 <main>
-  <div class="map-frame">
+  <div id="map-frame" class="map-frame">
     <canvas id="map" aria-label="Carte de la ville"></canvas>
     <canvas id="overlay" aria-hidden="true" hidden></canvas>
   </div>
   <p id="tool-msg" role="status" aria-live="polite"></p>
-  <p id="query-panel" aria-live="polite" hidden></p>
+  <div id="query-panel" aria-live="polite" hidden></div>
   <p id="stats" aria-live="polite"></p>
+  <details id="legend-box" class="box" open>
+    <summary>Légende des couleurs</summary>
+    <ul id="legend" class="legend"></ul>
+  </details>
+  <details id="help-box" class="box" hidden>
+    <summary>Raccourcis clavier</summary>
+    <dl id="shortcuts" class="shortcuts"></dl>
+  </details>
 </main>
 <footer>Moteur: port Rust de MicropolisCore (GPL) compilé en WebAssembly.</footer>
 <script type="module" src="main.js"></script>
