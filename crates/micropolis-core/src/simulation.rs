@@ -305,7 +305,16 @@ pub struct Simulation {
     // @fields:tool (agent tool: add your extra Simulation fields right below this line)
 
     // @fields:sprite (agent sprite: add your extra Simulation fields right below this line)
-
+    /// Sprite pool; C++ `SimSprite` objects, addressed by index.
+    pub sprites: Vec<crate::sprite::Sprite>,
+    /// Head of the active sprite list (C++ `spriteList`).
+    pub sprite_list: Option<usize>,
+    /// Head of the free sprite pool (C++ `freeSprites`).
+    pub free_sprites: Option<usize>,
+    /// Per-type shortcut to a sprite (C++ `globalSprites`).
+    pub global_sprites: [Option<usize>; crate::sprite::SPRITE_COUNT],
+    /// Distance computed by the last `get_dir` call (C++ `absDist`).
+    pub abs_dist: i32,
     // @fields:simulate (agent simulate: add your extra Simulation fields right below this line)
 
     // @fields:misc (agent misc: add your extra Simulation fields right below this line)
@@ -519,7 +528,11 @@ impl Simulation {
             // @init:tool (agent tool: initialise your extra fields right below this line)
 
             // @init:sprite (agent sprite: initialise your extra fields right below this line)
-
+            sprites: Vec::new(),
+            sprite_list: None,
+            free_sprites: None,
+            global_sprites: [None; crate::sprite::SPRITE_COUNT],
+            abs_dist: 0,
             // @init:simulate (agent simulate: initialise your extra fields right below this line)
 
             // @init:misc (agent misc: initialise your extra fields right below this line)

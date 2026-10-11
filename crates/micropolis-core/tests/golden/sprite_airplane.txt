@@ -1,0 +1,202 @@
+step 0 cycle 0 map d71d9f19ad8fa8a1
+  t3 f11 x368 y332 dx568 dy332 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 1 cycle 1 map d71d9f19ad8fa8a1
+  t3 f11 x376 y332 dx278 dy533 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 2 cycle 2 map d71d9f19ad8fa8a1
+  t3 f11 x384 y332 dx999 dy515 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 3 cycle 3 map d71d9f19ad8fa8a1
+  t3 f11 x392 y332 dx235 dy811 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 4 cycle 4 map d71d9f19ad8fa8a1
+  t3 f11 x400 y332 dx460 dy599 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 5 cycle 5 map d71d9f19ad8fa8a1
+  t3 f10 x408 y332 dx373 dy290 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 6 cycle 6 map d71d9f19ad8fa8a1
+  t3 f10 x416 y332 dx1298 dy142 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 7 cycle 7 map d71d9f19ad8fa8a1
+  t3 f10 x424 y332 dx1322 dy1629 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 8 cycle 8 map d71d9f19ad8fa8a1
+  t3 f10 x432 y332 dx654 dy594 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 9 cycle 9 map d71d9f19ad8fa8a1
+  t3 f10 x440 y332 dx726 dy947 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 10 cycle 10 map d71d9f19ad8fa8a1
+  t3 f9 x448 y332 dx745 dy460 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 11 cycle 11 map d71d9f19ad8fa8a1
+  t3 f9 x456 y332 dx1217 dy1594 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 12 cycle 12 map d71d9f19ad8fa8a1
+  t3 f9 x464 y332 dx683 dy1168 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 13 cycle 13 map d71d9f19ad8fa8a1
+  t3 f9 x472 y332 dx-41 dy523 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 14 cycle 14 map d71d9f19ad8fa8a1
+  t3 f9 x480 y332 dx804 dy272 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 15 cycle 15 map d71d9f19ad8fa8a1
+  t3 f3 x488 y332 dx805 dy712 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 16 cycle 16 map d71d9f19ad8fa8a1
+  t3 f3 x496 y332 dx1844 dy267 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 17 cycle 17 map d71d9f19ad8fa8a1
+  t3 f3 x504 y332 dx1112 dy777 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 18 cycle 18 map d71d9f19ad8fa8a1
+  t3 f3 x512 y332 dx755 dy733 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 19 cycle 19 map d71d9f19ad8fa8a1
+  t3 f3 x520 y332 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 20 cycle 20 map d71d9f19ad8fa8a1
+  t3 f4 x526 y338 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 21 cycle 21 map d71d9f19ad8fa8a1
+  t3 f4 x532 y344 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 22 cycle 22 map d71d9f19ad8fa8a1
+  t3 f4 x538 y350 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 23 cycle 23 map d71d9f19ad8fa8a1
+  t3 f4 x544 y356 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 24 cycle 24 map d71d9f19ad8fa8a1
+  t3 f4 x550 y362 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 25 cycle 25 map d71d9f19ad8fa8a1
+  t3 f5 x550 y370 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 26 cycle 26 map d71d9f19ad8fa8a1
+  t3 f5 x550 y378 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 27 cycle 27 map d71d9f19ad8fa8a1
+  t3 f5 x550 y386 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 28 cycle 28 map d71d9f19ad8fa8a1
+  t3 f5 x550 y394 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 29 cycle 29 map d71d9f19ad8fa8a1
+  t3 f5 x550 y402 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 30 cycle 30 map d71d9f19ad8fa8a1
+  t3 f5 x550 y410 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 31 cycle 31 map d71d9f19ad8fa8a1
+  t3 f5 x550 y418 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 32 cycle 32 map d71d9f19ad8fa8a1
+  t3 f5 x550 y426 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 33 cycle 33 map d71d9f19ad8fa8a1
+  t3 f5 x550 y434 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 34 cycle 34 map d71d9f19ad8fa8a1
+  t3 f5 x550 y442 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 35 cycle 35 map d71d9f19ad8fa8a1
+  t3 f5 x550 y450 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 36 cycle 36 map d71d9f19ad8fa8a1
+  t3 f5 x550 y458 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 37 cycle 37 map d71d9f19ad8fa8a1
+  t3 f5 x550 y466 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 38 cycle 38 map d71d9f19ad8fa8a1
+  t3 f5 x550 y474 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 39 cycle 39 map d71d9f19ad8fa8a1
+  t3 f5 x550 y482 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 40 cycle 40 map d71d9f19ad8fa8a1
+  t3 f5 x550 y490 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 41 cycle 41 map d71d9f19ad8fa8a1
+  t3 f5 x550 y498 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 42 cycle 42 map d71d9f19ad8fa8a1
+  t3 f5 x550 y506 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 43 cycle 43 map d71d9f19ad8fa8a1
+  t3 f5 x550 y514 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 44 cycle 44 map d71d9f19ad8fa8a1
+  t3 f5 x550 y522 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 45 cycle 45 map d71d9f19ad8fa8a1
+  t3 f5 x550 y530 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 46 cycle 46 map d71d9f19ad8fa8a1
+  t3 f5 x550 y538 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 47 cycle 47 map d71d9f19ad8fa8a1
+  t3 f5 x550 y546 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 48 cycle 48 map d71d9f19ad8fa8a1
+  t3 f5 x550 y554 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 49 cycle 49 map d71d9f19ad8fa8a1
+  t3 f5 x550 y562 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 50 cycle 50 map d71d9f19ad8fa8a1
+  t3 f5 x550 y570 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 51 cycle 51 map d71d9f19ad8fa8a1
+  t3 f5 x550 y578 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 52 cycle 52 map d71d9f19ad8fa8a1
+  t3 f5 x550 y586 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 53 cycle 53 map d71d9f19ad8fa8a1
+  t3 f5 x550 y594 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 54 cycle 54 map d71d9f19ad8fa8a1
+  t3 f5 x550 y602 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 55 cycle 55 map d71d9f19ad8fa8a1
+  t3 f5 x550 y610 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 56 cycle 56 map d71d9f19ad8fa8a1
+  t3 f5 x550 y618 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 57 cycle 57 map d71d9f19ad8fa8a1
+  t3 f5 x550 y626 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 58 cycle 58 map d71d9f19ad8fa8a1
+  t3 f5 x550 y634 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 59 cycle 59 map d71d9f19ad8fa8a1
+  t3 f5 x550 y642 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 60 cycle 60 map d71d9f19ad8fa8a1
+  t3 f5 x550 y650 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 61 cycle 61 map d71d9f19ad8fa8a1
+  t3 f5 x550 y658 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 62 cycle 62 map d71d9f19ad8fa8a1
+  t3 f5 x550 y666 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 63 cycle 63 map d71d9f19ad8fa8a1
+  t3 f5 x550 y674 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 64 cycle 64 map d71d9f19ad8fa8a1
+  t3 f5 x550 y682 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 65 cycle 65 map d71d9f19ad8fa8a1
+  t3 f5 x550 y690 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 66 cycle 66 map d71d9f19ad8fa8a1
+  t3 f5 x550 y698 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 67 cycle 67 map d71d9f19ad8fa8a1
+  t3 f5 x550 y706 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 68 cycle 68 map d71d9f19ad8fa8a1
+  t3 f5 x550 y714 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 69 cycle 69 map d71d9f19ad8fa8a1
+  t3 f5 x550 y722 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 70 cycle 70 map d71d9f19ad8fa8a1
+  t3 f5 x550 y730 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 71 cycle 71 map d71d9f19ad8fa8a1
+  t3 f5 x550 y738 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 72 cycle 72 map d71d9f19ad8fa8a1
+  t3 f5 x550 y746 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 73 cycle 73 map d71d9f19ad8fa8a1
+  t3 f5 x550 y754 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 74 cycle 74 map d71d9f19ad8fa8a1
+  t3 f5 x550 y762 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 75 cycle 75 map d71d9f19ad8fa8a1
+  t3 f5 x550 y770 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 76 cycle 76 map d71d9f19ad8fa8a1
+  t3 f5 x550 y778 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 77 cycle 77 map d71d9f19ad8fa8a1
+  t3 f5 x550 y786 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 78 cycle 78 map d71d9f19ad8fa8a1
+  t3 f5 x550 y794 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 79 cycle 79 map d71d9f19ad8fa8a1
+  t3 f5 x550 y802 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 80 cycle 80 map d71d9f19ad8fa8a1
+  t3 f5 x550 y810 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 81 cycle 81 map d71d9f19ad8fa8a1
+  t3 f5 x550 y818 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 82 cycle 82 map d71d9f19ad8fa8a1
+  t3 f5 x550 y826 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 83 cycle 83 map d71d9f19ad8fa8a1
+  t3 f5 x550 y834 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 84 cycle 84 map d71d9f19ad8fa8a1
+  t3 f5 x550 y842 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 85 cycle 85 map d71d9f19ad8fa8a1
+  t3 f5 x550 y850 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 86 cycle 86 map d71d9f19ad8fa8a1
+  t3 f5 x550 y858 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 87 cycle 87 map d71d9f19ad8fa8a1
+  t3 f5 x550 y866 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 88 cycle 88 map d71d9f19ad8fa8a1
+  t3 f5 x550 y874 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 89 cycle 89 map d71d9f19ad8fa8a1
+  t3 f5 x550 y882 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 90 cycle 90 map d71d9f19ad8fa8a1
+  t3 f5 x550 y890 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 91 cycle 91 map d71d9f19ad8fa8a1
+  t3 f5 x550 y898 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 92 cycle 92 map d71d9f19ad8fa8a1
+  t3 f5 x550 y906 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 93 cycle 93 map d71d9f19ad8fa8a1
+  t3 f5 x550 y914 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 94 cycle 94 map d71d9f19ad8fa8a1
+  t3 f5 x550 y922 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 95 cycle 95 map d71d9f19ad8fa8a1
+  t3 f5 x550 y930 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 96 cycle 96 map d71d9f19ad8fa8a1
+  t3 f5 x550 y938 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 97 cycle 97 map d71d9f19ad8fa8a1
+  t3 f5 x550 y946 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 98 cycle 98 map d71d9f19ad8fa8a1
+  t3 f5 x550 y954 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 99 cycle 99 map d71d9f19ad8fa8a1
+  t3 f5 x550 y962 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
+step 100 cycle 100 map d71d9f19ad8fa8a1
+  t3 f5 x550 y970 dx564 dy1626 ox0 oy0 c0 s0 d0 nd0 st0 fl0 ct-1 tu0 ac0 sp100 xh48 yh16
