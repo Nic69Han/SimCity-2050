@@ -1006,15 +1006,14 @@ impl Simulation {
             }
         }
 
-        let tden: i32;
-        if tile < LTRFBASE {
-            tden = 0;
+        let tden: i32 = if tile < LTRFBASE {
+            0
         } else if tile < HTRFBASE {
-            tden = 1;
+            1
         } else {
             self.road_total = self.road_total.wrapping_add(1); // Heavy traffic counts as 2 roads.
-            tden = 2;
-        }
+            2
+        };
 
         let mut traffic_density = (self.traffic_density_map.world_get(pos.x, pos.y) as i32) >> 6;
 
