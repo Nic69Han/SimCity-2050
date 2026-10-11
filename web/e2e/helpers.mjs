@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { PALETTE } from "../palette.js";
 import { TILE_PX } from "../tools.js";
+import { formatStatus, formatStats } from "../status.js";
 
 export { TILE_PX };
 
@@ -381,4 +382,70 @@ export async function pollUntil(check, what, timeout = 15000) {
     if (Date.now() > end) throw new Error(`timed out after ${timeout} ms waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 100));
   }
+}
+
+// Playback -----------------------------------------------------------------------------------
+
+// Counts the animation frames the page runs (not the ones it requests): window.__frames.
+// Idempotent; call it after the page has loaded.
+export async function countFrames(page) {
+  await page.evaluate(() => {
+    if (window.__frames !== undefined) return;
+    window.__frames = 0;
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (cb) => raf((t) => {
+      cb(t);
+      window.__frames++;
+    });
+  });
+}
+
+// Plays for `frames` frames (about one second at 60 Hz per 60), then pauses. Returns what the
+// page showed at the pause: the frames it ran in this stretch, and its status and stats lines.
+// No frame runs after the pause, so the three values describe the same moment.
+export async function playFrames(page, frames) {
+  const from = await page.evaluate(() => window.__frames);
+  await page.click("#play");
+  await pollUntil(
+    async () => (await page.evaluate(() => window.__frames)) - from >= frames,
+    `${frames} frames of play`,
+    60000,
+  );
+  await page.click("#play");
+  return page.evaluate((start) => ({
+    ran: window.__frames - start,
+    status: document.getElementById("status").textContent,
+    stats: document.getElementById("stats").textContent,
+  }), from);
+}
+
+// The text the page shows for the shadow engine's state: what it must show after the same
+// ticks. `seed` is the seed the page shows ("Graine ...") for a city made by Nouvelle ville.
+export function expectedText(city, seed = null) {
+  const demand = Array.from(city.demand());
+  return {
+    status: formatStatus({ seed, month: city.month(), year: city.year(), funds: city.funds() }),
+    stats: formatStats({ population: city.population(), score: city.score(), demand }),
+  };
+}
+
+// Sets the value of a range or number input and fires its "input" event, as a user would.
+export async function setSlider(page, selector, value) {
+  await page.$eval(selector, (el, v) => {
+    el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, String(value));
+}
+
+// Finds the first tile where the shadow engine's tool preview returns `code`, scanning the
+// whole map, as {x, y} (or null).
+export function findPreview(shadow, key, code) {
+  const w = shadow.city.width();
+  const h = shadow.city.height();
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (shadow.preview(key, x, y)[0] === code) return { x, y };
+    }
+  }
+  return null;
 }

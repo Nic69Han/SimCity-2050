@@ -28,6 +28,11 @@ Files:
   seeds (31-bit, never 0), feature detection, the mock's `new_random_city`.
 - `mock-engine.mjs`: deterministic fake `City` implementing the tool contract of
   `docs/tools-contract.md`. Its rules are documented at the top of the file.
+- `playback.test.mjs`: the play loop (one animation-frame loop at most, cancelled on pause,
+  Lecture/Pause/Lecture in one frame) and ticks per frame by speed.
+- `latest.test.mjs`: "latest wins" for the asynchronous city loads (a late sample does not
+  replace a newer city or file).
+- `status.test.mjs`: status line, stats line and load message text (formatted from engine numbers).
 - `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.
 
 ## End-to-end tests (web/e2e)
@@ -52,13 +57,17 @@ Files:
   seed), the hover outline verdict, and the "shadow" engine: the same `web/pkg` loaded in Node
   from the same bytes, which gives the engine cost of a tool at a tile (the hover label is drawn
   on a canvas and cannot be read from the DOM).
-- `load.test.mjs`: first load (sample city, date, funds, 20 French tools), another sample city,
-  keyboard shortcuts, a 390 px phone viewport.
+- `load.test.mjs`: first load (sample city, date, funds, 20 French tools, "Chargement…" until the
+  sample is in), another sample city, keyboard shortcuts, a 390 px phone viewport.
 - `build.test.mjs`: road drag (funds = sum of the previewed costs), residential zone, placement
-  on water (failure message), query tool (French zone status), a touch tap.
-- `city.test.mjs`: new city with seeds (same seed, same pixels), Lecture and Pause, a refused
-  file, save and re-open of a .cty (27 120 bytes).
+  on water (failure message, no bulldozer), no money left (the refusal, nothing built), query
+  tool (French zone status), a touch tap.
+- `city.test.mjs`: new city with seeds (same seed, same pixels), Lecture and Pause (one loop,
+  no frame while paused), a refused file (its own live region, the status line kept), the city
+  selector ("Ville aléatoire", "Fichier local", a sample re-loads), save and re-open of a .cty
+  (27 120 bytes).
+- `play.test.mjs`: the speed slider and the Catastrophes checkbox reach the engine: after N
+  frames the status and stats lines equal those of the shadow engine run for the same ticks.
 
 Each test asserts that no console error, page error or failed request happened.
-Known page bugs are kept as `todo` tests (they run and are reported, but do not fail the run):
-the test names say what the page should do, and a `// BUG` comment above each says where.
+There are no `todo` tests: a known page bug is fixed, or it is a failing test (the run fails).

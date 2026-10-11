@@ -8,7 +8,7 @@ import {
   launchBrowser, openPage, assertNoErrors, newCity, readStatus, readMap, readToolMessage,
   selectTool, hoverTile, outlineAt, clickTile, dragTiles, findRun, findBlock, findTile,
   shadowCity, mapDataUrl, readQueryPanel, shot, DIRT_LABEL, WATER_LABEL, ROAD_LABEL,
-  tileXY,
+  tileXY, findPreview,
 } from "./helpers.mjs";
 
 const SEED = "4242"; // a random city with plenty of dry land and water (same map every run)
@@ -141,12 +141,49 @@ describe("building tools on the real engine", () => {
       const before = await readStatus(page);
       const mapBefore = await mapDataUrl(page);
       await clickTile(page, target.x, target.y);
-      assert.equal(await readToolMessage(page), resultMessage(target.result), "the French failure message");
+      const message = await readToolMessage(page);
+      assert.equal(message, resultMessage(target.result), "the French failure message");
+      assert.doesNotMatch(message, /bulldozer/iu, "on water a bulldozer cannot help: the message must not suggest one");
       assert.equal(await mapDataUrl(page), mapBefore, "nothing was built");
       const after = await readStatus(page);
       assert.equal(after.funds, before.funds, "funds unchanged");
       assert.equal(after.funds, shadow.funds());
       await shot(page, "d-water-refused");
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  test("(d2) with no money left, a placement is refused: 'Pas assez d'argent', nothing built", { timeout: TIMEOUT }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      await newCity(page, SEED);
+      const shadow = await shadowCity({ seed: Number(SEED) });
+      // drive the funds to 0 with airports (10 000 $ each, from the engine's own preview)
+      for (let i = 0; i < 2; i++) {
+        const spot = findPreview(shadow, "airport", RESULT.OK);
+        assert.ok(spot, "a place for an airport");
+        await selectTool(page, "airport");
+        await clickTile(page, spot.x, spot.y);
+        shadow.down("airport", spot.x, spot.y);
+      }
+      assert.equal(shadow.funds(), 0, "the funds are at 0");
+      assert.equal((await readStatus(page)).funds, 0, "the page shows the same 0");
+
+      // a zone on dry ground costs 100 $: the engine refuses it for lack of money
+      const spot = findPreview(shadow, "residential", RESULT.NO_MONEY);
+      assert.ok(spot, "a place where only the money is missing");
+      assert.equal(shadow.preview("residential", spot.x, spot.y)[0], RESULT.NO_MONEY);
+
+      await selectTool(page, "residential");
+      const mapBefore = await mapDataUrl(page);
+      await clickTile(page, spot.x, spot.y);
+      assert.equal(await readToolMessage(page), "Pas assez d'argent", "the French message for -2");
+      assert.equal(await mapDataUrl(page), mapBefore, "nothing was built");
+      assert.equal((await readStatus(page)).funds, 0, "the funds are unchanged");
+      assert.equal(shadow.funds(), 0);
+      await shot(page, "d2-no-money");
       assertNoErrors(errors);
     } finally {
       await close();
