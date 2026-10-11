@@ -6,6 +6,12 @@ use micropolis_core::simulation::{GameLevel, Simulation};
 use micropolis_core::tool::{EditingTool, ToolResult, TOOL_COUNT};
 use wasm_bindgen::prelude::*;
 
+// Feature modules: each adds its own `#[wasm_bindgen] impl City` block (one owner per file).
+mod budget;
+mod messages;
+mod sizes;
+mod sprites;
+
 /// Seed of the random generator when a city file is loaded: the same file always gives the
 /// same city (the original seeds from the clock, which cannot be reproduced).
 const LOAD_SEED: i32 = 1;
@@ -30,7 +36,7 @@ fn tool_of(id: i32) -> Option<EditingTool> {
 
 #[wasm_bindgen]
 pub struct City {
-    sim: Simulation,
+    pub(crate) sim: Simulation,
 }
 
 #[wasm_bindgen]

@@ -1,7 +1,10 @@
 // Presentation adapter (ARCHITECTURE.md rule 5): draws what the engine
 // exposes and forwards user actions. No game rule lives here.
 import { TILE_PX as SCALE, setupTools } from "./tools.js";
-import { PALETTE, buildRgbTable, legendEntries } from "./palette.js";
+import { PALETTE, legendEntries } from "./palette.js";
+import { createRenderer } from "./render.js";
+import * as messages from "./messages.js";
+import * as budgetUi from "./budget-ui.js";
 import { parseSeed, supportsNewCity, applyEnginePreferences } from "./newcity.js";
 import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
@@ -10,16 +13,14 @@ import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
 const { default: init, City } = MOCK ? await import("./dev-mock.js") : await import("./pkg/micropolis_wasm.js");
-const LOMASK = 0x03ff;
-const rgb = buildRgbTable(PALETTE); // one ABGR word per tile character, from palette.js
 // Selector entries for a city that is not a sample (added while shown, removed by a sample).
 const CHOICE_LABELS = Object.freeze({ random: "Ville aléatoire", local: "Fichier local" });
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("map");
-const ctx = canvas.getContext("2d");
+const renderer = createRenderer({ canvas, frame: $("map-frame") });
 const status = $("status");
-let city, image, tools = null;
+let city, tools = null;
 let ready = false; // true once a city is in the engine (sample, file or new city)
 let seedNote = null; // seed of the city made by "Nouvelle ville", shown in the status line
 let shown = "haight"; // the selector value of the city on the map
@@ -35,24 +36,7 @@ const playback = createPlayback({
 
 function draw() {
   if (!ready) return; // no city yet: the status line keeps "Chargement…", no numbers
-  const w = city.width(), h = city.height(), tiles = city.tiles();
-  if (!image || image.width !== w * SCALE) {
-    canvas.width = w * SCALE;
-    canvas.height = h * SCALE;
-    // CSS scales the frame to the viewport at this ratio (style.css); tiles stay exact.
-    $("map-frame").style.setProperty("--ratio", `${w} / ${h}`);
-    image = ctx.createImageData(w * SCALE, h * SCALE);
-  }
-  const px = new Uint32Array(image.data.buffer);
-  const stride = w * SCALE;
-  for (let x = 0; x < w; x++) {
-    for (let y = 0; y < h; y++) {
-      const c = rgb[tiles[x * h + y] & LOMASK];
-      const base = y * SCALE * stride + x * SCALE;
-      for (let dy = 0; dy < SCALE; dy++) px.fill(c, base + dy * stride, base + dy * stride + SCALE);
-    }
-  }
-  ctx.putImageData(image, 0, 0);
+  renderer.draw(city);
   // funds are part of every redraw, so the status line shows them after every action
   status.textContent = formatStatus({
     seed: seedNote,
@@ -66,6 +50,7 @@ function draw() {
     demand: city.demand(),
   });
   tools?.render();
+  for (const f of features) f.update?.(featureApi);
 }
 
 function setPlaying(on) {
@@ -190,6 +175,11 @@ function buildLegend(list) {
 
 await init();
 city = new City(1);
+// Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
+// engine has the methods it needs. `update` runs after every redraw.
+const features = [messages, budgetUi];
+const featureApi = { city: () => city, $, redraw: () => draw(), isReady: () => ready };
+for (const f of features) f.setup?.(featureApi);
 buildLegend($("legend"));
 tools = setupTools({
   city,

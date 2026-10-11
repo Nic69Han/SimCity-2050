@@ -45,3 +45,9 @@ Core API (`EditingTool::{ALL,cost,size,key,footprint}`, `Simulation::tool_previe
 tool-script and new-city differential tests, and the page (palette/input against a mock engine) are merged.
 Wave 2: wasm adapter implementing the list above, page changes (query formatting, "new city" button),
 differential test "new city + player builds", then an end-to-end browser test on the real wasm.
+
+## Wave 5 layout (hooks created by the integrator)
+wasm adapter: one file per feature, each with its own `#[wasm_bindgen] impl City` block:
+`sizes.rs` (map size), `messages.rs` (game events), `budget.rs` (tax, budget, evaluation, history),
+`sprites.rs` (moving objects). Page: `render.js` (map drawing), `messages.js`, `budget-ui.js` export
+`setup(api)` / `update(api)`; `main.js` only wires them. Each agent edits its own files.
