@@ -13,11 +13,14 @@ cargo install wasm-bindgen-cli --version 0.2.100 --locked
 ./scripts/build-web.sh
 python3 -m http.server -d web 8000   # puis http://localhost:8000
 ```
-La page charge Haight-Ashbury; « Ouvrir un .cty » charge un autre fichier,
-« Enregistrer » exporte la ville.
+La page charge Haight-Ashbury (ou Kyoto, Yokohama, ou un `.cty` local); « Lecture » fait
+tourner la simulation, « Enregistrer » exporte la ville.
 
 ## Tests
 `cargo test --workspace`
+
+Test différentiel contre le moteur C++ d'origine (identité tick par tick) :
+`scripts/compare-oracle.sh [ticks]` (nécessite `g++`).
 
 ## Avancement du port
 Voir [crates/micropolis-core/README.md](crates/micropolis-core/README.md).

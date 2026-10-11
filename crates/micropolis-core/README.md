@@ -12,26 +12,23 @@ Chaque module est converti puis **validé contre le code C++ d'origine** :
 - valeurs de référence produites par le C++ (`tests/gold.cpp`) et figées dans les tests ;
 - constantes de tuiles générées par `tools/gen_tiles.py` avec les valeurs réelles du compilateur C++.
 
-## Avancement (≈ 1 000 lignes C++ sur 21 000)
-| Module C++ | Rust | État |
-|---|---|---|
-| random.cpp | rng.rs | fait, identique bit à bit |
-| position.* | position.rs | fait (2 bugs C++ corrigés, voir doc) |
-| map_type.h | map.rs | fait, tailles dynamiques |
-| MapTileBits / Characters | tile.rs, tile_chars.rs | fait (généré) |
-| micropolis.h/.cpp, allocate, initialize | simulation.rs | état de `Simulation`, `new_city`, `init_graph_max` fait (sans callbacks/sprites) |
-| fileio.cpp | fileio.rs | `.cty` lecture/écriture (+ `simLoadInit` partiel), testé sur Haight |
-| callback() | events.rs | file d'événements (port de sortie) |
-| power, scan, zone, simulate, traffic, ... | | à faire |
+## Avancement
+Tous les modules de simulation du C++ sont portés et validés contre le moteur d'origine
+(voir `PORTING.md`) : rng, position, map, tile, simulation (état), fileio (`.cty`),
+power, connect, scan, zone, traffic, disasters, evaluate, budget, tool, sprite,
+simulate (boucle `simTick`), generate (terrain), animate, message, update, utilities, graph.
 
-## Ordre conseillé pour la suite
-1. ~~`Simulation` (struct d'état, remplace `class Micropolis`) + `initialize`, `allocate`~~ (fait, reste `doPowerScan`/`evalInit` qui arrivent avec `power` et `evaluate`)
-2. ~~`fileio`~~ (fait; reste la comparaison avec une sortie C++ de référence)
-3. `power`, `scan`, `zone`, `simulate`, `traffic`, `budget`, `evaluate`
-4. `generate` (génération de terrain), `tool` (outils de construction), `disasters`, `sprite`
-5. Test de non-régression : même ville + même graine, N ticks, comparaison de la carte avec le C++
+**Preuve de fidélité** : `scripts/compare-oracle.sh` fait tourner le moteur C++ d'origine et le
+port Rust sur les mêmes villes (Haight, Kyoto, Yokohama), graines et options de catastrophes, et
+exige des empreintes identiques à chaque tick (temps, fonds, populations, valves, moyennes,
+hash de toute la carte). Résultat : 0 écart sur 3 000 ticks (12 combinaisons).
+Chaque module a en plus ses tests « golden » écrits contre le C++ (`reference/gold/`).
 
-> Architecture: voir `../../ARCHITECTURE.md`. Ce crate ne doit avoir aucune dépendance ni E/S.
+Non portés (interface seulement) : `map.cpp` (mini-cartes), `resource.cpp`, `loadScenario`
+(fichiers de scénario absents), glue Tcl/Python de `main.cpp`.
+
+À faire : outils de construction dans la page web, génération d'une nouvelle ville dans la page,
+graphismes de tuiles, validation sur des cartes plus grandes que 120x100.
 
 ## Divergences volontaires par rapport au C++
 - `Position::move` : `NORTH_EAST` ne retombe plus dans `EAST` ; `SOUTH_WEST` teste les bornes.
