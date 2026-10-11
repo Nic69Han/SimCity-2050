@@ -10,6 +10,7 @@
 //! `initSimMemory`, `doSimInit` outline) and `utilities.cpp`
 //! (`setGameLevelFunds`).
 
+use crate::events::Event;
 use crate::map::Map;
 use crate::position::Position;
 use crate::rng::Rng;
@@ -98,6 +99,7 @@ pub struct Simulation {
     /// Tile map, column-major (`x * world_h + y`) like the original.
     pub tiles: Vec<Tile>,
     pub rng: Rng,
+    events: Vec<Event>,
 
     // ---- density / effect maps (block size in the name of the field's doc) ----
     pub population_density_map: Map<u8>, // 2
@@ -113,9 +115,9 @@ pub struct Simulation {
     pub rate_of_growth_map: Map<i16>,    // 8
     pub fire_station_map: Map<i16>,      // 8
     pub fire_station_effect_map: Map<i16>,
-    pub police_station_map: Map<i16>,    // 8
+    pub police_station_map: Map<i16>, // 8
     pub police_station_effect_map: Map<i16>,
-    pub com_rate_map: Map<i16>,          // 8
+    pub com_rate_map: Map<i16>, // 8
 
     // ---- histories ----
     pub res_hist: Vec<i16>,
@@ -303,6 +305,7 @@ impl Simulation {
             world_h,
             tiles: vec![0; (world_w as usize) * (world_h as usize)],
             rng: Rng::new(1),
+            events: Vec::new(),
 
             population_density_map: m(2),
             traffic_density_map: m(2),
@@ -490,6 +493,24 @@ impl Simulation {
         Self::new(crate::DEFAULT_WORLD_W, crate::DEFAULT_WORLD_H)
     }
 
+    /// Queue an event for the adapter (outgoing port).
+    pub fn push_event(&mut self, e: Event) {
+        self.events.push(e);
+    }
+
+    /// Take all pending events, oldest first.
+    pub fn drain_events(&mut self) -> Vec<Event> {
+        std::mem::take(&mut self.events)
+    }
+
+    /// `(year, month 0..12)` of the city clock (48 city times per year).
+    pub fn calendar(&self) -> (i64, i64) {
+        (
+            self.city_time / CITYTIMES_PER_YEAR as i64 + self.starting_year as i64,
+            (self.city_time % CITYTIMES_PER_YEAR as i64) / CITYTIMES_PER_MONTH as i64,
+        )
+    }
+
     pub fn world_size(&self) -> (i32, i32) {
         (self.world_w, self.world_h)
     }
@@ -654,6 +675,7 @@ impl Simulation {
         self.init_sim_memory();
         self.set_game_level_funds(level);
         self.init_game();
+        self.push_event(Event::NewCity);
     }
 }
 

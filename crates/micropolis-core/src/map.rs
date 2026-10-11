@@ -151,7 +151,7 @@ mod tests {
     fn storage_is_column_major() {
         let mut m = Map::<u8>::new(4, 3, 1, 0);
         m.set(1, 2, 42);
-        assert_eq!(m.as_slice()[1 * 3 + 2], 42);
+        assert_eq!(m.as_slice()[3 + 2], 42);
     }
 
     #[test]

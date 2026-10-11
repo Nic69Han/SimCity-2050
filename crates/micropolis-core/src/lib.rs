@@ -4,6 +4,8 @@
 //! Unlike the C++ original, world dimensions are runtime parameters, so the
 //! map can be made far larger than the original 120x100.
 
+pub mod events;
+pub mod fileio;
 pub mod map;
 pub mod position;
 pub mod rng;

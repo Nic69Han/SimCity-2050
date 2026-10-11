@@ -1,8 +1,8 @@
-[package]
-name = "micropolis-core"
+[workspace]
+resolver = "2"
+members = ["crates/micropolis-core", "crates/micropolis-wasm"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "Rust port of the Micropolis (SimCity Classic) simulation engine, independent of any UI"
 license = "GPL-3.0-or-later"
-
-[dependencies]

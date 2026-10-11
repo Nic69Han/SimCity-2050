@@ -1,34 +1,27 @@
-# micropolis-core (Rust)
+# SimCity 2050 — Micropolis en Rust, jouable dans le navigateur
 
-Conversion en Rust du moteur de simulation de **MicropolisCore** (SimCity Classic, GPL).
-Moteur indépendant de l'interface, déterministe, avec **dimensions de carte configurables**
-(l'original est figé à 120x100).
+Port en Rust du moteur de **MicropolisCore** (SimCity Classic, GPL), compilé en
+WebAssembly, avec une page web qui affiche et charge des villes `.cty`.
 
-> Dérivé de code GPL : ce projet est donc sous GPL. Si vous gardez le nom « Micropolis »,
-> la *Micropolis Public Name License* impose une attribution.
+Architecture: **hexagonale (ports & adapters)** autour d'un cœur fonctionnel — voir
+[ARCHITECTURE.md](ARCHITECTURE.md). Les règles sont vérifiées par un test.
 
-## Méthode
-Chaque module est converti puis **validé contre le code C++ d'origine** :
-- valeurs de référence produites par le C++ (`tests/gold.cpp`) et figées dans les tests ;
-- constantes de tuiles générées par `tools/gen_tiles.py` avec les valeurs réelles du compilateur C++.
+## Essayer
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.100 --locked
+./scripts/build-web.sh
+python3 -m http.server -d web 8000   # puis http://localhost:8000
+```
+La page charge Haight-Ashbury; « Ouvrir un .cty » charge un autre fichier,
+« Enregistrer » exporte la ville.
 
-## Avancement (≈ 1 000 lignes C++ sur 21 000)
-| Module C++ | Rust | État |
-|---|---|---|
-| random.cpp | rng.rs | fait, identique bit à bit |
-| position.* | position.rs | fait (2 bugs C++ corrigés, voir doc) |
-| map_type.h | map.rs | fait, tailles dynamiques |
-| MapTileBits / Characters | tile.rs, tile_chars.rs | fait (généré) |
-| micropolis.h/.cpp, allocate, initialize | simulation.rs | état de `Simulation`, `new_city`, `init_graph_max` fait (sans callbacks/sprites) |
-| power, scan, zone, simulate, traffic, ... | | à faire |
+## Tests
+`cargo test --workspace`
 
-## Ordre conseillé pour la suite
-1. ~~`Simulation` (struct d'état, remplace `class Micropolis`) + `initialize`, `allocate`~~ (fait, reste `doPowerScan`/`evalInit` qui arrivent avec `power` et `evaluate`)
-2. `fileio` (lecture des `.cty` : permet de comparer des villes réelles avec le C++)
-3. `power`, `scan`, `zone`, `simulate`, `traffic`, `budget`, `evaluate`
-4. `generate` (génération de terrain), `tool` (outils de construction), `disasters`, `sprite`
-5. Test de non-régression : même ville + même graine, N ticks, comparaison de la carte avec le C++
+## Avancement du port
+Voir [crates/micropolis-core/README.md](crates/micropolis-core/README.md).
 
-## Divergences volontaires par rapport au C++
-- `Position::move` : `NORTH_EAST` ne retombe plus dans `EAST` ; `SOUTH_WEST` teste les bornes.
-- `Rng::random(i16::MAX)` ne déborde plus.
+## Licence
+GPL v3 (dérivé de code GPL). Si le nom « Micropolis » est conservé, la
+Micropolis Public Name License impose une attribution.
