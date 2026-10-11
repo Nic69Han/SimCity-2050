@@ -17,3 +17,29 @@ jobs:
         run: ./scripts/compare-oracle.sh 600
       - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
       - run: ./scripts/build-web.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Page tests (no browser)
+        run: node --test web/test/*.test.mjs
+      - name: Wasm adapter contract test
+        run: ./scripts/test-wasm.sh
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+      - name: Install Playwright
+        working-directory: web/e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: web/e2e
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests on the wasm engine
+        run: ./scripts/e2e.sh
