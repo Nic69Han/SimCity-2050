@@ -307,6 +307,12 @@ pub struct Simulation {
     // @fields:sprite (agent sprite: add your extra Simulation fields right below this line)
 
     // @fields:simulate (agent simulate: add your extra Simulation fields right below this line)
+    /// `mustDrawBudget` (set by `updateFundEffects`, read by the budget module).
+    pub must_draw_budget: bool,
+    /// `cellSrc` of `simHeat` (`(W+2)*(H+2)` cells, kept between steps).
+    pub cell_src: Vec<i16>,
+    /// The function-static accumulator `a` of `simHeat`.
+    pub heat_a: i32,
 
     // @fields:misc (agent misc: add your extra Simulation fields right below this line)
 }
@@ -521,6 +527,9 @@ impl Simulation {
             // @init:sprite (agent sprite: initialise your extra fields right below this line)
 
             // @init:simulate (agent simulate: initialise your extra fields right below this line)
+            must_draw_budget: false,
+            cell_src: Vec::new(),
+            heat_a: 0,
 
             // @init:misc (agent misc: initialise your extra fields right below this line)
         }
