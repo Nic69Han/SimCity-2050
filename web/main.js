@@ -1,8 +1,10 @@
 // Presentation adapter (ARCHITECTURE.md, rule 5): draws what the engine
 // exposes and forwards user actions. No game rule lives here.
-import init, { City } from "./pkg/micropolis_wasm.js";
+import { TILE_PX as SCALE, setupTools } from "./tools.js";
 
-const SCALE = 6; // canvas pixels per tile
+// ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
+const MOCK = new URLSearchParams(location.search).has("mock");
+const { default: init, City } = MOCK ? await import("./dev-mock.js") : await import("./pkg/micropolis_wasm.js");
 const MONTHS = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
 const TICKS_PER_FRAME = { 1: 1, 2: 4, 3: 16 }; // simulation ticks per animation frame
 
@@ -26,7 +28,7 @@ const $ = (id) => document.getElementById(id);
 const canvas = $("map");
 const ctx = canvas.getContext("2d");
 const status = $("status");
-let city, image, playing = false;
+let city, image, tools = null, playing = false;
 
 function draw() {
   const w = city.width(), h = city.height(), tiles = city.tiles();
@@ -51,6 +53,7 @@ function draw() {
   $("stats").textContent =
     `Population ${city.population().toLocaleString("fr-FR")} · score ${city.score()} · ` +
     `demande R ${r} / C ${c} / I ${i}`;
+  tools?.render();
 }
 
 function frame() {
@@ -89,6 +92,15 @@ async function loadSample(name) {
 
 await init();
 city = new City(1);
+tools = setupTools({
+  city,
+  canvas,
+  overlay: $("overlay"),
+  palette: $("palette"),
+  message: $("tool-msg"),
+  queryPanel: $("query-panel"),
+  onChange: draw,
+});
 $("city").onchange = (e) => loadSample(e.target.value).catch((err) => (status.textContent = err.message));
 $("file").onchange = async (ev) => {
   const f = ev.target.files[0];
@@ -105,4 +117,5 @@ $("save").onclick = () => {
   URL.revokeObjectURL(a.href);
 };
 draw();
-loadSample("haight").catch((e) => (status.textContent = e.message));
+if (MOCK) load(new Uint8Array(0));
+else loadSample("haight").catch((e) => (status.textContent = e.message));

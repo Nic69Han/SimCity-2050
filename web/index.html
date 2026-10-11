@@ -22,8 +22,14 @@
   <label><input id="disasters" type="checkbox"> Catastrophes</label>
   <span id="status" role="status">Chargement…</span>
 </header>
+<nav id="palette" aria-label="Outils de construction" hidden></nav>
 <main>
-  <canvas id="map" aria-label="Carte de la ville"></canvas>
+  <div class="map-frame">
+    <canvas id="map" aria-label="Carte de la ville"></canvas>
+    <canvas id="overlay" aria-hidden="true" hidden></canvas>
+  </div>
+  <p id="tool-msg" role="status" aria-live="polite"></p>
+  <p id="query-panel" aria-live="polite" hidden></p>
   <p id="stats" aria-live="polite"></p>
 </main>
 <footer>Moteur: port Rust de MicropolisCore (GPL) compilé en WebAssembly.</footer>
