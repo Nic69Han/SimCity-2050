@@ -10,8 +10,8 @@
 //! follow the original.
 
 use crate::position::{Direction, Position};
-use crate::shim_pending::SPRITE_HELICOPTER;
 use crate::simulation::{Simulation, MAX_TRAFFIC_DISTANCE};
+use crate::sprite::SPRITE_HELICOPTER;
 use crate::tile::{
     Tile, COMBASE, DIRT, LASTPOWER, LASTRAIL, LHTHR, LOMASK, NUCLEAR, PORT, POWERBASE, ROADBASE,
     TELEBASE, TELELAST,
@@ -99,10 +99,11 @@ impl Simulation {
                         // Direct helicopter towards heavy traffic
                         let dest_x = (i32::from(self.traf_max_x) * 16) as i16;
                         let dest_y = (i32::from(self.traf_max_y) * 16) as i16;
-                        if let Some(sprite) = self.get_sprite(SPRITE_HELICOPTER) {
+                        if let Some(idx) = self.get_sprite(SPRITE_HELICOPTER) {
+                            let sprite = &mut self.sprites[idx];
                             if sprite.control == -1 {
-                                sprite.dest_x = dest_x;
-                                sprite.dest_y = dest_y;
+                                sprite.dest_x = i32::from(dest_x);
+                                sprite.dest_y = i32::from(dest_y);
                             }
                         }
                     }

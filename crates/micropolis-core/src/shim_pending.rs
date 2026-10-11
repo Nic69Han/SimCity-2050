@@ -6,28 +6,7 @@ use crate::position::Position;
 use crate::simulation::{CityClass, Simulation};
 use crate::tile::Tile;
 
-pub(crate) const SPRITE_HELICOPTER: i32 = 2;
-
-pub(crate) struct SimSprite {
-    pub control: i16,
-    pub dest_x: i16,
-    pub dest_y: i16,
-}
-
 impl Simulation {
-    // sprite.cpp
-    pub(crate) fn get_sprite(&mut self, _kind: i32) -> Option<&mut SimSprite> {
-        todo!("sprite")
-    }
-    pub(crate) fn make_explosion(&mut self, _x: i32, _y: i32) {
-        todo!("sprite")
-    }
-    pub(crate) fn make_monster(&mut self) {
-        todo!("sprite")
-    }
-    pub(crate) fn make_tornado(&mut self) {
-        todo!("sprite")
-    }
     pub(crate) fn do_meltdown(&mut self, _pos: Position) {
         todo!("sprite")
     }
