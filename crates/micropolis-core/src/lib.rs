@@ -24,32 +24,11 @@ pub mod update;
 pub mod utilities;
 pub mod zone;
 
-// Temporary: removed at integration.
 pub mod events;
 pub mod fileio;
 pub mod map;
 pub mod position;
 pub mod rng;
-#[allow(dead_code)]
-mod shim_evaluate;
-#[allow(dead_code)]
-mod shim_generate;
-#[allow(dead_code)]
-mod shim_misc;
-#[allow(dead_code)]
-mod shim_power;
-#[allow(dead_code)]
-mod shim_scan;
-#[allow(dead_code)]
-mod shim_simulate;
-#[allow(dead_code)]
-mod shim_sprite;
-#[allow(dead_code)]
-mod shim_tool;
-#[allow(dead_code)]
-mod shim_traffic;
-#[allow(dead_code)]
-mod shim_zone;
 pub mod simulation;
 pub mod tile;
 pub mod tile_chars;
@@ -57,3 +36,7 @@ pub mod tile_chars;
 /// World size of the original game, kept as the default.
 pub const DEFAULT_WORLD_W: i32 = 120;
 pub const DEFAULT_WORLD_H: i32 = 100;
+
+// Temporary stubs for modules that are not ported yet (zone, sprite, simulate, evaluate, budget).
+#[allow(dead_code)]
+mod shim_pending;
