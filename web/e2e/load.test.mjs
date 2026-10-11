@@ -90,13 +90,7 @@ describe("the page", () => {
     }
   });
 
-  // BUG (web/main.js): the page calls draw() on the empty city before it fetches the sample,
-  // so the status line shows the empty city's date and funds (and never "Chargement…", the
-  // text of index.html). Kept as a TODO.
-  test("(a3) while the sample loads, the status line does not describe an empty city", {
-    timeout: TIMEOUT,
-    todo: "page bug in web/main.js: the empty city is drawn on the status line before the sample loads",
-  }, async () => {
+  test("(a3) while the sample loads, the status line says Chargement… (no numbers of an empty city)", { timeout: TIMEOUT }, async () => {
     const context = await browser.newContext({ locale: "fr-FR" });
     const page = await context.newPage();
     let release;
@@ -111,6 +105,13 @@ describe("the page", () => {
       await page.goto(baseUrl());
       await page.waitForFunction(() => document.querySelectorAll("#palette button.tool").length > 0);
       assert.equal(await page.locator("#status").textContent(), "Chargement…");
+      assert.equal(await page.locator("#stats").textContent(), "", "no population of an empty city either");
+      assert.equal(await page.locator("#play").isDisabled(), true, "nothing to play before a city exists");
+      // once the sample arrives, the status line shows its date and funds, and only then
+      release();
+      await page.waitForFunction(() => document.getElementById("status").textContent.includes("$"));
+      assert.equal((await readStatus(page)).funds, 1000000, "the sample's funds");
+      assert.equal(await page.locator("#play").isDisabled(), false);
     } finally {
       release();
       await context.close();

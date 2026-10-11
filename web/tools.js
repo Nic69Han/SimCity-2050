@@ -27,7 +27,9 @@ export function resultMessage(code) {
     case RESULT.NO_MONEY:
       return "Pas assez d'argent";
     case RESULT.NEED_BULLDOZE:
-      return "Terrain à dégager d'abord (bulldozer)";
+      // the engine's code for "something is on the tile" (rubble, trees, or water, where a
+      // bulldozer cannot help): the message says what to do in either case
+      return "Emplacement occupé : dégagez-le d'abord ou choisissez un autre endroit";
     case RESULT.FAILED:
       return "Impossible de construire ici";
     default:

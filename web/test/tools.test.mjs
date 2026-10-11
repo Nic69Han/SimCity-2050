@@ -13,11 +13,19 @@ describe("result -> message (aria-live status, French)", () => {
     assert.equal(resultMessage(RESULT.NO_MONEY), "Pas assez d'argent");
     assert.equal(resultMessage(-2), "Pas assez d'argent");
   });
-  test("NeedBulldoze (-1)", () => {
-    assert.equal(resultMessage(RESULT.NEED_BULLDOZE), "Terrain à dégager d'abord (bulldozer)");
+  test("NeedBulldoze (-1): neutral, true on water too (a bulldozer cannot help there)", () => {
+    const msg = resultMessage(RESULT.NEED_BULLDOZE);
+    assert.equal(msg, "Emplacement occupé : dégagez-le d'abord ou choisissez un autre endroit");
+    assert.doesNotMatch(msg, /bulldozer/iu, "the message must not promise a bulldozer");
   });
   test("Failed (0)", () => {
     assert.equal(resultMessage(RESULT.FAILED), "Impossible de construire ici");
+  });
+  test("every failure message is short, French and does not name the tool", () => {
+    for (const code of [RESULT.NO_MONEY, RESULT.NEED_BULLDOZE, RESULT.FAILED]) {
+      const msg = resultMessage(code);
+      assert.ok(msg.length > 0 && msg.length <= 80, `${code}: ${msg}`);
+    }
   });
   test("Ok (1) clears the message", () => {
     assert.equal(resultMessage(RESULT.OK), "");

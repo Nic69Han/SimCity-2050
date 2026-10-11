@@ -5,7 +5,9 @@ import { stat } from "node:fs/promises";
 import {
   launchBrowser, openPage, assertNoErrors, newCity, readStatus, readToolMessage, mapDataUrl,
   selectTool, clickTile, findBlock, readMap, shot, pollUntil, DIRT_LABEL, START_FUNDS,
+  countFrames, readSample, shadowCity,
 } from "./helpers.mjs";
+import { tileColor } from "../palette.js";
 
 const TIMEOUT = 90000;
 const CTY_BYTES = 27120; // size of the sample cities, and of a saved one
@@ -101,28 +103,16 @@ describe("cities", () => {
     }
   });
 
-  // BUG (web/main.js, setPlaying): each Lecture schedules a new animation-frame loop and
-  // Pause only clears `playing`, so Lecture, Pause, Lecture within one frame leaves two loops
-  // running: the city then runs at double speed. Found by this test; kept as a TODO until the
-  // page cancels the pending frame (e.g. keep the frame id and cancelAnimationFrame it).
-  test("(g2) Lecture, Pause, Lecture within one frame runs one loop, not two", {
-    timeout: TIMEOUT,
-    todo: "page bug in web/main.js setPlaying: a second frame loop starts while the first is pending",
-  }, async () => {
+  test("(g2) Lecture, Pause, Lecture within one frame runs one loop, not two (no double speed)", { timeout: TIMEOUT }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
-      await page.evaluate(() => {
-        window.__frames = 0;
-        const raf = window.requestAnimationFrame.bind(window);
-        window.requestAnimationFrame = (cb) => {
-          window.__frames++;
-          return raf(cb);
-        };
-      });
-      const framesIn = (ms) => page.evaluate((m) => new Promise((resolve) => {
-        const start = window.__frames;
-        setTimeout(() => resolve(window.__frames - start), m);
-      }), ms);
+      await countFrames(page);
+      const framesIn = async (ms) => {
+        const from = await page.evaluate(() => window.__frames);
+        await page.waitForTimeout(ms);
+        return (await page.evaluate(() => window.__frames)) - from;
+      };
+      // three toggles in one task: Lecture, Pause, Lecture (no frame runs between them)
       await page.evaluate(() => {
         const b = document.getElementById("play");
         b.click();
@@ -130,49 +120,130 @@ describe("cities", () => {
         b.click();
       });
       assert.equal(await page.locator("#play").textContent(), "⏸ Pause");
-      const doubled = await framesIn(1000);
+      const afterToggles = await framesIn(1000);
       await page.click("#play"); // Pause
       await page.waitForTimeout(200);
-      await page.click("#play"); // Lecture, one loop
+      assert.equal(await framesIn(300), 0, "no frame runs while paused");
+      await page.click("#play"); // Lecture: one loop
       const single = await framesIn(1000);
-      assert.ok(single > 0, "the city plays");
-      assert.ok(doubled < single * 1.5, `frames requested per second: ${doubled} after the fast toggles, ${single} for one loop`);
       await page.click("#play");
+      assert.ok(single > 0, "the city plays");
+      assert.ok(afterToggles < single * 1.5,
+        `frames run per second: ${afterToggles} after the fast toggles, ${single} for one loop`);
       assertNoErrors(errors);
     } finally {
       await close();
     }
   });
 
-  test("(l) a file that is not a .cty shows an error and leaves the city as it was", { timeout: TIMEOUT }, async () => {
+  test("(l) a file that is not a .cty shows an error in its own line and leaves the city as it was", { timeout: TIMEOUT }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
       await newCity(page, "4242");
       const map = await mapDataUrl(page);
       const funds = (await readStatus(page)).funds;
       await page.setInputFiles("#file", { name: "bad.cty", mimeType: "application/octet-stream", buffer: Buffer.from("not a city") });
-      await pollUntil(async () => (await page.locator("#status").textContent()).startsWith("Erreur"), "the error message");
+      await pollUntil(async () => (await page.locator("#load-msg").textContent()).startsWith("Erreur"), "the error message");
       assert.equal(await mapDataUrl(page), map, "the map is unchanged");
+      assert.equal((await readStatus(page)).funds, funds, "the funds are unchanged");
       await shot(page, "l-bad-file");
-      assert.ok(funds > 0);
       assertNoErrors(errors);
     } finally {
       await close();
     }
   });
 
-  // BUG (web/main.js, load): the error replaces the whole status line, so the date and funds
-  // disappear until the next redraw. Kept as a TODO (the test runs, its failure is reported).
-  test("(l2) after a refused file the status line still shows the date and funds", {
-    timeout: TIMEOUT,
-    todo: "page bug in web/main.js load(): the error message replaces the date and funds on the status line",
-  }, async () => {
+  test("(l2) after a refused file the status line keeps the date and funds; the error is in #load-msg", { timeout: TIMEOUT }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
       await newCity(page, "4242");
+      const before = await page.locator("#status").textContent();
       await page.setInputFiles("#file", { name: "bad.cty", mimeType: "application/octet-stream", buffer: Buffer.from("not a city") });
-      await pollUntil(async () => (await page.locator("#status").textContent()).startsWith("Erreur"), "the error message");
+      await pollUntil(async () => (await page.locator("#load-msg").textContent()).startsWith("Erreur"), "the error message");
+      assert.equal(await page.locator("#status").textContent(), before, "the status line is untouched");
       assert.match(await page.locator("#status").textContent(), /\d\s*\$$/u, "the funds are still shown");
+      assert.equal(await page.locator("#tool-msg").textContent(), "", "the tool message is not used for load errors");
+      // a good file clears the error
+      await page.setInputFiles("#file", { name: "city.cty", mimeType: "application/octet-stream", buffer: await readSample("kyoto") });
+      await pollUntil(async () => (await page.locator("#load-msg").textContent()) === "", "the error to clear");
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  test("(n) the city selector names the city on the map: Ville aléatoire, Fichier local; a sample re-loads", { timeout: TIMEOUT }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      const selected = () => page.$eval("#city", (s) => s.options[s.selectedIndex].textContent);
+      const haight = await mapDataUrl(page);
+      assert.equal(await selected(), "Haight-Ashbury");
+
+      // a new city: the selector says so (and keeps the samples in its list)
+      await newCity(page, "4242");
+      const random = await mapDataUrl(page);
+      assert.equal(await selected(), "Ville aléatoire");
+      assert.equal(await page.locator("#city option").count(), 4);
+
+      // a sample: the map and the selector are that sample's again
+      await page.selectOption("#city", "haight");
+      await pollUntil(async () => (await mapDataUrl(page)) === haight, "the Haight-Ashbury map to come back");
+      assert.equal(await selected(), "Haight-Ashbury");
+      assert.equal(await page.locator("#city option").count(), 3, "the choice entry is gone");
+      assert.equal((await readStatus(page)).funds, 1000000);
+      assert.notEqual(random, haight);
+
+      // a local file (the Kyoto sample's bytes): the selector says Fichier local, and the
+      // date and funds are Kyoto's. (Pixels are not compared across loads: a city loaded after
+      // another one can differ in a few tile words, see the report.)
+      await page.selectOption("#city", "kyoto");
+      await pollUntil(async () => (await mapDataUrl(page)) !== haight, "the Kyoto map");
+      const kyotoStatus = await page.locator("#status").textContent();
+      await page.selectOption("#city", "haight");
+      await pollUntil(async () => (await page.locator("#status").textContent()) !== kyotoStatus, "Haight-Ashbury again");
+      await page.setInputFiles("#file", { name: "kyoto.cty", mimeType: "application/octet-stream", buffer: await readSample("kyoto") });
+      await pollUntil(async () => (await page.locator("#status").textContent()) === kyotoStatus, "the opened file's status");
+      assert.equal(await selected(), "Fichier local");
+      assert.equal(await page.locator("#load-msg").textContent(), "");
+      // a sample chosen after a file loads it again
+      await page.selectOption("#city", "haight");
+      await pollUntil(async () => (await page.locator("#status").textContent()) !== kyotoStatus, "Haight-Ashbury after the file");
+      assert.equal(await selected(), "Haight-Ashbury");
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  // BUG (engine, crates/micropolis-core load_cty): a .cty loaded into an engine that holds another
+  // city keeps some tile words of that city, so Kyoto after Haight-Ashbury differs from a fresh
+  // engine's Kyoto in a few tiles. Kept as a TODO until the core is deterministic across loads.
+  // The fresh reference is the shadow engine (same bytes, a new City); the page's pixels are read
+  // per tile at the tile centre and compared with the palette colour of each tile word.
+  test("(o) Kyoto loaded after Haight-Ashbury draws the same map as Kyoto in a fresh engine", {
+    timeout: TIMEOUT,
+    todo: "engine bug: load_cty depends on the previous city (a few Kyoto tiles differ), see the BUG comment",
+  }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      const haight = await mapDataUrl(page);
+      await page.selectOption("#city", "kyoto");
+      await pollUntil(async () => (await mapDataUrl(page)) !== haight, "the Kyoto map");
+      const map = await readMap(page);
+
+      const fresh = await shadowCity({ cty: await readSample("kyoto") });
+      const { city } = fresh;
+      const h = city.height();
+      const tiles = city.tiles();
+      const wrong = [];
+      for (let x = 0; x < map.w; x++) {
+        for (let y = 0; y < map.h; y++) {
+          const want = tileColor(tiles[x * h + y]);
+          const got = map.at(x, y).hex;
+          if (want !== got) wrong.push(`${x},${y}: ${got} (fresh ${want})`);
+        }
+      }
+      assert.deepEqual(wrong, [], `${wrong.length} tiles differ from a fresh engine's Kyoto`);
       assertNoErrors(errors);
     } finally {
       await close();
