@@ -245,7 +245,14 @@ impl Simulation {
     /// A new random city, as the original reaches it: a fresh engine (the
     /// constructor's `simInit`) followed by `generateSomeCity(seed)`. Disasters
     /// stay as `simInit` sets them (on); callers choose the other settings.
+    ///
+    /// The engine is rebuilt first, so the city depends only on `seed` and never on what the
+    /// engine held before (only the start year survives).
     pub fn new_random_city(&mut self, seed: i32) {
+        let (w, h) = self.world_size();
+        let starting_year = self.starting_year;
+        *self = Simulation::new(w, h);
+        self.starting_year = starting_year;
         self.sim_init();
         self.generate_some_city(seed);
     }

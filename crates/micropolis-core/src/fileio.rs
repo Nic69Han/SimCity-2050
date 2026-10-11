@@ -69,9 +69,35 @@ fn set_long(misc: &mut [i16], i: usize, v: i32) {
 }
 
 impl Simulation {
+    /// Whether `bytes` can be loaded into this engine (size of the file and of the world).
+    fn check_cty(&self, bytes: &[u8]) -> Result<(), CtyError> {
+        if self.world_size() != (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
+            return Err(CtyError::WorldSizeMismatch {
+                expected: (DEFAULT_WORLD_W, DEFAULT_WORLD_H),
+                actual: self.world_size(),
+            });
+        }
+        if bytes.len() != CTY_SIZE {
+            return Err(CtyError::BadSize(bytes.len()));
+        }
+        Ok(())
+    }
+
     /// Port of `loadFile`: replace the city with the one in `bytes`, run
     /// `doSimInit` (scans, census, power) like the original does.
+    ///
+    /// The result depends only on `bytes` and the current random generator state, never on what
+    /// the engine held before: the engine is rebuilt first (the C++ loads into a freshly
+    /// constructed engine). Only the generator state and the start year survive. A refused
+    /// file leaves the engine untouched.
     pub fn load_cty(&mut self, bytes: &[u8]) -> Result<(), CtyError> {
+        self.check_cty(bytes)?;
+        let (w, h) = self.world_size();
+        let rng = self.rng.clone();
+        let starting_year = self.starting_year;
+        *self = Simulation::new(w, h);
+        self.rng = rng;
+        self.starting_year = starting_year;
         self.load_cty_data(bytes)?;
         self.init_will_stuff();
         self.scenario = Scenario::None;
@@ -86,15 +112,7 @@ impl Simulation {
     /// Only the data part of `loadFile`: histories, tiles, and the settings
     /// stored in the misc history. No scans: the tile map is the raw file's.
     pub fn load_cty_data(&mut self, bytes: &[u8]) -> Result<(), CtyError> {
-        if self.world_size() != (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
-            return Err(CtyError::WorldSizeMismatch {
-                expected: (DEFAULT_WORLD_W, DEFAULT_WORLD_H),
-                actual: self.world_size(),
-            });
-        }
-        if bytes.len() != CTY_SIZE {
-            return Err(CtyError::BadSize(bytes.len()));
-        }
+        self.check_cty(bytes)?;
 
         let mut at = 0;
         for h in [
