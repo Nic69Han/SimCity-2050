@@ -185,7 +185,9 @@ Quad Micropolis::tickCount()
  */
 Ptr Micropolis::newPtr(int size)
 {
-    return (Ptr)malloc(size);
+    // ORACLE PATCH (not in upstream): zeroed memory, the engine reads
+    // its history arrays before initialising them.
+    return (Ptr)calloc(1, size);
 }
 
 

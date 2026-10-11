@@ -101,7 +101,7 @@ void Micropolis::cityEvaluation()
 {
     //printf("cityEvaluation totalPop %d\n", totalPop);
     if (totalPop > 0) {
-        short problemTable[PROBNUM]; // Score for each problem, higher the more severe the problem is.
+        short problemTable[PROBNUM + 1] = {0}; // ORACLE PATCH: slot PROBNUM is read by voteProblems (UB upstream) // Score for each problem, higher the more severe the problem is.
         for (int z = 0; z < PROBNUM; z++) {
             problemTable[z] = 0;
         }

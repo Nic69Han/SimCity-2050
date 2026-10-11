@@ -68,3 +68,10 @@ engine, which is built here as an oracle:
     and their Rust names/signatures; shims you created; fields you added; tests
     and what they compare against; anything you could NOT port or are unsure
     about (be honest — never claim parity you did not test).
+
+## Oracle patches (the only deviations of `reference/micropolis-cpp` from upstream)
+1. `random.cpp`: `randomlySeedRandom()` honours env `MICROPOLIS_SEED`.
+2. `stubs.cpp`: `newPtr` uses `calloc` (the engine reads some arrays before writing them).
+3. `evaluate.cpp`: `cityEvaluation`'s `problemTable` has one extra zeroed slot, because
+   `voteProblems` reads `problemTable[PROBNUM]` (undefined behaviour upstream). The Rust
+   port treats that slot as 0, so the patched oracle is the well-defined reference.
