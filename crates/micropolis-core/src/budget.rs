@@ -17,7 +17,7 @@ use crate::events::Event;
 use crate::simulation::{Simulation, NOWHERE};
 
 /// `MESSAGE_NO_MONEY` in `text.h` ("YOUR CITY HAS GONE BROKE!").
-pub const MESSAGE_NO_MONEY: i16 = 26;
+pub const MESSAGE_NO_MONEY: i16 = 29;
 
 /// Result of the allocation step of `doBudgetNow`.
 #[derive(Debug, Clone, Copy, PartialEq)]

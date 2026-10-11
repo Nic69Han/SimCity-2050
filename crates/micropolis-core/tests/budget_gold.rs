@@ -7,7 +7,7 @@
 //! auto budget survived (`A 1`) or was switched off (`A 0`). `doBudgetNow`
 //! itself is not run here because it calls the integration shims.
 
-use micropolis_core::budget::{allocate_funding, budget_path, BudgetPath};
+use micropolis_core::budget::{allocate_funding, budget_path, BudgetPath, MESSAGE_NO_MONEY};
 use micropolis_core::simulation::Simulation;
 
 const GOLD: &str = include_str!("data/budget_gold.txt");
@@ -28,7 +28,8 @@ impl Gen {
     }
 }
 
-/// Expected lines in order: a `B` line then an `A` line per case, then `I`.
+/// Expected lines in order: a `B` line then an `A` line per case, then `I`
+/// and `M` (the message number, checked against `text.h`).
 #[test]
 fn budget_matches_original_cpp() {
     let mut g = Gen(777_001);
@@ -103,5 +104,8 @@ fn budget_matches_original_cpp() {
         s.must_draw_budget as i32
     );
     assert_eq!(got, want);
+
+    let want = lines.next().expect("missing M line");
+    assert_eq!(format!("M {}", MESSAGE_NO_MONEY), want, "MESSAGE_NO_MONEY");
     assert!(lines.next().is_none(), "unexpected extra golden lines");
 }

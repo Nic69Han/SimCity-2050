@@ -10,6 +10,7 @@
 // Run:   reference/build/budget_cases > crates/micropolis-core/tests/data/budget_gold.txt
 #define private public
 #include "micropolis.h"
+#include "text.h"
 #undef private
 #include <cstdint>
 #include <cstdio>
@@ -74,5 +75,6 @@ int main() {
     m.initFundingLevel();
     printf("I %u %u %u %lld %lld %lld %d\n", bits(m.firePercent), bits(m.policePercent),
            bits(m.roadPercent), LL(m.fireValue), LL(m.policeValue), LL(m.roadValue), m.mustDrawBudget);
+    printf("M %d\n", (int)MESSAGE_NO_MONEY);
     return 0;
 }
