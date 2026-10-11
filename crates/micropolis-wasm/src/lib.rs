@@ -65,6 +65,38 @@ impl City {
         i32::from(self.sim.total_pop)
     }
 
+    /// Advance the simulation by one tick (`simTick`). Does nothing while the
+    /// speed is 0.
+    pub fn tick(&mut self) {
+        self.sim.sim_tick();
+    }
+
+    /// Speed 0 (paused) to 3 (fast), as `setSpeed`.
+    pub fn set_speed(&mut self, speed: i32) {
+        self.sim.set_speed(speed as i16);
+    }
+
+    pub fn speed(&self) -> i32 {
+        i32::from(self.sim.sim_speed)
+    }
+
+    pub fn enable_disasters(&mut self, on: bool) {
+        self.sim.set_enable_disasters(on);
+    }
+
+    /// Residential, commercial and industrial demand valves.
+    pub fn demand(&self) -> Vec<i32> {
+        vec![
+            i32::from(self.sim.res_valve),
+            i32::from(self.sim.com_valve),
+            i32::from(self.sim.ind_valve),
+        ]
+    }
+
+    pub fn score(&self) -> i32 {
+        i32::from(self.sim.city_score)
+    }
+
     /// Number of pending events, then discards them. Events carry no payload
     /// the page needs yet; it simply redraws after a load.
     pub fn take_events(&mut self) -> u32 {

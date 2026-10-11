@@ -1,5 +1,5 @@
 // Reference oracle: runs the ORIGINAL C++ engine and prints state fingerprints.
-// Usage: oracle <city.cty> <seed> <ticks> [dump_dir]
+// Usage: [ORACLE_DISASTERS=1] oracle <city.cty> <seed> <ticks> [dump_dir]
 // Prints one line per tick: "tick N key=value ..." so Rust can be diffed line by line.
 // With dump_dir, also writes <dump_dir>/map_<N>.txt (12000 tile values, column-major).
 #define private public
@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     setenv("MICROPOLIS_SEED", argv[2], 1); // read by randomlySeedRandom() (oracle patch)
     Micropolis m;
     if (!m.loadFile(argv[1])) { printf("load fail\n"); return 1; }
-    m.setEnableDisasters(false);
+    m.setEnableDisasters(getenv("ORACLE_DISASTERS") != NULL); // env ORACLE_DISASTERS=1 enables them
     m.setSpeed(3);
     m.setPasses(1);
     int ticks = atoi(argv[3]);
