@@ -215,14 +215,12 @@ describe("cities", () => {
     }
   });
 
-  // BUG (engine, crates/micropolis-core load_cty): a .cty loaded into an engine that holds another
-  // city keeps some tile words of that city, so Kyoto after Haight-Ashbury differs from a fresh
-  // engine's Kyoto in a few tiles. Kept as a TODO until the core is deterministic across loads.
+  // Regression (fixed in micropolis-core): a .cty loaded into an engine that held another city used
+  // to keep some state of that city, so Kyoto after Haight-Ashbury differed from a fresh engine's Kyoto.
   // The fresh reference is the shadow engine (same bytes, a new City); the page's pixels are read
   // per tile at the tile centre and compared with the palette colour of each tile word.
   test("(o) Kyoto loaded after Haight-Ashbury draws the same map as Kyoto in a fresh engine", {
     timeout: TIMEOUT,
-    todo: "engine bug: load_cty depends on the previous city (a few Kyoto tiles differ), see the BUG comment",
   }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {

@@ -109,6 +109,14 @@ impl Simulation {
         Ok(())
     }
 
+    /// [`load_cty`](Self::load_cty) after seeding the random generator: the result depends on
+    /// `bytes` and `seed` only. (The original seeds from the clock, which is not reproducible.)
+    pub fn load_cty_seeded(&mut self, bytes: &[u8], seed: i32) -> Result<(), CtyError> {
+        self.check_cty(bytes)?;
+        self.rng.seed(seed);
+        self.load_cty(bytes)
+    }
+
     /// Only the data part of `loadFile`: histories, tiles, and the settings
     /// stored in the misc history. No scans: the tile map is the raw file's.
     pub fn load_cty_data(&mut self, bytes: &[u8]) -> Result<(), CtyError> {

@@ -99,3 +99,23 @@ fn new_random_city_after_another_city_equals_fresh() {
     );
     assert_eq!(used_saved, fresh_saved);
 }
+
+#[test]
+fn seeded_load_depends_only_on_file_and_seed() {
+    let mut fresh = Simulation::with_default_size();
+    fresh.load_cty_seeded(KYOTO, 1).unwrap();
+    let fresh_saved = run(&mut fresh, 100);
+
+    let mut used = Simulation::with_default_size();
+    used.load_cty_seeded(HAIGHT, 9).unwrap();
+    run(&mut used, 250);
+    used.load_cty_seeded(KYOTO, 1).unwrap();
+    assert_eq!(run(&mut used, 100), fresh_saved);
+
+    // A refused file changes neither the city nor the generator.
+    let before = used.save_cty();
+    let next = used.rng.clone().random16();
+    assert!(used.load_cty_seeded(&KYOTO[..10], 5).is_err());
+    assert_eq!(used.save_cty(), before);
+    assert_eq!(used.rng.clone().random16(), next);
+}

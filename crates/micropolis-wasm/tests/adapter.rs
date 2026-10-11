@@ -253,3 +253,21 @@ fn save_and_load_round_trip_after_tools() {
     assert_eq!(zones(&loaded.tiles()), zones(&city.tiles()));
     assert!(zones(&loaded.tiles()) > 0);
 }
+
+#[test]
+fn loading_a_city_does_not_depend_on_the_previous_one() {
+    const KYOTO: &[u8] = include_bytes!("../../../assets/cities/kyoto.cty");
+
+    let mut fresh = City::new(1);
+    fresh.load_cty(KYOTO).unwrap();
+
+    let mut used = haight();
+    for _ in 0..200 {
+        used.tick();
+    }
+    used.load_cty(KYOTO).unwrap();
+
+    assert_eq!(used.tiles(), fresh.tiles());
+    assert_eq!(used.funds(), fresh.funds());
+    assert_eq!(used.save_cty(), fresh.save_cty());
+}

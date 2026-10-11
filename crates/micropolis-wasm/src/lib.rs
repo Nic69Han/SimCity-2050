@@ -6,6 +6,10 @@ use micropolis_core::simulation::{GameLevel, Simulation};
 use micropolis_core::tool::{EditingTool, ToolResult, TOOL_COUNT};
 use wasm_bindgen::prelude::*;
 
+/// Seed of the random generator when a city file is loaded: the same file always gives the
+/// same city (the original seeds from the clock, which cannot be reproduced).
+const LOAD_SEED: i32 = 1;
+
 /// Year the original front-end gives to city time 0.
 const STARTING_YEAR: i16 = 1900;
 
@@ -43,7 +47,7 @@ impl City {
     /// Load the bytes of a `.cty` file; the error is a readable message.
     pub fn load_cty(&mut self, bytes: &[u8]) -> Result<(), JsError> {
         self.sim
-            .load_cty(bytes)
+            .load_cty_seeded(bytes, LOAD_SEED)
             .map_err(|e| JsError::new(&e.to_string()))
     }
 
@@ -77,8 +81,10 @@ impl City {
         self.sim.calendar().1 as i32
     }
 
+    /// City population as the original front-end shows it (`getPopulation`:
+    /// residents plus eight times the workers, times 20).
     pub fn population(&self) -> i32 {
-        i32::from(self.sim.total_pop)
+        i32::try_from(self.sim.get_population()).unwrap_or(i32::MAX)
     }
 
     /// Advance the simulation by one tick (`simTick`). Does nothing while the
