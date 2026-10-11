@@ -29,6 +29,8 @@
 //! 2 housing, 3 taxes, 4 traffic, 5 unemployment, 6 fire. Entries that do not exist
 //! are `-1` with 0 votes.
 //!
+//! `tax_fund_at(rate) -> i32`: the taxes a collection would bring in at that rate (no change).
+//!
 //! `history(kind, scale) -> Vec<i32>`: 120 values, oldest first. `kind`: 0 residential,
 //! 1 commercial, 2 industrial demand (valve history), 3 money, 4 crime, 5 pollution.
 //! `scale`: 0 = last 10 years (short), 1 = last 120 years (long). Empty for other values.
@@ -114,6 +116,11 @@ impl City {
     /// The city evaluation (layout in the module documentation).
     pub fn evaluation(&self) -> Vec<i32> {
         evaluation_layout(&self.sim.evaluation_report())
+    }
+
+    /// Taxes a collection would bring in at `rate` for the current city (no change).
+    pub fn tax_fund_at(&self, rate: i32) -> i32 {
+        sat(self.sim.tax_fund_at_rate(rate))
     }
 
     /// One history graph, 120 values, oldest first (see the module documentation).

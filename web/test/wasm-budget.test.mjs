@@ -58,6 +58,15 @@ describe("wasm budget contract", { skip: SKIP }, () => {
     }
   });
 
+  test("tax_fund_at() previews the collection at the current rate", () => {
+    const city = load();
+    for (let i = 0; i < 60; i++) city.tick();
+    assert.equal(city.tax_fund_at(0), 0);
+    const at10 = city.tax_fund_at(10);
+    const at20 = city.tax_fund_at(20);
+    assert.ok(at10 > 0 && at20 >= 2 * at10 - 1, `${at10} ${at20}`);
+  });
+
   test("history() returns 120 values for valid kinds and scales, nothing otherwise", () => {
     const city = load();
     for (let i = 0; i < 3; i++) city.tick();

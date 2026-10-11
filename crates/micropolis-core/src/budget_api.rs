@@ -105,6 +105,15 @@ impl Simulation {
         true
     }
 
+    /// The taxes a collection would bring in at `rate` for the current city
+    /// (the `taxFund` formula of `tax_amounts`, with `rate` instead of `cityTax`).
+    /// Nothing is changed: this is the figure the tax slider shows.
+    pub fn tax_fund_at_rate(&self, rate: i32) -> i64 {
+        const F_LEVELS: [f32; 3] = [1.4, 1.2, 0.8];
+        let base = (self.total_pop as i64 * self.land_value_average as i64) / 120;
+        ((base * rate as i64) as f32 * F_LEVELS[self.game_level as usize]) as i64
+    }
+
     /// The budget dialog's "accept": store the three percentages (clamped to
     /// `0..=100`) and run `doBudgetFromMenu`, which allocates the current funds
     /// with the new percentages (scaling them back when money runs out). Nothing
@@ -172,6 +181,21 @@ mod tests {
         assert!(!s.set_tax_rate(21));
         assert!(!s.set_tax_rate(-1));
         assert_eq!(s.city_tax, 20);
+    }
+
+    #[test]
+    fn tax_preview_matches_the_collection_formula() {
+        let mut s = Simulation::with_default_size();
+        s.load_cty(include_bytes!("../../../assets/cities/haight.cty"))
+            .expect("load");
+        for rate in [0i16, 7, 20] {
+            s.city_tax = rate;
+            assert_eq!(
+                s.tax_fund_at_rate(rate as i32),
+                s.tax_amounts().3,
+                "rate {rate}"
+            );
+        }
     }
 
     #[test]
