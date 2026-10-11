@@ -27,7 +27,8 @@ tool_down(id: i32, x: i32, y: i32) -> i32            // ToolResult code
 tool_drag(id: i32, x0, y0, x1, y1) -> void
 tool_preview(id: i32, x: i32, y: i32) -> Int32Array  // [result, cost]
 tool_footprint(id: i32, x: i32, y: i32) -> Int32Array // [x0, y0, w, h]
-query(x: i32, y: i32) -> string                      // zone status text, '' if none
+query(x: i32, y: i32) -> Int32Array                  // [] if nothing to report, else [category, density, land_value, crime, pollution, growth]
+                                                      // = ZoneStatus (string-table indices as in the C++ `doZoneStatus`); the PAGE translates them to French
 new_random_city(seed: i32) -> void
 ```
 ## Page (`web/`)
@@ -38,3 +39,9 @@ shortcuts; works with mouse and touch (pointer events). The page keeps no game s
 ## Differential tests (agents "toolscript", "newcity")
 `reference/oracle` and `examples/fingerprint` gain a script mode so that tool actions applied during a run
 must give identical per-tick fingerprints in C++ and Rust.
+
+## Status (wave 1 merged)
+Core API (`EditingTool::{ALL,cost,size,key,footprint}`, `Simulation::tool_preview`), `Simulation::new_random_city(seed)`,
+tool-script and new-city differential tests, and the page (palette/input against a mock engine) are merged.
+Wave 2: wasm adapter implementing the list above, page changes (query formatting, "new city" button),
+differential test "new city + player builds", then an end-to-end browser test on the real wasm.
