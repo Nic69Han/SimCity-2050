@@ -184,7 +184,8 @@ mod tests {
 
     #[test]
     fn empty_city_evaluation_has_no_problems() {
-        let s = Simulation::with_default_size();
+        let mut s = Simulation::with_default_size();
+        s.city_evaluation(); // an empty city is reset by evalInit (no problem list yet)
         let e = s.evaluation_report();
         assert_eq!(e.problems, [None; CVP_PROBLEM_COMPLAINTS]);
     }
