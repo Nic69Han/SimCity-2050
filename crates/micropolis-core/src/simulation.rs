@@ -290,6 +290,25 @@ pub struct Simulation {
     pub res_last: i64,
     pub com_last: i64,
     pub ind_last: i64,
+    // @fields:power (agent power: add your extra Simulation fields right below this line)
+
+    // @fields:scan (agent scan: add your extra Simulation fields right below this line)
+
+    // @fields:evaluate (agent evaluate: add your extra Simulation fields right below this line)
+
+    // @fields:generate (agent generate: add your extra Simulation fields right below this line)
+
+    // @fields:zone (agent zone: add your extra Simulation fields right below this line)
+
+    // @fields:traffic (agent traffic: add your extra Simulation fields right below this line)
+
+    // @fields:tool (agent tool: add your extra Simulation fields right below this line)
+
+    // @fields:sprite (agent sprite: add your extra Simulation fields right below this line)
+
+    // @fields:simulate (agent simulate: add your extra Simulation fields right below this line)
+
+    // @fields:misc (agent misc: add your extra Simulation fields right below this line)
 }
 
 impl Simulation {
@@ -485,6 +504,25 @@ impl Simulation {
             res_last: 0,
             com_last: 0,
             ind_last: 0,
+            // @init:power (agent power: initialise your extra fields right below this line)
+
+            // @init:scan (agent scan: initialise your extra fields right below this line)
+
+            // @init:evaluate (agent evaluate: initialise your extra fields right below this line)
+
+            // @init:generate (agent generate: initialise your extra fields right below this line)
+
+            // @init:zone (agent zone: initialise your extra fields right below this line)
+
+            // @init:traffic (agent traffic: initialise your extra fields right below this line)
+
+            // @init:tool (agent tool: initialise your extra fields right below this line)
+
+            // @init:sprite (agent sprite: initialise your extra fields right below this line)
+
+            // @init:simulate (agent simulate: initialise your extra fields right below this line)
+
+            // @init:misc (agent misc: initialise your extra fields right below this line)
         }
     }
 
