@@ -6,6 +6,7 @@ import { createRenderer } from "./render.js";
 import * as messages from "./messages.js";
 import * as budgetUi from "./budget-ui.js";
 import { parseSeed, supportsNewCity, applyEnginePreferences } from "./newcity.js";
+import { chooseSize, readLimits, supportsNewSized, isSaveable, saveNote, sizeErrorText } from "./sizes.js";
 import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
 import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT } from "./status.js";
@@ -24,6 +25,7 @@ let city, tools = null;
 let ready = false; // true once a city is in the engine (sample, file or new city)
 let seedNote = null; // seed of the city made by "Nouvelle ville", shown in the status line
 let shown = "haight"; // the selector value of the city on the map
+let sizeLimits = null; // map size limits of the engine (City.size_limits), read at start
 const latest = createLatest(); // the newest load wins (a late sample never replaces a file)
 
 const playback = createPlayback({
@@ -34,9 +36,17 @@ const playback = createPlayback({
   },
 });
 
+// Enregistrer only saves the original 120 x 100 map (a .cty file describes that size).
+function updateSaveButton() {
+  const saveable = isSaveable(city);
+  $("save").disabled = !saveable;
+  $("save-note").textContent = saveNote(saveable);
+}
+
 function draw() {
   if (!ready) return; // no city yet: the status line keeps "Chargement…", no numbers
   renderer.draw(city);
+  updateSaveButton();
   // funds are part of every redraw, so the status line shows them after every action
   status.textContent = formatStatus({
     seed: seedNote,
@@ -132,12 +142,26 @@ async function loadSample(name) {
   else showCity(name);
 }
 
+// A new random city of the chosen size, in the same city object (the tools and the playback keep it).
+function makeCity(size, seed) {
+  if (supportsNewSized(City)) city.adopt(City.new_sized(size.width, size.height, seed));
+  else city.new_random_city(seed);
+}
+
 // "Nouvelle ville": stop playback, ask the engine for a city from the seed, keep the
 // page's speed and disasters options, show the seed so it can be noted and reused.
 function newCity() {
   const seedInput = $("seed");
   if (!ready) {
     $("new-msg").textContent = LOADING_TEXT;
+    return;
+  }
+  const size = chooseSize({ preset: $("size").value, width: $("size-w").value, height: $("size-h").value }, sizeLimits);
+  const sizeFields = { width: $("size-w"), height: $("size-h") };
+  for (const f of Object.values(sizeFields)) f.removeAttribute("aria-invalid");
+  if (size.error) {
+    $("new-msg").textContent = size.error;
+    if (size.field) sizeFields[size.field].setAttribute("aria-invalid", "true");
     return;
   }
   const parsed = parseSeed(seedInput.value);
@@ -150,7 +174,12 @@ function newCity() {
   seedInput.removeAttribute("aria-invalid");
   latest.start(); // a sample or file still loading must not replace this city
   setPlaying(false);
-  city.new_random_city(parsed.seed);
+  try {
+    makeCity(size, parsed.seed);
+  } catch (e) {
+    $("new-msg").textContent = sizeErrorText(String(e?.message ?? e), sizeLimits);
+    return;
+  }
   // the engine resets its speed and disasters on a new city: push the page's options again
   applyEnginePreferences(city, { speed: $("speed").value, disasters: $("disasters").checked });
   seedNote = parsed.seed;
@@ -194,6 +223,14 @@ tools = setupTools({
 const hasNewCity = supportsNewCity(city);
 $("newcity").hidden = !hasNewCity;
 $("newcity-btn").onclick = newCity;
+sizeLimits = readLimits(City);
+$("size-w").min = sizeLimits.minWidth;
+$("size-w").max = sizeLimits.maxWidth;
+$("size-h").min = sizeLimits.minHeight;
+$("size-h").max = sizeLimits.maxHeight;
+$("size").onchange = (e) => {
+  $("size-custom").hidden = e.target.value !== "custom";
+};
 $("seed").onkeydown = (e) => {
   if (e.key === "Enter") newCity();
 };
@@ -214,9 +251,10 @@ $("play").onclick = () => setPlaying(!playback.playing);
 $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
 $("save").onclick = () => {
-  if (!ready) return;
+  if (!ready || !isSaveable(city)) return;
+  const bytes = typeof city.save_checked === "function" ? city.save_checked() : city.save_cty();
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([city.save_cty()], { type: "application/octet-stream" }));
+  a.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
   a.download = "city.cty";
   a.click();
   URL.revokeObjectURL(a.href);

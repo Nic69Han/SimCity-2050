@@ -15,7 +15,8 @@ Two modes, both writing a `.tools` script to stdout:
    A player builds a city on the terrain of a NEW random city. <dump> is the tile map
    written by the oracle right after generation:
        ORACLE_DUMP_MAP=<dump> reference/build/oracle_gen <seed> 0
-   (12000 values, column-major: index = x * 100 + y). The generator finds the largest
+   (W*H values, column-major: index = x * H + y; W x H is given by --size WxH, default
+   120x100). The generator finds the largest
    site of dirt/trees (no water, two tiles from the map edge) that holds a grid of city
    blocks, then plans, in game ticks:
      * tick 1-2   probes: a zone on a tree (needs clearing) and a zone on water;
@@ -34,6 +35,10 @@ Two modes, both writing a `.tools` script to stdout:
    All coordinates and the draw use only <seed> and the map, so the same arguments always
    give the same file. The checked-in starter scripts were made from the dumps of the
    oracle for seeds 1, 2, 3, 7, 42 (see scripts/compare-newcity-tools.sh).
+   Other sizes: --size WxH with the oracle built for that size (scripts/build-oracle-size.sh):
+       ORACLE_DUMP_MAP=<dump> reference/build/oracle_gen_WxH <seed> 0
+       gen-tool-script.py --starter <seed> --map <dump> --size WxH [--ticks 3000]
+   The generator's coordinates (block grid, bulldozer clicks, off-map probes) follow the size.
 
 Uses its own LCG (no `random` module), so the same arguments always give the same file.
 """
@@ -367,13 +372,28 @@ def starter_script(seed, tiles, ticks):
     return header + [line for _, line in sorted(acts, key=lambda ta: ta[0])]
 
 
+def parse_size(text):
+    """`WxH` -> (W, H); the oracle's own limits (80x67 minimum, 512x512 maximum)."""
+    try:
+        w, h = (int(v) for v in text.lower().split("x"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"size must be WxH, got {text!r}")
+    if not (80 <= w <= 512 and 67 <= h <= 512):
+        raise argparse.ArgumentTypeError(f"size {w}x{h} outside 80x67 .. 512x512")
+    return w, h
+
+
 def main(argv):
+    global WORLD_W, WORLD_H
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("args", nargs="*", type=int, help="random mode: <seed> <ticks> <n_actions>")
     parser.add_argument("--starter", type=int, metavar="SEED", help="starter city mode")
     parser.add_argument("--map", metavar="DUMP", help="starter mode: the oracle_gen map dump")
     parser.add_argument("--ticks", type=int, default=3000, help="starter mode: last tick of the script")
+    parser.add_argument("--size", type=parse_size, default=(120, 100), metavar="WxH",
+                        help="world size of the map and of the oracle (default 120x100)")
     opts = parser.parse_args(argv)
+    WORLD_W, WORLD_H = opts.size
 
     if opts.starter is not None:
         if opts.args or not opts.map:

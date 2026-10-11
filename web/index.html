@@ -22,8 +22,19 @@
   <label><input id="disasters" type="checkbox"> Catastrophes</label>
   <div id="newcity" class="newcity" hidden>
     <button id="newcity-btn" type="button">Nouvelle ville</button>
+    <label>Taille <select id="size" aria-label="Taille de la carte">
+      <option value="normal">Normal (120 × 100)</option>
+      <option value="grande">Grande (200 × 150)</option>
+      <option value="tres-grande">Très grande (300 × 250)</option>
+      <option value="custom">Personnalisée</option>
+    </select></label>
+    <span id="size-custom" hidden>
+      <label>Largeur <input id="size-w" type="number" inputmode="numeric" min="80" max="512" step="1" value="120" size="4"></label>
+      <label>Hauteur <input id="size-h" type="number" inputmode="numeric" min="67" max="512" step="1" value="100" size="4"></label>
+    </span>
     <label>Graine <input id="seed" type="text" inputmode="numeric" autocomplete="off" placeholder="au hasard" size="11"></label>
     <span id="new-msg" role="status"></span>
+    <span id="save-note" role="status"></span>
   </div>
   <span id="status" role="status">Chargement…</span>
 </header>
