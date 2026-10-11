@@ -3,6 +3,7 @@
 // Everything above setupTools() is pure and importable without a DOM. setupTools() is
 // the only function that touches the page, and it is called at runtime only.
 import { ToolStroke, attachPointer, tileAt } from "./input.js";
+import { formatZoneStatus } from "./query.js";
 
 export const TILE_PX = 6; // canvas pixels per tile (same as main.js)
 
@@ -101,6 +102,17 @@ export function shortcutFor(key) {
   return Object.hasOwn(SHORTCUTS, key) ? SHORTCUTS[key] : null;
 }
 
+// Rows of the keyboard help: [{ key: "B", label: "Bulldozer" }, ...] sorted by key, for the
+// tools the engine reports, then the fixed keys (Échap cancels the tool).
+export function shortcutRows(catalog) {
+  const rows = catalog
+    .filter((t) => t.shortcut)
+    .map((t) => ({ key: t.shortcut.toUpperCase(), label: t.label }))
+    .sort((a, b) => a.key.localeCompare(b.key, "fr"));
+  rows.push({ key: "Échap", label: "Abandonner l'outil choisi" });
+  return rows;
+}
+
 // Tool id bound to a typed character, among the tools the engine actually reports.
 export function toolIdForShortcut(char, catalog) {
   if (typeof char !== "string" || char.length !== 1) return null;
@@ -143,6 +155,14 @@ export function formatCost(cost) {
   return cost > 0 ? `${cost.toLocaleString("fr-FR")} $` : "gratuit";
 }
 
+// Cost shown on the hover label. When the placement is Ok, the cost is the one tool_preview
+// returns (terrain can add cost: clearing trees or rubble), never the catalog price. Otherwise
+// the preview's cost if it has one, else the catalog price, so the label always tells a cost.
+export function costLabel(preview, price) {
+  if (preview[0] === RESULT.OK) return formatCost(preview[1]);
+  return formatCost(preview[1] > 0 ? preview[1] : price);
+}
+
 // tool_footprint [x0, y0, w, h] in tiles -> pixel rectangle on the overlay.
 export function outlineRect(fp, px = TILE_PX) {
   const [x0, y0, w, h] = fp;
@@ -163,6 +183,16 @@ const el = (tag, className, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
+
+// Fills the keyboard help list (<dl>) with the shortcut rows.
+function buildHelp(dl, rows) {
+  dl.replaceChildren();
+  for (const r of rows) {
+    const dt = el("dt", null);
+    dt.append(el("kbd", "tool-key", r.key));
+    dl.append(dt, el("dd", null, r.label));
+  }
+}
 
 // Builds the palette buttons into `container`. Returns { select(id | null) }.
 function buildPalette(container, catalog, onPick) {
@@ -211,7 +241,7 @@ function paintHover(g, rect, preview, price) {
   g.strokeStyle = color;
   g.lineWidth = 2;
   g.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-  const text = formatCost(preview[1] > 0 ? preview[1] : price);
+  const text = costLabel(preview, price);
   g.font = "bold 14px system-ui, sans-serif";
   const boxW = g.measureText(text).width + 8;
   const boxH = 18;
@@ -230,17 +260,23 @@ function paintHover(g, rect, preview, price) {
 // Returns { render() } to call after every redraw of the map, or null when the engine
 // has no tool API (the palette and overlay are then hidden and the page works as before).
 //   onChange(): redraws the whole page after an action (the map and funds change).
-export function setupTools({ city, canvas, overlay, palette, message, queryPanel, onChange }) {
+//   help (optional): <dl> that receives the keyboard shortcut rows; hidden without the tool API.
+export function setupTools({ city, canvas, overlay, palette, message, queryPanel, help = null, onChange }) {
   if (!supportsTools(city)) {
     palette.hidden = true;
     overlay.hidden = true;
     queryPanel.hidden = true;
+    if (help) help.closest("details").hidden = true;
     return null;
   }
 
   palette.hidden = false;
   overlay.hidden = false;
   const catalog = readCatalog(city);
+  if (help) {
+    buildHelp(help, shortcutRows(catalog));
+    help.closest("details").hidden = false;
+  }
   const byId = new Map(catalog.map((t) => [t.id, t]));
   const queryId = catalog.find((t) => t.key === "query")?.id ?? null;
   const isInspect = (id) => id === queryId && typeof city.query === "function";
@@ -255,8 +291,13 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
     isInspect,
     onResult: (code) => say(resultMessage(code)),
     onInspect: (tile) => {
+      // [] (or nothing usable) -> the "rien à signaler" line; otherwise one line per fact.
+      const lines = formatZoneStatus(city.query(tile.x, tile.y));
       queryPanel.hidden = false;
-      queryPanel.textContent = city.query(tile.x, tile.y) || "Rien à signaler ici.";
+      queryPanel.replaceChildren(
+        ...(lines.length ? lines : ["Rien à signaler ici."]).map((line, i) =>
+          el("div", i === 0 ? "query-title" : "query-line", line)),
+      );
     },
   });
 

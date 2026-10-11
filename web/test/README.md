@@ -20,5 +20,12 @@ Files:
 - `tools.test.mjs`: result -> French message for every ToolResult code, feature
   detection fallback (no tool API -> no palette), catalog and groups, shortcut table,
   hover outline geometry and colour verdict.
+- `query.test.mjs`: zone status (`city.query`, an Int32Array) -> French lines, every
+  index of the C++ doZoneStatus (STR202 + 1, category k + 1), unknown indices.
+- `palette.test.mjs`: tile colours shared by the renderer and the legend; no overlaps;
+  the legend's rows; the renderer table agrees with the lookup.
+- `newcity.test.mjs`: seed box parsing (empty = random, clamp to i32, errors), random
+  seeds (31-bit, never 0), feature detection, the mock's `new_random_city`.
 - `mock-engine.mjs`: deterministic fake `City` implementing the tool contract of
   `docs/tools-contract.md`. Its rules are documented at the top of the file.
+- `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.

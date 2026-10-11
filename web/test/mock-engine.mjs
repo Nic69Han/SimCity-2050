@@ -6,17 +6,44 @@
 //   - origin off the map, or any footprint tile off the map or on water -> Failed (0), cost 0
 //   - footprint on rubble and tool is not bulldozer                  -> NeedBulldoze (-1)
 //   - funds below the cost                                           -> NoMoney (-2)
-//   - otherwise Ok (1); the cost is charged, bulldozer clears rubble, others build (tile 64)
-//   - query never changes state; query text is '' on bare dirt
+//   - otherwise Ok (1); the preview cost is charged, bulldozer clears rubble, others build their tile
+//   - query never changes state; it returns Int32Array [] off the map, else
+//     [category, density, land_value, crime, pollution, growth] (docs/tools-contract.md).
+//     The category follows the tile (dirt reports 29, as the C++ does); the four other
+//     values are deterministic functions of (x, y) covering every index of web/query.js.
 //   - footprint origin: size 1 at (x, y); size 3 starts at (x-1, y-1); size 4 at (x-1, y-1);
 //     size 6 at (x-2, y-2)
+//   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
+//   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
+//     so tool_preview's cost differs from the catalog price (the page must show the preview's)
+//   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
+//     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
+//     adapter does (simInit defaults); the page must push its own settings back afterwards
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
 export const DIRT = 0;
 export const WATER = 2;
-export const RUBBLE = 36;
-export const BUILDING = 64;
+export const TREES = 21;
+export const RUBBLE = 44;
+export const RESIDENTIAL = 240;
+export const START_FUNDS = 20000;
+export const TREE_CLEAR = 10; // extra dollars per tree tile cleared by a building tool
+const NO_TERRAIN_COST = new Set(["query", "bulldozer", "water", "land", "forest"]);
+
+// Tile written by a successful build, per tool key (the rest of the tools write residential).
+const TILE_OF = Object.freeze({
+  road: 64, network: 64, wire: 208, railroad: 224, residential: 240, commercial: 423,
+  industrial: 612, seaport: 693, airport: 709, coal_power: 745, fire_station: 761,
+  police_station: 770, stadium: 779, nuclear_power: 811, park: TREES, forest: TREES,
+  water: WATER, land: DIRT,
+});
+
+// Query category (string-table index, web/query.js) of a tile.
+const CATEGORY_OF = new Map([
+  [DIRT, 29], [WATER, 2], [TREES, 3], [RUBBLE, 4], [64, 8], [208, 9], [224, 10], [RESIDENTIAL, 11],
+  [423, 12], [612, 13], [693, 14], [709, 15], [745, 16], [761, 17], [770, 18], [779, 19], [811, 20],
+]);
 
 // Index = EditingTool index (tool.rs order). cost in dollars, size in tiles.
 export const MOCK_TOOLS = Object.freeze([
@@ -58,23 +85,41 @@ export class MockCity {
   #map; // column-major like the engine: tiles[x * height + y]
   #funds;
   #speed = 2;
+  #rubble = 60;
+  #disasters = true;
+  seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
   log = [];
 
-  constructor(seed = 1, { width = 40, height = 30, funds = 20000, rubble = 60 } = {}) {
+  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60 } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
-    this.#map = new Uint16Array(width * height).fill(DIRT);
-    const rnd = lcg(seed);
-    // a lake in the top-left corner, then some rubble patches away from it
+    this.#rubble = rubble;
+    this.#generate(seed);
+  }
+
+  // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
+  #generate(seed) {
+    this.seed = seed | 0;
+    this.#map = new Uint16Array(this.#width * this.#height).fill(DIRT);
+    const rnd = lcg(this.seed);
     for (let x = 3; x < 10; x++) for (let y = 3; y < 8; y++) this.#set(x, y, WATER);
-    for (let i = 0; i < rubble; i++) {
-      const x = Math.floor(rnd() * width);
-      const y = Math.floor(rnd() * height);
+    for (let i = 0; i < this.#rubble; i++) {
+      const x = Math.floor(rnd() * this.#width);
+      const y = Math.floor(rnd() * this.#height);
       if (this.#get(x, y) === DIRT) this.#set(x, y, RUBBLE);
     }
+  }
+
+  // Same signature as the engine's new_random_city(seed: i32). The page keeps its own
+  // speed and disasters settings; the engine's are kept here too, as the page re-applies them.
+  new_random_city(seed) {
+    this.#generate(seed | 0);
+    this.#funds = START_FUNDS;
+    this.#speed = 3; // engine defaults after a new city
+    this.#disasters = true;
   }
 
   #inside(x, y) {
@@ -113,9 +158,12 @@ export class MockCity {
         if (tile === RUBBLE) rubble = true;
       }
     }
+    let trees = 0;
+    for (let i = x0; i < x0 + w; i++) for (let j = y0; j < y0 + h; j++) if (this.#get(i, j) === TREES) trees++;
+    const cost = t.cost + (NO_TERRAIN_COST.has(t.key) ? 0 : trees * TREE_CLEAR);
     if (rubble && t.key !== "bulldozer") return { result: RESULT.NEED_BULLDOZE, cost: t.cost };
-    if (this.#funds < t.cost) return { result: RESULT.NO_MONEY, cost: t.cost };
-    return { result: RESULT.OK, cost: t.cost };
+    if (this.#funds < cost) return { result: RESULT.NO_MONEY, cost };
+    return { result: RESULT.OK, cost };
   }
 
   tool_count() {
@@ -149,7 +197,7 @@ export class MockCity {
           if (t.key === "bulldozer") {
             if (this.#get(i, j) === RUBBLE) this.#set(i, j, DIRT);
           } else {
-            this.#set(i, j, BUILDING);
+            this.#set(i, j, TILE_OF[t.key] ?? RESIDENTIAL);
           }
         }
       }
@@ -165,12 +213,17 @@ export class MockCity {
     if (t && t.size === 1 && t.key !== "query") this.tool_down(id, x1, y1);
   }
   query(x, y) {
-    if (!this.#inside(x, y)) return "";
-    const tile = this.#get(x, y);
-    if (tile === WATER) return `Tuile (${x}, ${y}) : eau`;
-    if (tile === RUBBLE) return `Tuile (${x}, ${y}) : décombres`;
-    if (tile === BUILDING) return `Tuile (${x}, ${y}) : bâtiment`;
-    return "";
+    if (!this.#inside(x, y)) return Int32Array.of();
+    const category = CATEGORY_OF.get(this.#get(x, y)) ?? 1;
+    // deterministic spread over every index of web/query.js (density 1-4, land 5-8, ...)
+    return Int32Array.of(
+      category,
+      1 + ((x + y) % 4),
+      5 + ((x * 3 + y) % 4),
+      9 + (x % 4),
+      13 + (y % 4),
+      17 + ((x + 2 * y) % 4),
+    );
   }
 
   // --- city state used by the page (not part of the tool contract) ---
@@ -207,7 +260,12 @@ export class MockCity {
   set_speed(s) {
     this.#speed = s;
   }
-  enable_disasters() {}
+  enable_disasters(on) {
+    this.#disasters = Boolean(on);
+  }
+  disasters() {
+    return this.#disasters;
+  }
   tick() {}
   load_cty() {}
   take_events() {
