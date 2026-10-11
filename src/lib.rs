@@ -7,6 +7,7 @@
 pub mod map;
 pub mod position;
 pub mod rng;
+pub mod simulation;
 pub mod tile;
 pub mod tile_chars;
 

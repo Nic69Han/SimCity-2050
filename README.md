@@ -19,10 +19,11 @@ Chaque module est converti puis **validé contre le code C++ d'origine** :
 | position.* | position.rs | fait (2 bugs C++ corrigés, voir doc) |
 | map_type.h | map.rs | fait, tailles dynamiques |
 | MapTileBits / Characters | tile.rs, tile_chars.rs | fait (généré) |
+| micropolis.h/.cpp, allocate, initialize | simulation.rs | état de `Simulation`, `new_city`, `init_graph_max` fait (sans callbacks/sprites) |
 | power, scan, zone, simulate, traffic, ... | | à faire |
 
 ## Ordre conseillé pour la suite
-1. `Simulation` (struct d'état, remplace `class Micropolis`) + `initialize`, `allocate`
+1. ~~`Simulation` (struct d'état, remplace `class Micropolis`) + `initialize`, `allocate`~~ (fait, reste `doPowerScan`/`evalInit` qui arrivent avec `power` et `evaluate`)
 2. `fileio` (lecture des `.cty` : permet de comparer des villes réelles avec le C++)
 3. `power`, `scan`, `zone`, `simulate`, `traffic`, `budget`, `evaluate`
 4. `generate` (génération de terrain), `tool` (outils de construction), `disasters`, `sprite`
