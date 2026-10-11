@@ -17,6 +17,7 @@ actions=0
 declare -A tally=()
 for city in assets/cities/*.cty; do
   for script in assets/scripts/*.tools; do
+    case "$(basename "$script")" in budget_*) continue ;; esac # money scripts: scripts/compare-budget.sh
     # Actions the run will apply: those whose tick is within the simulated range.
     expected=$(awk -v t="$TICKS" '!/^#/ && NF>=5 && $1+0 <= t+0 {n++} END {print n+0}' "$script")
     for dis in 0 1; do

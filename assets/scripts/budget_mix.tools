@@ -1,0 +1,13 @@
+# Budget differential: odd tax rates and percents at irregular ticks, including the
+# boundary values 0, 1, 99, 100 of the budget dialog. Run by scripts/compare-budget.sh.
+0 budget 100 100 100
+37 tax 13
+137 budget 33 66 99
+411 tax 17
+555 budget 1 2 3
+1024 tax 2
+1333 budget 77 23 41
+1999 tax 19
+2222 budget 100 0 100
+2777 tax 0
+2999 budget 0 100 0
