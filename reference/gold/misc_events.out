@@ -1,0 +1,1674 @@
+SPEED p=0 v=-2
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=3
+SPEED p=0 v=-1
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=3
+SPEED p=0 v=0
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=3
+SPEED p=0 v=1
+U speed
+SPEED-STATE meta=1 speed=1 pausedSpeed=3
+SPEED p=0 v=2
+U speed
+SPEED-STATE meta=2 speed=2 pausedSpeed=3
+SPEED p=0 v=3
+U speed
+SPEED-STATE meta=3 speed=3 pausedSpeed=3
+SPEED p=0 v=4
+U speed
+SPEED-STATE meta=3 speed=3 pausedSpeed=3
+SPEED p=0 v=5
+U speed
+SPEED-STATE meta=3 speed=3 pausedSpeed=3
+SPEED p=1 v=-2
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=0
+SPEED p=1 v=-1
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=0
+SPEED p=1 v=0
+U speed
+SPEED-STATE meta=0 speed=0 pausedSpeed=0
+SPEED p=1 v=1
+U speed
+SPEED-STATE meta=1 speed=0 pausedSpeed=1
+SPEED p=1 v=2
+U speed
+SPEED-STATE meta=2 speed=0 pausedSpeed=2
+SPEED p=1 v=3
+U speed
+SPEED-STATE meta=3 speed=0 pausedSpeed=3
+SPEED p=1 v=4
+U speed
+SPEED-STATE meta=3 speed=0 pausedSpeed=3
+SPEED p=1 v=5
+U speed
+SPEED-STATE meta=3 speed=0 pausedSpeed=3
+U speed
+PR setSpeed(2) meta=2 speed=2
+U speed
+U paused
+PR pause meta=0 speed=0 pausedSpeed=2 paused=1
+U paused
+PR pause2 meta=0 speed=0 pausedSpeed=2 paused=1
+U speed
+PR setSpeed(3) while paused meta=3 speed=0 pausedSpeed=3
+U speed
+U paused
+PR resume meta=3 speed=3 pausedSpeed=3 paused=0
+U paused
+PR resume2 meta=3 speed=3 paused=0
+U passes
+PASSES passes=5 pass=0
+U gameLevel
+LEVEL 2
+U cityName
+CITYNAME [San_Fran_cisco_2_]
+U cityName
+CITYNAME []
+U cityName
+CITYNAME [Ab_c]
+U date
+YEAR t=0 y=1900 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+YEAR t=0 y=1990 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+U date
+YEAR t=0 y=2000 -> time=480 cityYear=2000 cityMonth=0 cur=2000
+U date
+YEAR t=0 y=2050 -> time=2880 cityYear=2050 cityMonth=0 cur=2050
+U date
+YEAR t=47 y=1900 -> time=47 cityYear=1990 cityMonth=11 cur=1990
+YEAR t=47 y=1990 -> time=47 cityYear=1990 cityMonth=11 cur=1990
+U date
+YEAR t=47 y=2000 -> time=527 cityYear=2000 cityMonth=11 cur=2000
+U date
+YEAR t=47 y=2050 -> time=2927 cityYear=2050 cityMonth=11 cur=2050
+U date
+YEAR t=48 y=1900 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+YEAR t=48 y=1990 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+U date
+YEAR t=48 y=2000 -> time=480 cityYear=2000 cityMonth=0 cur=2000
+U date
+YEAR t=48 y=2050 -> time=2880 cityYear=2050 cityMonth=0 cur=2050
+U date
+YEAR t=95 y=1900 -> time=47 cityYear=1990 cityMonth=11 cur=1990
+YEAR t=95 y=1990 -> time=47 cityYear=1990 cityMonth=11 cur=1990
+U date
+YEAR t=95 y=2000 -> time=527 cityYear=2000 cityMonth=11 cur=2000
+U date
+YEAR t=95 y=2050 -> time=2927 cityYear=2050 cityMonth=11 cur=2050
+U date
+YEAR t=4800 y=1900 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+YEAR t=4800 y=1990 -> time=0 cityYear=1990 cityMonth=0 cur=1990
+U date
+YEAR t=4800 y=2000 -> time=480 cityYear=2000 cityMonth=0 cur=2000
+U date
+YEAR t=4800 y=2050 -> time=2880 cityYear=2050 cityMonth=0 cur=2050
+U date
+YEAR t=100000 y=1900 -> time=16 cityYear=1990 cityMonth=4 cur=1990
+YEAR t=100000 y=1990 -> time=16 cityYear=1990 cityMonth=4 cur=1990
+U date
+YEAR t=100000 y=2000 -> time=496 cityYear=2000 cityMonth=4 cur=2000
+U date
+YEAR t=100000 y=2050 -> time=2896 cityYear=2050 cityMonth=4 cur=2050
+U options
+OPT dis=0 budget=0 bull=1 goto=1 sound=1 anim=0 msg=0 notice=1
+OPT-again
+U funds
+FUNDS 1 total=20000 last=20000
+U funds
+FUNDS 2 total=18500
+U funds
+FUNDS 3 total=7 last=7
+U date
+DATE t=0 -> time=0 timeLast=0 year=1990 month=0 yearLast=1990 monthLast=0
+U date
+DATE t=1 -> time=1 timeLast=0 year=1990 month=0 yearLast=1990 monthLast=0
+U date
+DATE t=3 -> time=3 timeLast=0 year=1990 month=0 yearLast=1990 monthLast=0
+U date
+DATE t=4 -> time=4 timeLast=1 year=1990 month=1 yearLast=1990 monthLast=1
+U date
+DATE t=47 -> time=47 timeLast=11 year=1990 month=11 yearLast=1990 monthLast=11
+U date
+DATE t=48 -> time=48 timeLast=12 year=1991 month=0 yearLast=1991 monthLast=0
+U date
+DATE t=50 -> time=50 timeLast=12 year=1991 month=0 yearLast=1991 monthLast=0
+U date
+DATE t=4799 -> time=4799 timeLast=1199 year=2089 month=11 yearLast=2089 monthLast=11
+U date
+DATE t=100000 -> time=100000 timeLast=25000 year=4073 month=4 yearLast=4073 monthLast=4
+U date
+M 40 -1 -1 1 0
+DATE t=47904624 -> time=0 timeLast=0 year=1990 month=0 yearLast=1990 monthLast=0
+U demand
+VALVE r=0 c=0 i=0 -> last 0 0 0 flag=0
+U demand
+VALVE r=-3000 c=1500 i=700 -> last -1500 1500 700 flag=0
+U demand
+VALVE r=1500 c=-1500 i=-1499 -> last 1500 -1500 -1499 flag=0
+U demand
+VALVE r=17 c=17 i=17 -> last 17 17 17 flag=0
+U demand
+VALVE r=2600 c=-7 i=0 -> last 1500 -7 0 flag=0
+U demand
+U date
+U funds
+HEADS last 1200 -400 90 timeLast=0 yearLast=1990 monthLast=0 fundsLast=7
+GET -1 -1 -1 = 0
+GET -1 -1 0 = 0
+GET -1 -1 5 = 0
+GET -1 -1 119 = 0
+GET -1 -1 120 = 0
+GET -1 -1 239 = 0
+GET -1 -1 240 = 0
+GET -1 0 -1 = 0
+GET -1 0 0 = 0
+GET -1 0 5 = 0
+GET -1 0 119 = 0
+GET -1 0 120 = 0
+GET -1 0 239 = 0
+GET -1 0 240 = 0
+GET -1 1 -1 = 0
+GET -1 1 0 = 0
+GET -1 1 5 = 0
+GET -1 1 119 = 0
+GET -1 1 120 = 0
+GET -1 1 239 = 0
+GET -1 1 240 = 0
+GET -1 2 -1 = 0
+GET -1 2 0 = 0
+GET -1 2 5 = 0
+GET -1 2 119 = 0
+GET -1 2 120 = 0
+GET -1 2 239 = 0
+GET -1 2 240 = 0
+GET 0 -1 -1 = 0
+GET 0 -1 0 = 0
+GET 0 -1 5 = 0
+GET 0 -1 119 = 0
+GET 0 -1 120 = 0
+GET 0 -1 239 = 0
+GET 0 -1 240 = 0
+GET 0 0 -1 = 0
+GET 0 0 0 = -50
+GET 0 0 5 = 135
+GET 0 0 119 = 139
+GET 0 0 120 = 0
+GET 0 0 239 = 0
+GET 0 0 240 = 0
+GET 0 1 -1 = 0
+GET 0 1 0 = 176
+GET 0 1 5 = 60
+GET 0 1 119 = 64
+GET 0 1 120 = 0
+GET 0 1 239 = 0
+GET 0 1 240 = 0
+GET 0 2 -1 = 0
+GET 0 2 0 = 0
+GET 0 2 5 = 0
+GET 0 2 119 = 0
+GET 0 2 120 = 0
+GET 0 2 239 = 0
+GET 0 2 240 = 0
+GET 1 -1 -1 = 0
+GET 1 -1 0 = 0
+GET 1 -1 5 = 0
+GET 1 -1 119 = 0
+GET 1 -1 120 = 0
+GET 1 -1 239 = 0
+GET 1 -1 240 = 0
+GET 1 0 -1 = 0
+GET 1 0 0 = -50
+GET 1 0 5 = 190
+GET 1 0 119 = 244
+GET 1 0 120 = 0
+GET 1 0 239 = 0
+GET 1 0 240 = 0
+GET 1 1 -1 = 0
+GET 1 1 0 = -9
+GET 1 1 5 = 231
+GET 1 1 119 = -16
+GET 1 1 120 = 0
+GET 1 1 239 = 0
+GET 1 1 240 = 0
+GET 1 2 -1 = 0
+GET 1 2 0 = 0
+GET 1 2 5 = 0
+GET 1 2 119 = 0
+GET 1 2 120 = 0
+GET 1 2 239 = 0
+GET 1 2 240 = 0
+GET 2 -1 -1 = 0
+GET 2 -1 0 = 0
+GET 2 -1 5 = 0
+GET 2 -1 119 = 0
+GET 2 -1 120 = 0
+GET 2 -1 239 = 0
+GET 2 -1 240 = 0
+GET 2 0 -1 = 0
+GET 2 0 0 = -50
+GET 2 0 5 = 245
+GET 2 0 119 = 48
+GET 2 0 120 = 0
+GET 2 0 239 = 0
+GET 2 0 240 = 0
+GET 2 1 -1 = 0
+GET 2 1 0 = 107
+GET 2 1 5 = 101
+GET 2 1 119 = 205
+GET 2 1 120 = 0
+GET 2 1 239 = 0
+GET 2 1 240 = 0
+GET 2 2 -1 = 0
+GET 2 2 0 = 0
+GET 2 2 5 = 0
+GET 2 2 119 = 0
+GET 2 2 120 = 0
+GET 2 2 239 = 0
+GET 2 2 240 = 0
+GET 3 -1 -1 = 0
+GET 3 -1 0 = 0
+GET 3 -1 5 = 0
+GET 3 -1 119 = 0
+GET 3 -1 120 = 0
+GET 3 -1 239 = 0
+GET 3 -1 240 = 0
+GET 3 0 -1 = 0
+GET 3 0 0 = -50
+GET 3 0 5 = -1
+GET 3 0 119 = 153
+GET 3 0 120 = 0
+GET 3 0 239 = 0
+GET 3 0 240 = 0
+GET 3 1 -1 = 0
+GET 3 1 0 = 223
+GET 3 1 5 = -29
+GET 3 1 119 = 125
+GET 3 1 120 = 0
+GET 3 1 239 = 0
+GET 3 1 240 = 0
+GET 3 2 -1 = 0
+GET 3 2 0 = 0
+GET 3 2 5 = 0
+GET 3 2 119 = 0
+GET 3 2 120 = 0
+GET 3 2 239 = 0
+GET 3 2 240 = 0
+GET 4 -1 -1 = 0
+GET 4 -1 0 = 0
+GET 4 -1 5 = 0
+GET 4 -1 119 = 0
+GET 4 -1 120 = 0
+GET 4 -1 239 = 0
+GET 4 -1 240 = 0
+GET 4 0 -1 = 0
+GET 4 0 0 = -50
+GET 4 0 5 = 54
+GET 4 0 119 = -43
+GET 4 0 120 = 0
+GET 4 0 239 = 0
+GET 4 0 240 = 0
+GET 4 1 -1 = 0
+GET 4 1 0 = 38
+GET 4 1 5 = 142
+GET 4 1 119 = 45
+GET 4 1 120 = 0
+GET 4 1 239 = 0
+GET 4 1 240 = 0
+GET 4 2 -1 = 0
+GET 4 2 0 = 0
+GET 4 2 5 = 0
+GET 4 2 119 = 0
+GET 4 2 120 = 0
+GET 4 2 239 = 0
+GET 4 2 240 = 0
+GET 5 -1 -1 = 0
+GET 5 -1 0 = 0
+GET 5 -1 5 = 0
+GET 5 -1 119 = 0
+GET 5 -1 120 = 0
+GET 5 -1 239 = 0
+GET 5 -1 240 = 0
+GET 5 0 -1 = 0
+GET 5 0 0 = -50
+GET 5 0 5 = 109
+GET 5 0 119 = 62
+GET 5 0 120 = 0
+GET 5 0 239 = 0
+GET 5 0 240 = 0
+GET 5 1 -1 = 0
+GET 5 1 0 = 154
+GET 5 1 5 = 12
+GET 5 1 119 = -35
+GET 5 1 120 = 0
+GET 5 1 239 = 0
+GET 5 1 240 = 0
+GET 5 2 -1 = 0
+GET 5 2 0 = 0
+GET 5 2 5 = 0
+GET 5 2 119 = 0
+GET 5 2 120 = 0
+GET 5 2 239 = 0
+GET 5 2 240 = 0
+GET 6 -1 -1 = 0
+GET 6 -1 0 = 0
+GET 6 -1 5 = 0
+GET 6 -1 119 = 0
+GET 6 -1 120 = 0
+GET 6 -1 239 = 0
+GET 6 -1 240 = 0
+GET 6 0 -1 = 0
+GET 6 0 0 = 0
+GET 6 0 5 = 0
+GET 6 0 119 = 0
+GET 6 0 120 = 0
+GET 6 0 239 = 0
+GET 6 0 240 = 0
+GET 6 1 -1 = 0
+GET 6 1 0 = 0
+GET 6 1 5 = 0
+GET 6 1 119 = 0
+GET 6 1 120 = 0
+GET 6 1 239 = 0
+GET 6 1 240 = 0
+GET 6 2 -1 = 0
+GET 6 2 0 = 0
+GET 6 2 5 = 0
+GET 6 2 119 = 0
+GET 6 2 120 = 0
+GET 6 2 239 = 0
+GET 6 2 240 = 0
+RANGE -1 -1 = 0 0
+RANGE -1 0 = 0 0
+RANGE -1 1 = 0 0
+RANGE -1 2 = 0 0
+RANGE 0 -1 = 0 0
+RANGE 0 0 = -50 248
+RANGE 0 1 = -49 250
+RANGE 0 2 = 0 0
+RANGE 1 -1 = 0 0
+RANGE 1 0 = -50 248
+RANGE 1 1 = -48 250
+RANGE 1 2 = 0 0
+RANGE 2 -1 = 0 0
+RANGE 2 0 = -50 250
+RANGE 2 1 = -48 248
+RANGE 2 2 = 0 0
+RANGE 3 -1 = 0 0
+RANGE 3 0 = -50 244
+RANGE 3 1 = -50 244
+RANGE 3 2 = 0 0
+RANGE 4 -1 = 0 0
+RANGE 4 0 = -50 250
+RANGE 4 1 = -47 246
+RANGE 4 2 = 0 0
+RANGE 5 -1 = 0 0
+RANGE 5 0 = -50 245
+RANGE 5 1 = -46 249
+RANGE 5 2 = 0 0
+RANGE 6 -1 = 0 0
+RANGE 6 0 = 0 0
+RANGE 6 1 = 0 0
+RANGE 6 2 = 0 0
+SET money-long7=1234 res-short119=-5 bad=0
+U history
+GRAPH-DOER done
+TILE get(-1,0)=0 get(0,0)=0 get(3,4)=4660
+TILE off-map set ignored get(120,0)=0
+POWER 44 0 0
+POWER-set 9
+POPDENS 44 0 0
+ROG 4464 0
+TRAF 255 0 0
+POLL 201 0
+CRIME 99 0
+LAND 232 0
+FIRE 4464 -33
+POLICE -4464 0
+U map
+MAPSERIAL 2
+S city Siren 3 4
+S city Monster -1 -1
+S city ExplosionLow -1 -1
+QUAKE 5
+QUAKE 6
+G 10 20
+LOSE
+WIN
+NEW
+NOTIFY done
+PRESET 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+S2 res=0 com=0 ind=0 resCap=0 comCap=0 indCap=0 totalZone=0 scoreWait=0
+PRESET 1
+M 6 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 16 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 12 -1 -1 1 0
+M 6 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 16 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 12 -1 -1 1 0
+M 6 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 16 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 12 -1 -1 1 0
+M 6 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 16 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 12 -1 -1 1 0
+S2 res=600 com=150 ind=80 resCap=1 comCap=1 indCap=0 totalZone=15 scoreWait=0
+PRESET 2
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 6 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 6 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 6 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 6 -1 -1 0 0
+S2 res=100 com=10 ind=10 resCap=0 comCap=0 indCap=0 totalZone=550 scoreWait=0
+PRESET 3
+M 1 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 6 -1 -1 0 0
+M 9 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 1 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 6 -1 -1 0 0
+M 9 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 1 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 6 -1 -1 0 0
+M 9 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+M 1 -1 -1 0 0
+M 3 -1 -1 0 0
+M 4 -1 -1 0 0
+M 6 -1 -1 0 0
+M 9 -1 -1 0 0
+M 17 -1 -1 0 0
+M 18 -1 -1 0 0
+S2 res=0 com=300 ind=100 resCap=0 comCap=1 indCap=0 totalZone=20 scoreWait=0
+PRESET 4
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 12 -1 -1 1 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 12 -1 -1 1 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 12 -1 -1 1 0
+M 4 -1 -1 0 0
+M 5 -1 -1 0 0
+M 7 -1 -1 0 0
+M 9 -1 -1 0 0
+M 10 -1 -1 1 0
+M 11 -1 -1 1 0
+M 13 -1 -1 0 0
+M 12 -1 -1 1 0
+S2 res=501 com=101 ind=71 resCap=1 comCap=1 indCap=0 totalZone=75 scoreWait=0
+PRESET 5
+M 1 -1 -1 0 0
+M 47 -1 -1 1 1
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 12 -1 -1 1 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 12 -1 -1 1 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 12 -1 -1 1 0
+M 1 -1 -1 0 0
+M 2 -1 -1 0 0
+M 3 -1 -1 0 0
+M 12 -1 -1 1 0
+S2 res=9 com=0 ind=0 resCap=0 comCap=0 indCap=0 totalZone=0 scoreWait=0
+SCORE sc=1 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=0 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=1 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=2 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=3 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=1 cls=4 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=1 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=0 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=1 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=2 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=3 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=2 cls=4 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=2 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=0 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=1 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=2 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=79 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=3 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=3 cls=4 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=80 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=3 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=0 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=0 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=0 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=0 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=0 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=0 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=1 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=1 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=1 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=1 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=1 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=1 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=2 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=2 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=2 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=2 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=2 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=2 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=3 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=3 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=3 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=3 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=3 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=3 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=4 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=4 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=4 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=4 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=4 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=4 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=5 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=5 traf=79 crime=60 score=500
+M 47 -1 -1 1 1
+SCORE sc=4 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=4 cls=5 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=5 traf=80 crime=59 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=5 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=4 cls=5 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=0 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=0 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=0 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=0 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=1 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=1 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=1 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=1 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=2 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=2 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=2 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=2 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=3 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=3 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=3 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=3 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=4 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=4 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=4 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=4 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=5 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=5 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=5 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=5 cls=5 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=5 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=0 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=0 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=0 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=0 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=0 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=0 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=1 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=1 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=1 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=1 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=1 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=1 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=2 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=2 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=2 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=2 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=2 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=2 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=3 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=3 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=3 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=3 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=3 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=3 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=4 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=4 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=4 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=4 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=4 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=4 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=5 traf=79 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=5 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=5 traf=79 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=5 traf=80 crime=59 score=500
+M 47 -1 -1 1 1
+SCORE sc=6 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=6 cls=5 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=6 cls=5 traf=80 crime=60 score=501
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=0 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=0 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=0 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=0 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=1 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=1 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=1 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=1 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=2 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=2 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=2 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=2 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=3 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=3 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=3 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=3 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=4 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=4 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=4 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=4 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=5 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=5 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=5 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=7 cls=5 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=7 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=0 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=0 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=0 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=0 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=0 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=0 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=0 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=0 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=1 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=1 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=1 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=1 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=1 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=1 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=1 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=1 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=2 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=2 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=2 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=2 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=2 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=2 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=2 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=2 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=3 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=3 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=3 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=3 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=3 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=3 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=3 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=3 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=4 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=4 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=4 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=4 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=4 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=4 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=4 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=4 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=5 traf=79 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=5 traf=79 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=5 traf=79 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=5 traf=79 crime=60 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=5 traf=80 crime=59 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=5 traf=80 crime=59 score=501
+M 47 -1 -1 1 1
+SCORE sc=8 cls=5 traf=80 crime=60 score=500
+M 48 -1 -1 1 1
+LOSE
+SCORE sc=8 cls=5 traf=80 crime=60 score=501
+M 47 -1 -1 1 1
+MSND seed=1 msg=1
+MSND seed=1 msg=12
+MSND seed=1 msg=11
+S city Siren 5 -1
+MSND seed=1 msg=20
+S city Siren 5 -1
+MSND seed=1 msg=21
+S city Monster 5 -1
+MSND seed=1 msg=22
+S city Siren 5 -1
+MSND seed=1 msg=23
+S city Siren 5 -1
+MSND seed=1 msg=24
+S city Siren 5 -1
+MSND seed=1 msg=25
+S city Siren 5 -1
+MSND seed=1 msg=26
+S city Siren 5 -1
+MSND seed=1 msg=27
+S city Siren 5 -1
+MSND seed=1 msg=30
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=1 msg=43
+S city ExplosionHigh 5 -1
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=1 msg=44
+S city Siren 5 -1
+MSND seed=1 msg=40
+MSND seed=777 msg=1
+MSND seed=777 msg=12
+S city HonkHonkLow 5 -1
+MSND seed=777 msg=11
+S city Siren 5 -1
+MSND seed=777 msg=20
+S city Siren 5 -1
+MSND seed=777 msg=21
+S city Monster 5 -1
+MSND seed=777 msg=22
+S city Siren 5 -1
+MSND seed=777 msg=23
+S city Siren 5 -1
+MSND seed=777 msg=24
+S city Siren 5 -1
+MSND seed=777 msg=25
+S city Siren 5 -1
+MSND seed=777 msg=26
+S city Siren 5 -1
+MSND seed=777 msg=27
+S city Siren 5 -1
+MSND seed=777 msg=30
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=777 msg=43
+S city ExplosionHigh 5 -1
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=777 msg=44
+S city Siren 5 -1
+MSND seed=777 msg=40
+MSND seed=123456 msg=1
+MSND seed=123456 msg=12
+S city HonkHonkHigh 5 -1
+MSND seed=123456 msg=11
+S city Siren 5 -1
+MSND seed=123456 msg=20
+S city Siren 5 -1
+MSND seed=123456 msg=21
+S city Monster 5 -1
+MSND seed=123456 msg=22
+S city Siren 5 -1
+MSND seed=123456 msg=23
+S city Siren 5 -1
+MSND seed=123456 msg=24
+S city Siren 5 -1
+MSND seed=123456 msg=25
+S city Siren 5 -1
+MSND seed=123456 msg=26
+S city Siren 5 -1
+MSND seed=123456 msg=27
+S city Siren 5 -1
+MSND seed=123456 msg=30
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=123456 msg=43
+S city ExplosionHigh 5 -1
+S city ExplosionLow 5 -1
+S city Siren 5 -1
+MSND seed=123456 msg=44
+S city Siren 5 -1
+MSND seed=123456 msg=40

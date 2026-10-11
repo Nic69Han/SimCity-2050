@@ -309,6 +309,11 @@ pub struct Simulation {
     // @fields:simulate (agent simulate: add your extra Simulation fields right below this line)
 
     // @fields:misc (agent misc: add your extra Simulation fields right below this line)
+    pub enable_sound: bool,
+    pub auto_goto: bool,
+    pub must_update_funds: bool,
+    pub must_update_options: bool,
+    pub history_initialized: bool,
 }
 
 impl Simulation {
@@ -523,6 +528,11 @@ impl Simulation {
             // @init:simulate (agent simulate: initialise your extra fields right below this line)
 
             // @init:misc (agent misc: initialise your extra fields right below this line)
+            enable_sound: false,
+            auto_goto: false,
+            must_update_funds: false,
+            must_update_options: false,
+            history_initialized: false,
         }
     }
 
