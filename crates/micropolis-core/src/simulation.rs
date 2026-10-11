@@ -297,7 +297,8 @@ pub struct Simulation {
     // @fields:evaluate (agent evaluate: add your extra Simulation fields right below this line)
 
     // @fields:generate (agent generate: add your extra Simulation fields right below this line)
-
+    /// `generatedCitySeed`: the seed of the last `generate_map_seed` call.
+    pub generated_city_seed: i32,
     // @fields:zone (agent zone: add your extra Simulation fields right below this line)
 
     // @fields:traffic (agent traffic: add your extra Simulation fields right below this line)
@@ -511,7 +512,7 @@ impl Simulation {
             // @init:evaluate (agent evaluate: initialise your extra fields right below this line)
 
             // @init:generate (agent generate: initialise your extra fields right below this line)
-
+            generated_city_seed: 0,
             // @init:zone (agent zone: initialise your extra fields right below this line)
 
             // @init:traffic (agent traffic: initialise your extra fields right below this line)
