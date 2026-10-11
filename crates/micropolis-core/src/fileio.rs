@@ -6,9 +6,7 @@
 //! then the 120x100 tile map in column-major order. 27 120 bytes in total.
 //! Longs inside the misc history are two shorts, high word first.
 
-use crate::simulation::{
-    CityClass, GameLevel, Scenario, Simulation, HISTORY_LEN, MISC_HISTORY_LEN,
-};
+use crate::simulation::{Scenario, Simulation, HISTORY_LEN, MISC_HISTORY_LEN};
 use crate::{DEFAULT_WORLD_H, DEFAULT_WORLD_W};
 
 pub const CTY_SIZE: usize = 27_120;
@@ -71,8 +69,23 @@ fn set_long(misc: &mut [i16], i: usize, v: i32) {
 }
 
 impl Simulation {
-    /// Port of `loadFile`: replace the city with the one in `bytes`.
+    /// Port of `loadFile`: replace the city with the one in `bytes`, run
+    /// `doSimInit` (scans, census, power) like the original does.
     pub fn load_cty(&mut self, bytes: &[u8]) -> Result<(), CtyError> {
+        self.load_cty_data(bytes)?;
+        self.init_will_stuff();
+        self.scenario = Scenario::None;
+        self.init_sim_load = 1;
+        self.do_initial_eval = false;
+        self.do_sim_init();
+        self.map_serial += 1;
+        self.push_event(crate::events::Event::NewCity);
+        Ok(())
+    }
+
+    /// Only the data part of `loadFile`: histories, tiles, and the settings
+    /// stored in the misc history. No scans: the tile map is the raw file's.
+    pub fn load_cty_data(&mut self, bytes: &[u8]) -> Result<(), CtyError> {
         if self.world_size() != (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
             return Err(CtyError::WorldSizeMismatch {
                 expected: (DEFAULT_WORLD_W, DEFAULT_WORLD_H),
@@ -122,13 +135,6 @@ impl Simulation {
         self.sim_speed_meta = self.sim_speed;
         self.sim_passes = 1;
 
-        self.init_will_stuff();
-        self.scenario = Scenario::None;
-        self.init_sim_load = 1;
-        self.do_initial_eval = false;
-        self.sim_load_init();
-        self.map_serial += 1;
-        self.push_event(crate::events::Event::NewCity);
         Ok(())
     }
 
@@ -164,61 +170,6 @@ impl Simulation {
             .for_each(|v| out.extend(v.to_be_bytes()));
         self.tiles.iter().for_each(|t| out.extend(t.to_be_bytes()));
         out
-    }
-
-    /// Port of `simLoadInit` (simulate.cpp). `evalInit` and `doNilPower` are
-    /// not ported yet (evaluate / power modules).
-    fn sim_load_init(&mut self) {
-        const DISASTER_WAIT: [i16; 9] = [0, 2, 10, 40, 20, 3, 5, 5, 96];
-        const SCORE_WAIT: [i16; 9] = [0, 1440, 240, 240, 480, 240, 480, 240, 480];
-
-        let m = self.misc_hist.clone();
-        self.external_market = m[1] as f32;
-        self.res_pop = m[2];
-        self.com_pop = m[3];
-        self.ind_pop = m[4];
-        self.res_valve = m[5];
-        self.com_valve = m[6];
-        self.ind_valve = m[7];
-        self.crime_ramp = m[10];
-        self.pollution_ramp = m[11];
-        self.land_value_average = m[12];
-        self.crime_average = m[13];
-        self.pollution_average = m[14];
-        self.game_level = GameLevel::from_i16(m[15]).unwrap_or(GameLevel::Easy);
-        if self.external_market == 0.0 {
-            self.external_market = 4.0;
-        }
-        self.set_common_inits();
-
-        self.city_class = match m[16] {
-            1 => CityClass::Town,
-            2 => CityClass::City,
-            3 => CityClass::Capital,
-            4 => CityClass::Metropolis,
-            5 => CityClass::Megalopolis,
-            _ => CityClass::Village,
-        };
-        self.city_score = if (1..=999).contains(&m[17]) {
-            m[17]
-        } else {
-            500
-        };
-        self.res_cap = false;
-        self.com_cap = false;
-        self.ind_cap = false;
-        self.city_tax_average = ((self.city_time % 48) * 7) as i16;
-        self.power_grid_map.fill(1);
-
-        // Scenario is always `None` after `loadFile`, as in the original.
-        self.disaster_event = Scenario::None;
-        self.disaster_wait = DISASTER_WAIT[0];
-        self.score_type = Scenario::None;
-        self.score_wait = SCORE_WAIT[0];
-        self.road_effect = crate::simulation::MAX_ROAD_EFFECT;
-        self.police_effect = crate::simulation::MAX_POLICE_STATION_EFFECT;
-        self.fire_effect = crate::simulation::MAX_FIRE_STATION_EFFECT;
-        self.init_sim_load = 0;
     }
 }
 
@@ -264,11 +215,11 @@ mod tests {
     #[test]
     fn save_round_trips() {
         let mut s = Simulation::with_default_size();
-        s.load_cty(HAIGHT).unwrap();
+        s.load_cty_data(HAIGHT).unwrap();
         let saved = s.save_cty();
         assert_eq!(saved.len(), CTY_SIZE);
         let mut t = Simulation::with_default_size();
-        t.load_cty(&saved).unwrap();
+        t.load_cty_data(&saved).unwrap();
         assert_eq!(s.tiles, t.tiles);
         assert_eq!(s.total_funds, t.total_funds);
         assert_eq!(s.city_time, t.city_time);

@@ -78,6 +78,25 @@ pub struct Sprite {
 }
 
 impl Simulation {
+    /// Whether an active sprite of `kind` exists (`getSprite(kind) != NULL`).
+    pub fn sprite_of_kind_exists(&mut self, kind: i32) -> bool {
+        self.get_sprite(kind).is_some()
+    }
+
+    /// Hot spots `(x + xHot, y + yHot)` of every active ship, in list order.
+    pub fn ship_hotspots(&self) -> Vec<(i32, i32)> {
+        let mut out = Vec::new();
+        let mut cur = self.sprite_list;
+        while let Some(i) = cur {
+            let s = &self.sprites[i];
+            if s.kind == SPRITE_SHIP && s.frame != 0 {
+                out.push((s.x + s.x_hot, s.y + s.y_hot));
+            }
+            cur = s.next;
+        }
+        out
+    }
+
     /// `sendMessage` with the sprite code's `int` coordinates.
     fn sprite_message(&mut self, mesg: i16, x: i32, y: i32, picture: bool, important: bool) {
         self.send_message(mesg, x as i16, y as i16, picture, important);

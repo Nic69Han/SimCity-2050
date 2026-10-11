@@ -87,7 +87,7 @@ fn scenario() -> String {
     use EditingTool::*;
 
     let mut s = Simulation::with_default_size();
-    s.load_cty(HAIGHT).unwrap();
+    s.load_cty_data(HAIGHT).unwrap();
     s.auto_bulldoze = true;
     s.do_animation = true;
     s.total_funds = 100_000;

@@ -36,7 +36,3 @@ pub mod tile_chars;
 /// World size of the original game, kept as the default.
 pub const DEFAULT_WORLD_W: i32 = 120;
 pub const DEFAULT_WORLD_H: i32 = 100;
-
-// Temporary stubs for modules that are not ported yet (zone, sprite, simulate, evaluate, budget).
-#[allow(dead_code)]
-mod shim_pending;

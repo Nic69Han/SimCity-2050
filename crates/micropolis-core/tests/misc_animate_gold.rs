@@ -76,7 +76,7 @@ fn animate_tiles_matches_cpp_on_synthetic_and_city_maps() {
     ))
     .unwrap();
     let mut c = Simulation::with_default_size();
-    c.load_cty(&bytes).unwrap();
+    c.load_cty_data(&bytes).unwrap();
     assert_eq!(format!("{:016x}", fnv(&c.tiles)), get("city_before"));
     c.animate_tiles();
     assert_eq!(format!("{:016x}", fnv(&c.tiles)), get("city_after"));

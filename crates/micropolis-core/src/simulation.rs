@@ -33,7 +33,7 @@ pub const COM_VALVE_RANGE: i32 = 1500;
 pub const IND_VALVE_RANGE: i32 = 1500;
 pub const PROBNUM: usize = 10;
 pub const CVP_PROBLEM_COMPLAINTS: usize = 4;
-pub const MAP_TYPE_COUNT: usize = 13;
+pub const MAP_TYPE_COUNT: usize = 15;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
@@ -320,6 +320,11 @@ pub struct Simulation {
     /// Distance computed by the last `get_dir` call (C++ `absDist`).
     pub abs_dist: i32,
     // @fields:simulate (agent simulate: add your extra Simulation fields right below this line)
+    /// `mustDrawBudget` (set by `updateFundEffects`, read by the budget module).
+    /// `cellSrc` of `simHeat` (`(W+2)*(H+2)` cells, kept between steps).
+    pub cell_src: Vec<i16>,
+    /// The function-static accumulator `a` of `simHeat`.
+    pub heat_a: i32,
 
     // @fields:misc (agent misc: add your extra Simulation fields right below this line)
     pub enable_sound: bool,
@@ -544,6 +549,8 @@ impl Simulation {
             global_sprites: [None; crate::sprite::SPRITE_COUNT],
             abs_dist: 0,
             // @init:simulate (agent simulate: initialise your extra fields right below this line)
+            cell_src: Vec::new(),
+            heat_a: 0,
 
             // @init:misc (agent misc: initialise your extra fields right below this line)
             enable_sound: false,
@@ -680,40 +687,12 @@ impl Simulation {
 
     /// Port of `setCommonInits` (`evalInit` is part of the evaluate module).
     pub fn set_common_inits(&mut self) {
-        self.road_effect = MAX_ROAD_EFFECT;
-        self.police_effect = MAX_POLICE_STATION_EFFECT;
-        self.fire_effect = MAX_FIRE_STATION_EFFECT;
-        self.tax_flag = false;
-        self.tax_fund = 0;
+        self.set_common_inits_full();
     }
 
-    /// Port of `initSimMemory`, minus `doPowerScan` (power module to come):
-    /// state of a brand new city.
+    /// Port of `initSimMemory`: state of a brand new city.
     pub fn init_sim_memory(&mut self) {
-        self.set_common_inits();
-        for x in 0..HISTORY_LEN {
-            self.res_hist[x] = 0;
-            self.com_hist[x] = 0;
-            self.ind_hist[x] = 0;
-            self.money_hist[x] = 128;
-            self.crime_hist[x] = 0;
-            self.pollution_hist[x] = 0;
-        }
-        self.crime_ramp = 0;
-        self.pollution_ramp = 0;
-        self.total_pop = 0;
-        self.res_valve = 0;
-        self.com_valve = 0;
-        self.ind_valve = 0;
-        self.res_cap = false;
-        self.com_cap = false;
-        self.ind_cap = false;
-        self.external_market = 6.0;
-        self.disaster_event = Scenario::None;
-        self.score_type = Scenario::None;
-        self.power_stack_pointer = 0;
-        self.new_power = true;
-        self.init_sim_load = 0;
+        self.init_sim_memory_full();
     }
 
     /// Port of `setGameLevelFunds`.
