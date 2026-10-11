@@ -15,6 +15,12 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Differential test against the original C++ engine
         run: ./scripts/compare-oracle.sh 600
+      - name: Differential test of player tool actions
+        run: ./scripts/compare-tools.sh 300
+      - name: Differential test of new random cities
+        run: ./scripts/compare-newcity.sh 300
+      - name: Differential test of a new city built by the player
+        run: ./scripts/compare-newcity-tools.sh 1500
       - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
       - run: ./scripts/build-web.sh
       - uses: actions/setup-node@v4
