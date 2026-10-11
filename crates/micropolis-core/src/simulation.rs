@@ -295,7 +295,10 @@ pub struct Simulation {
     // @fields:scan (agent scan: add your extra Simulation fields right below this line)
 
     // @fields:evaluate (agent evaluate: add your extra Simulation fields right below this line)
-
+    /// `evalChanged`: the evaluation window should be shown again.
+    pub eval_changed: bool,
+    /// `mustDrawBudget`: the budget window needs redrawing.
+    pub must_draw_budget: bool,
     // @fields:generate (agent generate: add your extra Simulation fields right below this line)
 
     // @fields:zone (agent zone: add your extra Simulation fields right below this line)
@@ -507,7 +510,8 @@ impl Simulation {
             // @init:power (agent power: initialise your extra fields right below this line)
 
             // @init:scan (agent scan: initialise your extra fields right below this line)
-
+            eval_changed: false,
+            must_draw_budget: false,
             // @init:evaluate (agent evaluate: initialise your extra fields right below this line)
 
             // @init:generate (agent generate: initialise your extra fields right below this line)
