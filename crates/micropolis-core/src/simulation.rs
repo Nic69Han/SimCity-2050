@@ -711,6 +711,41 @@ impl Simulation {
         self.sim_speed = 0;
     }
 
+    /// Port of `simInit()` (main.cpp): the state the `Micropolis` constructor
+    /// leaves for a new city to inherit (funds, game level, tax, speed, flags).
+    /// The map arrays are allocated by [`Simulation::new`], so `initMapArrays`
+    /// has no separate counterpart.
+    pub fn sim_init(&mut self) {
+        self.set_enable_sound(true);
+        self.must_update_options = true;
+        self.scenario = Scenario::None;
+        self.starting_year = 1900;
+        self.sim_passes = 1;
+        self.sim_pass = 0;
+        self.set_auto_goto(true);
+        self.set_city_tax(7);
+        self.city_time = 50;
+        self.set_enable_disasters(true);
+        self.set_auto_bulldoze(true);
+        self.set_auto_budget(true);
+        // blinkFlag is cosmetic (the blink is a UI effect) and is not kept here.
+        self.sim_speed = 3;
+        self.change_eval();
+        self.sim_paused = false;
+        self.sim_loops = 0;
+        self.init_sim_load = 2;
+        self.init_graphs();
+        self.init_funding_level();
+        self.reset_map_state();
+        self.reset_editor_state();
+        self.clear_map();
+        self.init_will_stuff();
+        self.set_funds(5000);
+        self.set_game_level_funds(GameLevel::Easy);
+        self.set_speed(0);
+        self.set_passes(1);
+    }
+
     /// A new city on an empty map: everything `initWillStuff` +
     /// `initSimMemory` + `setGameLevelFunds` + `initGame` do, with an explicit
     /// seed for the random generator.

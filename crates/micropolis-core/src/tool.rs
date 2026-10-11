@@ -27,6 +27,7 @@ use std::collections::BTreeMap;
 
 use crate::events::Event;
 use crate::position::Position;
+use crate::rng::Rng;
 use crate::simulation::Simulation;
 use crate::tile::*;
 
@@ -89,34 +90,95 @@ pub enum EditingTool {
 pub const TOOL_COUNT: usize = 20;
 
 impl EditingTool {
+    /// All tools, in the order of the original `EditingTool` enum.
+    pub const ALL: [EditingTool; TOOL_COUNT] = [
+        EditingTool::Residential,
+        EditingTool::Commercial,
+        EditingTool::Industrial,
+        EditingTool::FireStation,
+        EditingTool::PoliceStation,
+        EditingTool::Query,
+        EditingTool::Wire,
+        EditingTool::Bulldozer,
+        EditingTool::Railroad,
+        EditingTool::Road,
+        EditingTool::Stadium,
+        EditingTool::Park,
+        EditingTool::Seaport,
+        EditingTool::CoalPower,
+        EditingTool::NuclearPower,
+        EditingTool::Airport,
+        EditingTool::Network,
+        EditingTool::Water,
+        EditingTool::Land,
+        EditingTool::Forest,
+    ];
+
     /// The tool with the given index, as in the original `EditingTool` enum.
     pub fn from_index(index: i32) -> Option<Self> {
-        const ALL: [EditingTool; TOOL_COUNT] = [
-            EditingTool::Residential,
-            EditingTool::Commercial,
-            EditingTool::Industrial,
-            EditingTool::FireStation,
-            EditingTool::PoliceStation,
-            EditingTool::Query,
-            EditingTool::Wire,
-            EditingTool::Bulldozer,
-            EditingTool::Railroad,
-            EditingTool::Road,
-            EditingTool::Stadium,
-            EditingTool::Park,
-            EditingTool::Seaport,
-            EditingTool::CoalPower,
-            EditingTool::NuclearPower,
-            EditingTool::Airport,
-            EditingTool::Network,
-            EditingTool::Water,
-            EditingTool::Land,
-            EditingTool::Forest,
-        ];
         usize::try_from(index)
             .ok()
-            .and_then(|i| ALL.get(i).copied())
+            .and_then(|i| Self::ALL.get(i).copied())
     }
+
+    /// Cost of using the tool, in dollars (`gCostOf`).
+    pub fn cost(self) -> i32 {
+        COST_OF[self as usize]
+    }
+
+    /// Size of the tool's building, in tiles per side (`gToolSize`): 1, 3, 4 or 6.
+    pub fn size(self) -> i32 {
+        TOOL_SIZE[self as usize]
+    }
+
+    /// Stable ASCII identifier of the tool, for the adapters and the page.
+    pub fn key(self) -> &'static str {
+        match self {
+            EditingTool::Residential => "residential",
+            EditingTool::Commercial => "commercial",
+            EditingTool::Industrial => "industrial",
+            EditingTool::FireStation => "fire_station",
+            EditingTool::PoliceStation => "police_station",
+            EditingTool::Query => "query",
+            EditingTool::Wire => "wire",
+            EditingTool::Bulldozer => "bulldozer",
+            EditingTool::Railroad => "railroad",
+            EditingTool::Road => "road",
+            EditingTool::Stadium => "stadium",
+            EditingTool::Park => "park",
+            EditingTool::Seaport => "seaport",
+            EditingTool::CoalPower => "coal_power",
+            EditingTool::NuclearPower => "nuclear_power",
+            EditingTool::Airport => "airport",
+            EditingTool::Network => "network",
+            EditingTool::Water => "water",
+            EditingTool::Land => "land",
+            EditingTool::Forest => "forest",
+        }
+    }
+
+    /// Tiles covered as `(x0, y0, w, h)` when the tool is used at `(x, y)`.
+    ///
+    /// A building of size `s > 1` is laid out from its top-left tile
+    /// `(x - 1, y - 1)` (see `build_building`), so it covers `s x s` tiles
+    /// starting there; its zone centre is the tile `(x, y)`. Tools of size 1
+    /// cover the single tile `(x, y)`.
+    pub fn footprint(self, x: i32, y: i32) -> (i32, i32, i32, i32) {
+        match self.size() {
+            s if s > 1 => (x - 1, y - 1, s, s),
+            _ => (x, y, 1, 1),
+        }
+    }
+}
+
+/// Result of [`Simulation::tool_preview`]: what `tool_down` would return, and
+/// the total the tool would charge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ToolPreview {
+    /// The result `tool_down` would return.
+    pub result: ToolResult,
+    /// The total cost the tool would charge; 0 unless `result` is [`ToolResult::Ok`].
+    pub cost: i32,
 }
 
 /// Cost of each tool, indexed by [`EditingTool`] (`gCostOf`).
@@ -317,11 +379,16 @@ impl ToolEffects {
     /// Apply the effects only if the funds cover the cost
     /// (`modifyIfEnoughFunding`). Otherwise the effects are kept.
     pub fn modify_if_enough_funding(&mut self, sim: &mut Simulation) -> bool {
-        if sim.total_funds < i64::from(self.cost) {
+        if !self.is_affordable(sim) {
             return false;
         }
         self.modify_world(sim);
         true
+    }
+
+    /// Do the funds of `sim` cover the accumulated cost?
+    pub fn is_affordable(&self, sim: &Simulation) -> bool {
+        sim.total_funds >= i64::from(self.cost)
     }
 
     /// Value of a map position, with the earlier modifications applied
@@ -441,7 +508,7 @@ impl Simulation {
 
     /// Check and connect the tiles around a new zone (`checkBorder`).
     fn check_border(
-        &mut self,
+        &self,
         x_map: i32,
         y_map: i32,
         size_x: i32,
@@ -548,7 +615,7 @@ impl Simulation {
 
     /// Build a building whose centre tile is `(map_h, map_v)` (`buildBuilding`).
     fn build_building(
-        &mut self,
+        &self,
         map_h: i32,
         map_v: i32,
         props: &BuildingProperties,
@@ -693,14 +760,14 @@ impl Simulation {
     /// Make a `size` x `size` square of rubble with its top-left tile at `(x, y)`
     /// (`putRubble`). Dirt and radioactive waste are left alone; the other
     /// tiles become tiny explosions (animated when `do_animation` is set).
-    fn put_rubble(&mut self, x: i32, y: i32, size: i32, effects: &mut ToolEffects) {
+    fn put_rubble(&self, x: i32, y: i32, size: i32, effects: &mut ToolEffects, rng: &mut Rng) {
         for xx in x..x + size {
             for yy in y..y + size {
                 if self.on_map(xx, yy) {
                     let mut tile = effects.get_map_tile(self, xx, yy);
                     if tile != RADTILE && tile != DIRT {
                         tile = if self.do_animation {
-                            TINYEXP + (self.rng.random(2) as Tile)
+                            TINYEXP + (rng.random(2) as Tile)
                         } else {
                             SOMETINYEXP
                         };
@@ -729,7 +796,9 @@ impl Simulation {
     /// the sprites.
     pub fn bulldozer_tool(&mut self, x: i32, y: i32) -> ToolResult {
         let mut effects = ToolEffects::new();
-        let result = self.bulldozer_tool_effects(x, y, &mut effects);
+        let mut rng = self.rng.clone();
+        let result = self.bulldozer_tool_effects(x, y, &mut effects, &mut rng);
+        self.rng = rng;
         if result == ToolResult::Ok {
             effects.modify_world(self);
         }
@@ -738,10 +807,11 @@ impl Simulation {
 
     /// Bulldozer tool, recorded in `effects` (`bulldozerTool(x, y, effects)`).
     pub fn bulldozer_tool_effects(
-        &mut self,
+        &self,
         x: i32,
         y: i32,
         effects: &mut ToolEffects,
+        rng: &mut Rng,
     ) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
@@ -764,7 +834,7 @@ impl Simulation {
             let center_x = x + delta_h;
             let center_y = y + delta_v;
             match zone_size {
-                3 | 4 | 6 => self.put_rubble(center_x - 1, center_y - 1, zone_size, effects),
+                3 | 4 | 6 => self.put_rubble(center_x - 1, center_y - 1, zone_size, effects, rng),
                 _ => unreachable!("zone sizes are 3, 4 or 6"),
             }
             return ToolResult::Ok;
@@ -783,7 +853,7 @@ impl Simulation {
     }
 
     /// Road tool (`roadTool`).
-    pub fn road_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn road_tool(&self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
@@ -791,7 +861,7 @@ impl Simulation {
     }
 
     /// Rail tool (`railroadTool`).
-    pub fn railroad_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn railroad_tool(&self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
@@ -799,7 +869,7 @@ impl Simulation {
     }
 
     /// Wire tool (`wireTool`).
-    pub fn wire_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn wire_tool(&self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
@@ -807,17 +877,29 @@ impl Simulation {
     }
 
     /// Park tool (`parkTool`).
-    pub fn park_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn park_tool(
+        &self,
+        x: i32,
+        y: i32,
+        effects: &mut ToolEffects,
+        rng: &mut Rng,
+    ) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
-        self.put_down_park(x, y, effects)
+        self.put_down_park(x, y, effects, rng)
     }
 
     /// Put a park on a dirt tile (`putDownPark`).
-    fn put_down_park(&mut self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
+    fn put_down_park(
+        &self,
+        map_h: i32,
+        map_v: i32,
+        effects: &mut ToolEffects,
+        rng: &mut Rng,
+    ) -> ToolResult {
         // The random number is drawn before the tile is checked, as in the original.
-        let value = self.rng.random(4);
+        let value = rng.random(4);
         let mut tile: Tile = BURNBIT | BULLBIT;
         if value == 4 {
             tile |= FOUNTAIN | ANIMBIT;
@@ -836,7 +918,7 @@ impl Simulation {
     }
 
     /// Network tool (`networkTool`).
-    pub fn network_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn network_tool(&self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
@@ -844,12 +926,7 @@ impl Simulation {
     }
 
     /// Lay a telecom network tile (`putDownNetwork`).
-    fn put_down_network(
-        &mut self,
-        map_h: i32,
-        map_v: i32,
-        effects: &mut ToolEffects,
-    ) -> ToolResult {
+    fn put_down_network(&self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
         let mut tile = effects.get_map_tile(self, map_h, map_v);
 
         // Auto-bulldoze an area that can be cleared.
@@ -873,11 +950,17 @@ impl Simulation {
     }
 
     /// Water tool (`waterTool`).
-    pub fn water_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn water_tool(
+        &self,
+        x: i32,
+        y: i32,
+        effects: &mut ToolEffects,
+        rng: &mut Rng,
+    ) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
-        let mut result = self.bulldozer_tool_effects(x, y, effects);
+        let mut result = self.bulldozer_tool_effects(x, y, effects, rng);
         if result == ToolResult::Ok {
             result = self.put_down_water(x, y, effects);
         }
@@ -885,7 +968,7 @@ impl Simulation {
     }
 
     /// Lay water (`putDownWater`).
-    fn put_down_water(&mut self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
+    fn put_down_water(&self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
         let tile = effects.get_map_tile(self, map_h, map_v);
         if tile == RIVER {
             return ToolResult::Failed;
@@ -897,16 +980,22 @@ impl Simulation {
 
     /// Land tool (`landTool`). The bulldozer result is not checked: the tile
     /// is made dirt regardless, as in the original.
-    pub fn land_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn land_tool(
+        &self,
+        x: i32,
+        y: i32,
+        effects: &mut ToolEffects,
+        rng: &mut Rng,
+    ) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
-        self.bulldozer_tool_effects(x, y, effects);
+        self.bulldozer_tool_effects(x, y, effects, rng);
         self.put_down_land(x, y, effects)
     }
 
     /// Lay dirt (`putDownLand`).
-    fn put_down_land(&mut self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
+    fn put_down_land(&self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
         let tile = effects.get_map_tile(self, map_h, map_v);
         if tile == DIRT {
             return ToolResult::Failed;
@@ -917,7 +1006,13 @@ impl Simulation {
     }
 
     /// Forest tool (`forestTool`).
-    pub fn forest_tool(&mut self, x: i32, y: i32, effects: &mut ToolEffects) -> ToolResult {
+    pub fn forest_tool(
+        &self,
+        x: i32,
+        y: i32,
+        effects: &mut ToolEffects,
+        rng: &mut Rng,
+    ) -> ToolResult {
         if !self.on_map(x, y) {
             return ToolResult::Failed;
         }
@@ -929,7 +1024,7 @@ impl Simulation {
 
         // The bulldozer result is replaced below, as in the original.
         if (tile & LOMASK) != DIRT {
-            self.bulldozer_tool_effects(x, y, effects);
+            self.bulldozer_tool_effects(x, y, effects, rng);
         }
 
         tile = effects.get_map_value(self, x, y);
@@ -941,7 +1036,7 @@ impl Simulation {
     }
 
     /// Plant a forest (`putDownForest`).
-    fn put_down_forest(&mut self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
+    fn put_down_forest(&self, map_h: i32, map_v: i32, effects: &mut ToolEffects) -> ToolResult {
         effects.set_map_value(map_h, map_v, WOODS | BLBNBIT);
 
         for (dx, dy) in NEIGHBOUR_DX.iter().zip(NEIGHBOUR_DY.iter()) {
@@ -956,60 +1051,106 @@ impl Simulation {
         ToolResult::Ok
     }
 
+    /// Planning step of a tool (the `switch` of `doTool`). Records the changes
+    /// and the cost in `effects` and returns the result before the funds check.
+    /// The world is only read; the random numbers drawn come from `rng`, so a
+    /// caller decides whether the draws are kept.
+    fn plan_tool(
+        &self,
+        tool: EditingTool,
+        tile_x: i32,
+        tile_y: i32,
+        rng: &mut Rng,
+        effects: &mut ToolEffects,
+    ) -> ToolResult {
+        match tool {
+            EditingTool::Residential => {
+                self.build_building(tile_x, tile_y, &RESIDENTIAL_ZONE_BUILDING, effects)
+            }
+            EditingTool::Commercial => {
+                self.build_building(tile_x, tile_y, &COMMERCIAL_ZONE_BUILDING, effects)
+            }
+            EditingTool::Industrial => {
+                self.build_building(tile_x, tile_y, &INDUSTRIAL_ZONE_BUILDING, effects)
+            }
+            EditingTool::FireStation => {
+                self.build_building(tile_x, tile_y, &FIRE_STATION_BUILDING, effects)
+            }
+            EditingTool::PoliceStation => {
+                self.build_building(tile_x, tile_y, &POLICE_STATION_BUILDING, effects)
+            }
+            EditingTool::Query => self.query_tool(tile_x, tile_y),
+            EditingTool::Wire => self.wire_tool(tile_x, tile_y, effects),
+            EditingTool::Bulldozer => self.bulldozer_tool_effects(tile_x, tile_y, effects, rng),
+            EditingTool::Railroad => self.railroad_tool(tile_x, tile_y, effects),
+            EditingTool::Road => self.road_tool(tile_x, tile_y, effects),
+            EditingTool::Stadium => self.build_building(tile_x, tile_y, &STADIUM_BUILDING, effects),
+            EditingTool::Park => self.park_tool(tile_x, tile_y, effects, rng),
+            EditingTool::Seaport => self.build_building(tile_x, tile_y, &SEAPORT_BUILDING, effects),
+            EditingTool::CoalPower => {
+                self.build_building(tile_x, tile_y, &COAL_POWER_BUILDING, effects)
+            }
+            EditingTool::NuclearPower => {
+                self.build_building(tile_x, tile_y, &NUCLEAR_POWER_BUILDING, effects)
+            }
+            EditingTool::Airport => self.build_building(tile_x, tile_y, &AIRPORT_BUILDING, effects),
+            EditingTool::Network => self.network_tool(tile_x, tile_y, effects),
+            EditingTool::Water => self.water_tool(tile_x, tile_y, effects, rng),
+            EditingTool::Land => self.land_tool(tile_x, tile_y, effects, rng),
+            EditingTool::Forest => self.forest_tool(tile_x, tile_y, effects, rng),
+        }
+    }
+
+    /// Result of a planned tool once its cost is known: a successful plan
+    /// that the funds do not cover becomes [`ToolResult::NoMoney`]. `Query`
+    /// charges nothing.
+    fn charged_result(
+        &self,
+        tool: EditingTool,
+        planned: ToolResult,
+        effects: &ToolEffects,
+    ) -> ToolResult {
+        if planned == ToolResult::Ok && tool != EditingTool::Query && !effects.is_affordable(self) {
+            ToolResult::NoMoney
+        } else {
+            planned
+        }
+    }
+
     /// Apply a tool at a tile of the city (`doTool`). On success the effects
     /// are applied if the funds cover the cost, otherwise
     /// [`ToolResult::NoMoney`] is returned and nothing changes.
+    ///
+    /// The random numbers drawn while planning are kept even when the tool
+    /// fails, as in the original.
     pub fn do_tool(&mut self, tool: EditingTool, tile_x: i32, tile_y: i32) -> ToolResult {
+        let mut rng = self.rng.clone();
         let mut effects = ToolEffects::new();
+        let planned = self.plan_tool(tool, tile_x, tile_y, &mut rng, &mut effects);
+        self.rng = rng;
 
-        let result = match tool {
-            EditingTool::Residential => {
-                self.build_building(tile_x, tile_y, &RESIDENTIAL_ZONE_BUILDING, &mut effects)
-            }
-            EditingTool::Commercial => {
-                self.build_building(tile_x, tile_y, &COMMERCIAL_ZONE_BUILDING, &mut effects)
-            }
-            EditingTool::Industrial => {
-                self.build_building(tile_x, tile_y, &INDUSTRIAL_ZONE_BUILDING, &mut effects)
-            }
-            EditingTool::FireStation => {
-                self.build_building(tile_x, tile_y, &FIRE_STATION_BUILDING, &mut effects)
-            }
-            EditingTool::PoliceStation => {
-                self.build_building(tile_x, tile_y, &POLICE_STATION_BUILDING, &mut effects)
-            }
-            EditingTool::Query => return self.query_tool(tile_x, tile_y),
-            EditingTool::Wire => self.wire_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Bulldozer => self.bulldozer_tool_effects(tile_x, tile_y, &mut effects),
-            EditingTool::Railroad => self.railroad_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Road => self.road_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Stadium => {
-                self.build_building(tile_x, tile_y, &STADIUM_BUILDING, &mut effects)
-            }
-            EditingTool::Park => self.park_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Seaport => {
-                self.build_building(tile_x, tile_y, &SEAPORT_BUILDING, &mut effects)
-            }
-            EditingTool::CoalPower => {
-                self.build_building(tile_x, tile_y, &COAL_POWER_BUILDING, &mut effects)
-            }
-            EditingTool::NuclearPower => {
-                self.build_building(tile_x, tile_y, &NUCLEAR_POWER_BUILDING, &mut effects)
-            }
-            EditingTool::Airport => {
-                self.build_building(tile_x, tile_y, &AIRPORT_BUILDING, &mut effects)
-            }
-            EditingTool::Network => self.network_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Water => self.water_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Land => self.land_tool(tile_x, tile_y, &mut effects),
-            EditingTool::Forest => self.forest_tool(tile_x, tile_y, &mut effects),
-        };
-
-        // Apply the effects if the tool worked and the funds cover them.
-        if result == ToolResult::Ok && !effects.modify_if_enough_funding(self) {
-            return ToolResult::NoMoney;
+        let result = self.charged_result(tool, planned, &effects);
+        if result == ToolResult::Ok && tool != EditingTool::Query {
+            effects.modify_world(self);
         }
         result
+    }
+
+    /// Dry run of [`Simulation::do_tool`] (`tool_preview`). Changes nothing:
+    /// the tiles, funds, random number generator, events and map serial are
+    /// left as they are. `result` is what `tool_down` would return, and `cost`
+    /// the total the tool would charge (0 unless `result` is `Ok`).
+    pub fn tool_preview(&self, tool: EditingTool, tile_x: i32, tile_y: i32) -> ToolPreview {
+        let mut rng = self.rng.clone();
+        let mut effects = ToolEffects::new();
+        let planned = self.plan_tool(tool, tile_x, tile_y, &mut rng, &mut effects);
+        let result = self.charged_result(tool, planned, &effects);
+        let cost = if result == ToolResult::Ok {
+            effects.get_cost()
+        } else {
+            0
+        };
+        ToolPreview { result, cost }
     }
 
     /// Apply a tool from a mouse press (`toolDown`). The messages of the

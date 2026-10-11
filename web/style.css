@@ -1,15 +1,102 @@
-:root { --bg:#f4f1ea; --fg:#1d1d1b; --panel:#fff; --accent:#2b6cb0; }
-@media (prefers-color-scheme: dark) { :root { --bg:#16181c; --fg:#e8e6e1; --panel:#22252b; --accent:#63a4ee; } }
+/* Colour tokens: light by default, dark when the system asks for it. Every text colour is
+   checked against its background (about 4.5:1 or more for body text). */
+:root {
+  --bg: #f4f1ea;
+  --fg: #1d1d1b;
+  --muted: #55554f;
+  --panel: #ffffff;
+  --accent: #2b6cb0;
+  --on-accent: #ffffff;
+  --bad: #b3261e;
+  --ok: #1e7a36;
+  --line: #8886;
+  --ratio: 1.333; /* map width / height; main.js sets it on .map-frame */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16181c;
+    --fg: #e8e6e1;
+    --muted: #b4b8c0;
+    --panel: #22252b;
+    --accent: #7fb4f5;
+    --on-accent: #101216;
+    --bad: #ff9a90;
+    --ok: #7fd69a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16181c;
+  --fg: #e8e6e1;
+  --muted: #b4b8c0;
+  --panel: #22252b;
+  --accent: #7fb4f5;
+  --on-accent: #101216;
+  --bad: #ff9a90;
+  --ok: #7fd69a;
+}
+
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
-header { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; padding:.75rem 16px; background:var(--panel); }
-h1 { font-size:1.2rem; margin:0 .5rem 0 0; }
-button, .btn { font:inherit; padding:.4rem .8rem; border:1px solid var(--accent); color:var(--accent); background:transparent; border-radius:6px; cursor:pointer; }
-button:hover, .btn:hover { background:var(--accent); color:var(--bg); }
-#status { margin-left:auto; font-variant-numeric:tabular-nums; }
-main { padding:16px; overflow:auto; }
-canvas { display:block; max-width:100%; height:auto; image-rendering:pixelated; border:1px solid #8886; background:#000; }
-footer { padding:.5rem 16px 1rem; font-size:.85rem; opacity:.7; }
-select, input[type=range] { font:inherit; }
-header label { display:inline-flex; gap:.4rem; align-items:center; }
-#stats { font-variant-numeric:tabular-nums; margin:.75rem 0 0; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.4 system-ui, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; padding: .75rem 16px; background: var(--panel); }
+h1 { font-size: 1.2rem; margin: 0 .5rem 0 0; }
+button, .btn { font: inherit; padding: .4rem .8rem; border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 6px; cursor: pointer; }
+button:hover, .btn:hover { background: var(--accent); color: var(--on-accent); }
+button:disabled { opacity: .5; cursor: default; }
+button:disabled:hover { background: transparent; color: var(--accent); }
+#status { margin-left: auto; font-variant-numeric: tabular-nums; }
+main { padding: 16px; overflow-x: hidden; }
+footer { padding: .5rem 16px 1rem; font-size: .85rem; color: var(--muted); }
+select, input[type=range] { font: inherit; }
+input[type=text] { font: inherit; padding: .3rem .4rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; max-width: 9rem; }
+input[aria-invalid="true"] { border-color: var(--bad); }
+header label { display: inline-flex; gap: .4rem; align-items: center; }
+#stats { font-variant-numeric: tabular-nums; margin: .75rem 0 0; }
+button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+/* New city controls (header row) */
+.newcity { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+#new-msg { color: var(--bad); font-weight: 600; font-size: .9rem; }
+#new-msg:empty { display: none; }
+
+/* Building tools: palette, map frame with hover overlay, status lines. */
+#palette { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .5rem 16px; background: var(--panel); border-top: 1px solid var(--line); }
+.tool-group { border: 0; margin: 0; padding: 0; min-width: 0; }
+.tool-group legend { font-size: .8rem; color: var(--muted); padding: 0; margin-bottom: .2rem; }
+.tool-row { display: flex; flex-wrap: wrap; gap: .3rem; }
+.tool { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .55rem; font-size: .9rem; }
+.tool.active, .tool[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.tool-cost { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tool.active .tool-cost, .tool[aria-pressed="true"] .tool-cost { color: var(--on-accent); }
+.tool-key { font: inherit; font-size: .75rem; border: 1px solid currentColor; border-radius: 3px; padding: 0 .25rem; }
+
+/* The map scales to the viewport: full width on a phone, at most 72% of the viewport height
+   elsewhere. The frame keeps the map's aspect ratio, and the canvas fills it, so the tile
+   under the pointer is still exact (input.js reads the displayed rectangle). */
+.map-frame { position: relative; width: min(100%, calc(72vh * var(--ratio))); margin: 0 auto; border: 1px solid var(--line); background: #000; }
+#map { display: block; width: 100%; height: auto; border: 0; background: #000; image-rendering: pixelated; touch-action: none; }
+#overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: transparent; }
+#tool-msg, #load-msg { min-height: 1.4em; margin: .5rem 0 0; color: var(--bad); font-weight: 600; }
+#tool-msg:empty, #load-msg:empty { min-height: 0; }
+
+/* Query (zone status) panel: a title line, then one line per fact */
+#query-panel { margin: .5rem 0 0; padding: .4rem .6rem; border-left: 3px solid var(--accent); background: var(--panel); font-variant-numeric: tabular-nums; }
+.query-title { font-weight: 600; }
+.query-line { color: var(--fg); }
+
+/* Legend and keyboard help: collapsible boxes */
+.box { margin-top: .75rem; padding: .4rem .75rem; background: var(--panel); border-radius: 6px; }
+.box summary { cursor: pointer; font-weight: 600; padding: .2rem 0; }
+.legend { list-style: none; margin: .4rem 0 .2rem; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; font-size: .9rem; }
+.legend li { display: inline-flex; align-items: center; gap: .4rem; }
+.swatch { display: inline-block; width: .9rem; height: .9rem; border-radius: 3px; border: 1px solid #8888; flex: none; }
+.shortcuts { display: grid; grid-template-columns: max-content 1fr; gap: .25rem .8rem; margin: .4rem 0 .2rem; font-size: .9rem; }
+.shortcuts dt { margin: 0; }
+.shortcuts dd { margin: 0; }
+
+@media (max-width: 480px) {
+  #status { margin-left: 0; }
+  .tool-row { gap: .25rem; }
+}

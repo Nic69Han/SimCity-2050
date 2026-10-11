@@ -226,6 +226,10 @@ impl Simulation {
         self.init_sim_load = 2;
         self.do_initial_eval = false;
 
+        // `initWillStuff` begins with `randomlySeedRandom()`. The oracle patch makes
+        // that reseed from env `MICROPOLIS_SEED`, which the oracle sets to `seed`, so
+        // the port reseeds with `seed` here (there is no environment in the core).
+        self.rng.seed(seed);
         self.init_will_stuff();
         self.reset_map_state();
         self.reset_editor_state();
@@ -236,6 +240,21 @@ impl Simulation {
         self.sim_update();
 
         self.push_event(Event::NewCity);
+    }
+
+    /// A new random city, as the original reaches it: a fresh engine (the
+    /// constructor's `simInit`) followed by `generateSomeCity(seed)`. Disasters
+    /// stay as `simInit` sets them (on); callers choose the other settings.
+    ///
+    /// The engine is rebuilt first, so the city depends only on `seed` and never on what the
+    /// engine held before (only the start year survives).
+    pub fn new_random_city(&mut self, seed: i32) {
+        let (w, h) = self.world_size();
+        let starting_year = self.starting_year;
+        *self = Simulation::new(w, h);
+        self.starting_year = starting_year;
+        self.sim_init();
+        self.generate_some_city(seed);
     }
 
     /// Port of `generateMap(int seed)`: lay out the terrain from `seed`.
