@@ -68,7 +68,7 @@ impl Simulation {
     }
 
     /// Port of `getPopulationDensity(int, int)` (map coordinates).
-    pub fn get_population_density(&self, x: i32, y: i32) -> i32 {
+    pub fn get_population_density_at(&self, x: i32, y: i32) -> i32 {
         self.population_density_map.get(x, y) as i32
     }
 

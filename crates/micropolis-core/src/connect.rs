@@ -8,44 +8,22 @@ use crate::simulation::Simulation;
 use crate::tile::{Tile, BLBNCNBIT, BULLBIT, BURNBIT, CONDBIT, LOMASK};
 use crate::tile_chars::*;
 
-/// Result of a tool application (`ToolResult` in micropolis.h).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ToolResult {
-    NoMoney = -2,
-    NeedBulldoze = -1,
-    Failed = 0,
-    Ok = 1,
-}
-
-/// Command for [`Simulation::connect_tile`] (`ConnectTileCommand` in micropolis.h).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ConnectTileCommand {
-    /// Fix zone (connect wire, road, and rail).
-    Fix,
-    /// Bulldoze and fix zone.
-    Bulldoze,
-    /// Lay road and fix zone.
-    Road,
-    /// Lay rail and fix zone.
-    Railroad,
-    /// Lay wire and fix zone.
-    Wire,
-}
+pub use crate::tool::{ConnectTileCommand, ToolResult};
 
 /// The part of `ToolEffects` (tool.h) that the connection code needs: read the
 /// map value as the tool sees it (including its pending modifications), record
 /// a modification, and add to the cost.
 pub trait Effects {
     /// `ToolEffects::getMapValue`: tile including status bits.
-    fn get_map_value(&self, x: i32, y: i32) -> Tile;
+    fn get_map_value(&self, sim: &Simulation, x: i32, y: i32) -> Tile;
     /// `ToolEffects::setMapValue`.
     fn set_map_value(&mut self, x: i32, y: i32, value: Tile);
     /// `ToolEffects::addCost`.
     fn add_cost(&mut self, amount: i32);
 
     /// `ToolEffects::getMapTile`: tile character without status bits.
-    fn get_map_tile(&self, x: i32, y: i32) -> Tile {
-        self.get_map_value(x, y) & LOMASK
+    fn get_map_tile(&self, sim: &Simulation, x: i32, y: i32) -> Tile {
+        self.get_map_value(sim, x, y) & LOMASK
     }
 }
 
@@ -111,7 +89,7 @@ impl Simulation {
             ConnectTileCommand::Road | ConnectTileCommand::Railroad | ConnectTileCommand::Wire => {
                 // Silently skip auto-bulldoze if no money.
                 if self.auto_bulldoze {
-                    let mut map_val = effects.get_map_value(x, y);
+                    let mut map_val = effects.get_map_value(self, x, y);
                     if map_val & BULLBIT != 0 {
                         map_val &= LOMASK;
                         map_val = neutralize_road(map_val);
@@ -156,7 +134,7 @@ impl Simulation {
 
     /// Port of `Micropolis::layDoze`: bulldoze a tile (make it #RIVER or #DIRT).
     pub fn lay_doze<E: Effects>(&self, x: i32, y: i32, effects: &mut E) -> ToolResult {
-        let mut tile = effects.get_map_value(x, y);
+        let mut tile = effects.get_map_value(self, x, y);
 
         if tile & BULLBIT == 0 {
             return ToolResult::Failed; // Check dozeable bit.
@@ -187,7 +165,7 @@ impl Simulation {
         let (w, h) = self.world_size();
         let mut cost = 10;
 
-        let mut tile = effects.get_map_tile(x, y);
+        let mut tile = effects.get_map_tile(self, x, y);
 
         match tile {
             DIRT => {
@@ -199,14 +177,14 @@ impl Simulation {
 
                 let mut bridge = None;
                 if x < w - 1 {
-                    tile = neutralize_road(effects.get_map_tile(x + 1, y));
+                    tile = neutralize_road(effects.get_map_tile(self, x + 1, y));
                     if tile == VRAILROAD || tile == HBRIDGE || (ROADS..=HROADPOWER).contains(&tile)
                     {
                         bridge = Some(HBRIDGE | BULLBIT);
                     }
                 }
                 if bridge.is_none() && x > 0 {
-                    tile = neutralize_road(effects.get_map_tile(x - 1, y));
+                    tile = neutralize_road(effects.get_map_tile(self, x - 1, y));
                     if tile == VRAILROAD
                         || tile == HBRIDGE
                         || (ROADS..=INTERSECTION).contains(&tile)
@@ -215,7 +193,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y < h - 1 {
-                    tile = neutralize_road(effects.get_map_tile(x, y + 1));
+                    tile = neutralize_road(effects.get_map_tile(self, x, y + 1));
                     if tile == HRAILROAD
                         || tile == VROADPOWER
                         || (VBRIDGE..=INTERSECTION).contains(&tile)
@@ -224,7 +202,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y > 0 {
-                    tile = neutralize_road(effects.get_map_tile(x, y - 1));
+                    tile = neutralize_road(effects.get_map_tile(self, x, y - 1));
                     if tile == HRAILROAD
                         || tile == VROADPOWER
                         || (VBRIDGE..=INTERSECTION).contains(&tile)
@@ -266,7 +244,7 @@ impl Simulation {
         let (w, h) = self.world_size();
         let mut cost = 20;
 
-        let mut tile = effects.get_map_tile(x, y);
+        let mut tile = effects.get_map_tile(self, x, y);
 
         tile = neutralize_road(tile);
 
@@ -281,14 +259,14 @@ impl Simulation {
 
                 let mut bridge = None;
                 if x < w - 1 {
-                    tile = neutralize_road(effects.get_map_tile(x + 1, y));
+                    tile = neutralize_road(effects.get_map_tile(self, x + 1, y));
                     if tile == RAILHPOWERV || tile == HRAIL || (LHRAIL..=HRAILROAD).contains(&tile)
                     {
                         bridge = Some(HRAIL | BULLBIT);
                     }
                 }
                 if bridge.is_none() && x > 0 {
-                    tile = neutralize_road(effects.get_map_tile(x - 1, y));
+                    tile = neutralize_road(effects.get_map_tile(self, x - 1, y));
                     if tile == RAILHPOWERV
                         || tile == HRAIL
                         || (VRAIL + 1..VRAILROAD).contains(&tile)
@@ -297,7 +275,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y < h - 1 {
-                    tile = neutralize_road(effects.get_map_tile(x, y + 1));
+                    tile = neutralize_road(effects.get_map_tile(self, x, y + 1));
                     if tile == RAILVPOWERH
                         || tile == VRAILROAD
                         || (HRAIL + 1..HRAILROAD).contains(&tile)
@@ -306,7 +284,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y > 0 {
-                    tile = neutralize_road(effects.get_map_tile(x, y - 1));
+                    tile = neutralize_road(effects.get_map_tile(self, x, y - 1));
                     if tile == RAILVPOWERH
                         || tile == VRAILROAD
                         || (HRAIL + 1..HRAILROAD).contains(&tile)
@@ -348,7 +326,7 @@ impl Simulation {
         let (w, h) = self.world_size();
         let mut cost = 5;
 
-        let mut tile = effects.get_map_tile(x, y);
+        let mut tile = effects.get_map_tile(self, x, y);
 
         tile = neutralize_road(tile);
 
@@ -363,7 +341,7 @@ impl Simulation {
 
                 let mut bridge = None;
                 if x < w - 1 {
-                    let t = effects.get_map_value(x + 1, y);
+                    let t = effects.get_map_value(self, x + 1, y);
                     if t & CONDBIT != 0 {
                         let t = neutralize_road(t & LOMASK);
                         if t != HROADPOWER && t != RAILHPOWERV && t != HPOWER {
@@ -372,7 +350,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && x > 0 {
-                    let t = effects.get_map_value(x - 1, y);
+                    let t = effects.get_map_value(self, x - 1, y);
                     if t & CONDBIT != 0 {
                         let t = neutralize_road(t & LOMASK);
                         if t != HROADPOWER && t != RAILHPOWERV && t != HPOWER {
@@ -381,7 +359,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y < h - 1 {
-                    let t = effects.get_map_value(x, y + 1);
+                    let t = effects.get_map_value(self, x, y + 1);
                     if t & CONDBIT != 0 {
                         let t = neutralize_road(t & LOMASK);
                         if t != VROADPOWER && t != RAILVPOWERH && t != VPOWER {
@@ -390,7 +368,7 @@ impl Simulation {
                     }
                 }
                 if bridge.is_none() && y > 0 {
-                    let t = effects.get_map_value(x, y - 1);
+                    let t = effects.get_map_value(self, x, y - 1);
                     if t & CONDBIT != 0 {
                         let t = neutralize_road(t & LOMASK);
                         if t != VROADPOWER && t != RAILVPOWERH && t != VPOWER {
@@ -456,14 +434,14 @@ impl Simulation {
         let (w, h) = self.world_size();
         let mut adj_tile: usize = 0;
 
-        let mut tile = effects.get_map_tile(x, y);
+        let mut tile = effects.get_map_tile(self, x, y);
 
         tile = neutralize_road(tile);
 
         if (ROADS..=INTERSECTION).contains(&tile) {
             // Cleanup Road
             if y > 0 {
-                tile = neutralize_road(effects.get_map_tile(x, y - 1));
+                tile = neutralize_road(effects.get_map_tile(self, x, y - 1));
                 if (tile == HRAILROAD || (ROADBASE..=VROADPOWER).contains(&tile))
                     && tile != HROADPOWER
                     && tile != VRAILROAD
@@ -474,7 +452,7 @@ impl Simulation {
             }
 
             if x < w - 1 {
-                tile = neutralize_road(effects.get_map_tile(x + 1, y));
+                tile = neutralize_road(effects.get_map_tile(self, x + 1, y));
                 if (tile == VRAILROAD || (ROADBASE..=VROADPOWER).contains(&tile))
                     && tile != VROADPOWER
                     && tile != HRAILROAD
@@ -485,7 +463,7 @@ impl Simulation {
             }
 
             if y < h - 1 {
-                tile = neutralize_road(effects.get_map_tile(x, y + 1));
+                tile = neutralize_road(effects.get_map_tile(self, x, y + 1));
                 if (tile == HRAILROAD || (ROADBASE..=VROADPOWER).contains(&tile))
                     && tile != HROADPOWER
                     && tile != VRAILROAD
@@ -496,7 +474,7 @@ impl Simulation {
             }
 
             if x > 0 {
-                tile = neutralize_road(effects.get_map_tile(x - 1, y));
+                tile = neutralize_road(effects.get_map_tile(self, x - 1, y));
                 if (tile == VRAILROAD || (ROADBASE..=VROADPOWER).contains(&tile))
                     && tile != VROADPOWER
                     && tile != HRAILROAD
@@ -513,7 +491,7 @@ impl Simulation {
         if (LHRAIL..=LVRAIL10).contains(&tile) {
             // Cleanup Rail
             if y > 0 {
-                tile = neutralize_road(effects.get_map_tile(x, y - 1));
+                tile = neutralize_road(effects.get_map_tile(self, x, y - 1));
                 if (RAILHPOWERV..=VRAILROAD).contains(&tile)
                     && tile != RAILHPOWERV
                     && tile != HRAILROAD
@@ -524,7 +502,7 @@ impl Simulation {
             }
 
             if x < w - 1 {
-                tile = neutralize_road(effects.get_map_tile(x + 1, y));
+                tile = neutralize_road(effects.get_map_tile(self, x + 1, y));
                 if (RAILHPOWERV..=VRAILROAD).contains(&tile)
                     && tile != RAILVPOWERH
                     && tile != VRAILROAD
@@ -535,7 +513,7 @@ impl Simulation {
             }
 
             if y < h - 1 {
-                tile = neutralize_road(effects.get_map_tile(x, y + 1));
+                tile = neutralize_road(effects.get_map_tile(self, x, y + 1));
                 if (RAILHPOWERV..=VRAILROAD).contains(&tile)
                     && tile != RAILHPOWERV
                     && tile != HRAILROAD
@@ -546,7 +524,7 @@ impl Simulation {
             }
 
             if x > 0 {
-                tile = neutralize_road(effects.get_map_tile(x - 1, y));
+                tile = neutralize_road(effects.get_map_tile(self, x - 1, y));
                 if (RAILHPOWERV..=VRAILROAD).contains(&tile)
                     && tile != RAILVPOWERH
                     && tile != VRAILROAD
@@ -563,7 +541,7 @@ impl Simulation {
         if (LHPOWER..=LVPOWER10).contains(&tile) {
             // Cleanup Wire
             if y > 0 {
-                let t = effects.get_map_value(x, y - 1);
+                let t = effects.get_map_value(self, x, y - 1);
                 if t & CONDBIT != 0 {
                     let t = neutralize_road(t & LOMASK);
                     if t != VPOWER && t != VROADPOWER && t != RAILVPOWERH {
@@ -573,7 +551,7 @@ impl Simulation {
             }
 
             if x < w - 1 {
-                let t = effects.get_map_value(x + 1, y);
+                let t = effects.get_map_value(self, x + 1, y);
                 if t & CONDBIT != 0 {
                     let t = neutralize_road(t & LOMASK);
                     if t != HPOWER && t != HROADPOWER && t != RAILHPOWERV {
@@ -583,7 +561,7 @@ impl Simulation {
             }
 
             if y < h - 1 {
-                let t = effects.get_map_value(x, y + 1);
+                let t = effects.get_map_value(self, x, y + 1);
                 if t & CONDBIT != 0 {
                     let t = neutralize_road(t & LOMASK);
                     if t != VPOWER && t != VROADPOWER && t != RAILVPOWERH {
@@ -593,7 +571,7 @@ impl Simulation {
             }
 
             if x > 0 {
-                let t = effects.get_map_value(x - 1, y);
+                let t = effects.get_map_value(self, x - 1, y);
                 if t & CONDBIT != 0 {
                     let t = neutralize_road(t & LOMASK);
                     if t != HPOWER && t != HROADPOWER && t != RAILHPOWERV {

@@ -923,7 +923,7 @@ impl Simulation {
         }
 
         let mut tile = effects.get_map_value(self, x, y);
-        if self.is_tree(tile) {
+        if Self::is_tree(tile) {
             return ToolResult::Ok;
         }
 
@@ -1100,6 +1100,27 @@ impl Simulation {
     /// redraws. Its update notice is dropped.
     fn tool_invalidate_maps(&mut self) {
         self.map_serial = self.map_serial.wrapping_add(1);
+    }
+}
+
+impl crate::connect::Effects for ToolEffects {
+    fn get_map_value(&self, sim: &Simulation, x: i32, y: i32) -> Tile {
+        ToolEffects::get_map_value(self, sim, x, y)
+    }
+    fn set_map_value(&mut self, x: i32, y: i32, value: Tile) {
+        ToolEffects::set_map_value(self, x, y, value)
+    }
+    fn add_cost(&mut self, amount: i32) {
+        ToolEffects::add_cost(self, amount)
+    }
+}
+
+impl crate::generate::MapEdits for ToolEffects {
+    fn map_value(&self, sim: &Simulation, x: i32, y: i32) -> Tile {
+        ToolEffects::get_map_value(self, sim, x, y)
+    }
+    fn set_map_value(&mut self, x: i32, y: i32, value: Tile) {
+        ToolEffects::set_map_value(self, x, y, value)
     }
 }
 

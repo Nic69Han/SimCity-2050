@@ -61,7 +61,13 @@ impl Simulation {
             loop {
                 num_power += 1;
                 if num_power > max_power {
-                    self.send_message(MESSAGE_NOT_ENOUGH_POWER, NOWHERE, NOWHERE, false, false);
+                    self.send_message(
+                        MESSAGE_NOT_ENOUGH_POWER,
+                        NOWHERE as i16,
+                        NOWHERE as i16,
+                        false,
+                        false,
+                    );
                     return;
                 }
                 if any_dir != Direction::Invalid {

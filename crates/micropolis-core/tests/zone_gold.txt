@@ -1,0 +1,417 @@
+loaded tiles=b58621e4e3995f9f
+candidates res=294 com=136 ind=67 hc=40
+zone 0 at 2,87 cat=0 pre=62708 traf=1 nh=-1 nc=-1
+  3x3 28912 61692 61693 61683 62708 61693 61693 61690 61693
+  pz=1 uz=0 rz=1 rp=7 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=-68 nh=-1 nc=-1 rng=8222
+zone 1 at 17,66 cat=0 pre=62708 traf=0 nh=1 nc=1
+  3x3 61680 61681 61682 61683 62708 61685 61686 57591 61688
+  pz=2 uz=0 rz=2 rp=7 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=-1 nh=1 nc=1 rng=13989
+zone 2 at 32,9 cat=0 pre=62708 traf=-1 nh=0 nc=0
+  3x3 28912 61690 61692 61690 62708 61692 61689 61691 61694
+  pz=3 uz=0 rz=3 rp=15 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=129 nh=0 nc=0 rng=18924
+zone 3 at 39,39 cat=0 pre=62828 traf=1 nh=0 nc=0
+  3x3 57704 57705 57706 57707 30060 57709 57710 57711 57712
+  pz=3 uz=1 rz=4 rp=55 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=157 nh=0 nc=0 rng=38915
+zone 4 at 46,65 cat=0 pre=62801 traf=0 nh=-1 nc=0
+  3x3 57677 57678 57679 57680 30033 57682 57683 57684 57685
+  pz=3 uz=2 rz=5 rp=71 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=75 nh=-1 nc=0 rng=14760
+zone 5 at 54,54 cat=0 pre=62828 traf=-1 nh=1 nc=-1
+  3x3 24855 24856 24857 24858 29979 24860 24861 24862 24863
+  pz=3 uz=3 rz=6 rp=111 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=41 nh=1 nc=-1 rng=14651
+zone 6 at 61,57 cat=0 pre=62792 traf=1 nh=0 nc=1
+  3x3 57668 57669 57670 57671 62792 57673 57674 57675 57676
+  pz=4 uz=3 rz=7 rp=151 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=-178 nh=0 nc=1 rng=39055
+zone 7 at 69,21 cat=0 pre=58612 traf=0 nh=0 nc=0
+  3x3 61695 61695 61695 61695 25844 61697 61696 61697 61697
+  pz=4 uz=4 rz=8 rp=159 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=52 nh=0 nc=0 rng=32446
+zone 8 at 78,57 cat=0 pre=58612 traf=-1 nh=-1 nc=0
+  3x3 61695 61696 61697 61697 25844 61695 61695 61695 61695
+  pz=4 uz=5 rz=9 rp=167 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=89 nh=-1 nc=0 rng=10517
+zone 9 at 94,96 cat=0 pre=58612 traf=1 nh=1 nc=0
+  3x3 61694 61693 61693 61692 58612 61694 61694 61692 61693
+  pz=5 uz=5 rz=10 rp=175 cz=0 cp=0 iz=0 ip=0 hp=0 chp=0 rog=102 nh=1 nc=0 rng=32148
+zone 10 at 6,77 cat=1 pre=62900 traf=0 nh=0 nc=-1
+  3x3 24999 25000 25001 25002 62891 25004 25005 25006 25007
+  pz=6 uz=5 rz=10 rp=175 cz=1 cp=1 iz=0 ip=0 hp=0 chp=0 rog=-104 nh=0 nc=-1 rng=11472
+zone 11 at 17,57 cat=1 pre=62954 traf=-1 nh=0 nc=1
+  3x3 57830 57831 57832 57833 62954 57835 57836 57837 57838
+  pz=7 uz=5 rz=10 rp=175 cz=2 cp=3 iz=0 ip=0 hp=0 chp=0 rog=-9 nh=0 nc=1 rng=62994
+zone 12 at 24,5 cat=1 pre=62945 traf=1 nh=-1 nc=0
+  3x3 57821 57822 57823 57824 62945 57826 57827 57828 57829
+  pz=8 uz=5 rz=10 rp=175 cz=3 cp=4 iz=0 ip=0 hp=0 chp=0 rog=-34 nh=-1 nc=0 rng=3774
+zone 13 at 32,57 cat=1 pre=62963 traf=0 nh=1 nc=0
+  3x3 57839 57840 57841 57842 62963 57844 57845 57846 57847
+  pz=9 uz=5 rz=10 rp=175 cz=4 cp=7 iz=0 ip=0 hp=0 chp=0 rog=181 nh=1 nc=0 rng=39031
+zone 14 at 43,91 cat=1 pre=62900 traf=-1 nh=0 nc=0
+  3x3 57776 57777 57778 57779 62900 57781 57782 57783 57784
+  pz=10 uz=5 rz=10 rp=175 cz=5 cp=8 iz=0 ip=0 hp=0 chp=0 rog=99 nh=0 nc=0 rng=15855
+zone 15 at 57,51 cat=1 pre=63071 traf=1 nh=0 nc=-1
+  3x3 57947 57948 57949 57950 30303 57952 57953 57954 57955
+  pz=10 uz=6 rz=10 rp=175 cz=6 cp=13 iz=0 ip=0 hp=0 chp=0 rog=-186 nh=0 nc=-1 rng=61477
+zone 16 at 73,21 cat=1 pre=62963 traf=0 nh=-1 nc=1
+  3x3 57839 57840 57841 57842 62963 57844 57845 57846 57847
+  pz=11 uz=6 rz=10 rp=175 cz=7 cp=16 iz=0 ip=0 hp=0 chp=0 rog=49 nh=-1 nc=1 rng=60101
+zone 17 at 102,47 cat=1 pre=62963 traf=-1 nh=1 nc=0
+  3x3 25017 25018 25019 25020 62909 25022 25023 25024 25025
+  pz=12 uz=6 rz=10 rp=175 cz=8 cp=19 iz=0 ip=0 hp=0 chp=0 rog=-2 nh=1 nc=0 rng=58692
+zone 18 at 2,73 cat=2 pre=63152 traf=1 nh=0 nc=0
+  3x3 58028 58029 25265 58031 30384 60306 58034 58035 58036
+  pz=12 uz=7 rz=10 rp=175 cz=8 cp=19 iz=1 ip=4 hp=0 chp=0 rog=-104 nh=0 nc=0 rng=20011
+zone 19 at 14,2 cat=2 pre=63152 traf=0 nh=0 nc=0
+  3x3 58028 58029 60302 58031 63152 60306 58034 58035 58036
+  pz=13 uz=7 rz=10 rp=175 cz=8 cp=19 iz=2 ip=8 hp=0 chp=0 rog=32 nh=0 nc=0 rng=38580
+zone 20 at 32,2 cat=2 pre=63116 traf=-1 nh=-1 nc=-1
+  3x3 25215 25216 25217 25218 63107 25220 25221 25222 25223
+  pz=14 uz=7 rz=10 rp=175 cz=8 cp=19 iz=3 ip=12 hp=0 chp=0 rog=93 nh=-1 nc=-1 rng=46443
+zone 21 at 73,2 cat=2 pre=63116 traf=1 nh=1 nc=1
+  3x3 57992 25226 60290 57995 30348 57997 57998 57999 58000
+  pz=14 uz=8 rz=10 rp=175 cz=8 cp=19 iz=4 ip=16 hp=0 chp=0 rog=33 nh=1 nc=1 rng=32851
+zone 22 at 83,9 cat=2 pre=63152 traf=0 nh=0 nc=0
+  3x3 58028 58029 60302 58031 63152 60306 58034 58035 58036
+  pz=15 uz=8 rz=10 rp=175 cz=8 cp=19 iz=5 ip=20 hp=0 chp=0 rog=166 nh=0 nc=0 rng=32283
+zone 23 at 90,13 cat=2 pre=63116 traf=-1 nh=0 nc=0
+  3x3 25251 25252 25253 25254 63143 25256 25257 25258 25259
+  pz=16 uz=8 rz=10 rp=175 cz=8 cp=19 iz=6 ip=24 hp=0 chp=0 rog=-14 nh=0 nc=0 rng=17194
+zone 24 at 114,69 cat=2 pre=63152 traf=1 nh=-1 nc=0
+  3x3 58028 58029 25265 58031 30384 60306 58034 58035 58036
+  pz=16 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=0 chp=0 rog=-3 nh=-1 nc=0 rng=16701
+zone 25 at 10,57 cat=3 pre=62882 traf=0 nh=1 nc=-1
+  3x3 57758 57759 57760 57761 62882 57763 57764 57765 57766
+  pz=17 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=0 chp=1 rog=88 nh=1 nc=-1 rng=45440
+zone 26 at 25,9 cat=3 pre=62873 traf=-1 nh=0 nc=1
+  3x3 57749 57750 57751 57752 62873 57754 57755 57756 57757
+  pz=18 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=1 chp=1 rog=-26 nh=0 nc=1 rng=25596
+zone 27 at 43,94 cat=3 pre=62882 traf=1 nh=0 nc=0
+  3x3 57758 57759 57760 57761 62882 57763 57764 57765 57766
+  pz=19 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=1 chp=2 rog=99 nh=0 nc=0 rng=36847
+zone 28 at 83,98 cat=3 pre=62873 traf=0 nh=-1 nc=0
+  3x3 57749 57750 57751 57752 62873 57754 57755 57756 57757
+  pz=20 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=2 chp=2 rog=-151 nh=-1 nc=0 rng=43967
+zone 29 at 108,31 cat=3 pre=62873 traf=-1 nh=1 nc=0
+  3x3 57749 57750 57751 57752 62873 57754 57755 57756 57757
+  pz=21 uz=9 rz=10 rp=175 cz=8 cp=19 iz=7 ip=28 hp=3 chp=2 rog=122 nh=1 nc=0 rng=42159
+rep 0 tiles=71026b7a rog=27fd2703 pz=42 uz=18 rz=20 rp=340 cz=16 cp=36 iz=14 ip=54 hp=6 chp=4 rng=52818
+rep 1 tiles=0ccc37bf rog=69275f03 pz=63 uz=27 rz=30 rp=496 cz=24 cp=54 iz=21 ip=79 hp=9 chp=6 rng=19391
+rep 2 tiles=935130e9 rog=8329ed03 pz=84 uz=36 rz=40 rp=643 cz=32 cp=72 iz=28 ip=103 hp=12 chp=8 rng=39224
+rep 3 tiles=d88ac952 rog=50965f03 pz=105 uz=45 rz=50 rp=773 cz=40 cp=89 iz=35 ip=124 hp=15 chp=10 rng=38941
+rep 4 tiles=6b44e051 rog=30f9e303 pz=126 uz=54 rz=60 rp=895 cz=48 cp=106 iz=42 ip=145 hp=18 chp=12 rng=46555
+rep 5 tiles=0fe51291 rog=63179703 pz=147 uz=63 rz=70 rp=1017 cz=56 cp=122 iz=49 ip=163 hp=21 chp=14 rng=28727
+rep 6 tiles=53d61780 rog=1cc30703 pz=168 uz=72 rz=80 rp=1123 cz=64 cp=137 iz=56 ip=178 hp=24 chp=16 rng=42935
+rep 7 tiles=104dce31 rog=43907a03 pz=189 uz=81 rz=90 rp=1227 cz=72 cp=152 iz=63 ip=193 hp=27 chp=18 rng=60333
+rep 8 tiles=856a360b rog=05d20103 pz=210 uz=90 rz=100 rp=1330 cz=80 cp=166 iz=70 ip=207 hp=30 chp=20 rng=42422
+rep 9 tiles=78270ba5 rog=1b657903 pz=231 uz=99 rz=110 rp=1426 cz=88 cp=180 iz=77 ip=220 hp=33 chp=22 rng=51735
+rep 10 tiles=82bfca93 rog=5a377403 pz=252 uz=108 rz=120 rp=1513 cz=96 cp=193 iz=84 ip=232 hp=36 chp=24 rng=56196
+rep 11 tiles=58d92d81 rog=5ed57403 pz=273 uz=117 rz=130 rp=1598 cz=104 cp=205 iz=91 ip=241 hp=39 chp=26 rng=43539
+rep 12 tiles=7315311f rog=2752ce03 pz=294 uz=126 rz=140 rp=1675 cz=112 cp=216 iz=98 ip=250 hp=42 chp=28 rng=19413
+rep 13 tiles=ce34fe90 rog=6525ce03 pz=315 uz=135 rz=150 rp=1760 cz=120 cp=227 iz=105 ip=256 hp=45 chp=30 rng=23157
+rep 14 tiles=46029f81 rog=7d5e8603 pz=336 uz=144 rz=160 rp=1837 cz=128 cp=237 iz=112 ip=263 hp=48 chp=32 rng=12476
+rep 15 tiles=baab7fbd rog=d341a503 pz=357 uz=153 rz=170 rp=1905 cz=136 cp=247 iz=119 ip=270 hp=51 chp=34 rng=60083
+rep 16 tiles=baab7fbd rog=d341a503 pz=378 uz=162 rz=180 rp=1973 cz=144 cp=257 iz=126 ip=276 hp=54 chp=36 rng=65274
+rep 17 tiles=9e6f46a3 rog=e1cd6503 pz=399 uz=171 rz=190 rp=2041 cz=152 cp=267 iz=133 ip=282 hp=57 chp=38 rng=17164
+rep 18 tiles=729f4e62 rog=7fbd0f03 pz=420 uz=180 rz=200 rp=2109 cz=160 cp=275 iz=140 ip=288 hp=60 chp=40 rng=21976
+rep 19 tiles=3fedef9e rog=cf79da03 pz=441 uz=189 rz=210 rp=2184 cz=168 cp=281 iz=147 ip=294 hp=63 chp=42 rng=5668
+after-phase1 tiles=8bb6c53e3fedef9e rog=e8a55c27cf79da03 com=f4f95039a4741283
+clear lots 470
+setZonePower 1 86 -> 0 t=3fedef9e
+getLandPollutionValue 1 86 -> 1
+doFreePop 1 86 -> 0
+evalLot 1 86 -> 2
+buildHouse 1 86 v=0 t=ebb56d64
+doResIn 1 86 p=0 v=0 t=cba770e7 rog=-48
+doResOut 1 86 p=0 v=0 t=cba770e7 rog=-48
+doComIn 1 86 p=0 v=0 t=52746b3b
+doComOut 1 86 p=0 v=0 t=52746b3b
+doIndIn 1 86 p=0 v=0 t=743a08b3
+doIndOut 1 86 p=0 v=0 t=743a08b3
+resPlop 1 86 den=0 v=0 t=998c486e
+comPlop 1 86 den=0 v=0 t=52746b3b
+indPlop 1 86 den=0 v=0 t=743a08b3
+zonePlop 1 86 -> 1 t=998c486e
+setSmoke 1 86 pw=1 t=998c486e
+makeHospital 1 86 nh=0 nc=0 t=d984487e rng=32305
+incRateOfGrowth 1 86 a=-2 rog=8
+evalRes 1 86 t=-1 -> -3000
+evalCom 1 86 t=-1 -> -3000
+evalInd t=-1 -> -1000
+setZonePower 14 14 -> 1 t=d984487e
+getLandPollutionValue 14 14 -> 0
+doFreePop 14 14 -> 0
+evalLot 14 14 -> 2
+buildHouse 14 14 v=1 t=b33c9805
+doResIn 14 14 p=7 v=1 t=73aceee8 rog=72
+doResOut 14 14 p=7 v=1 t=73aceee8 rog=68
+doComIn 14 14 p=1 v=1 t=4d62c87e
+doComOut 14 14 p=1 v=1 t=9da5be7f
+doIndIn 14 14 p=2 v=1 t=a53f4db2
+doIndOut 14 14 p=2 v=1 t=7f3e26bc
+resPlop 14 14 den=3 v=1 t=dae458cc
+comPlop 14 14 den=2 v=1 t=44c96e77
+indPlop 14 14 den=3 v=1 t=12ff6e61
+zonePlop 14 14 -> 1 t=8a021406
+setSmoke 14 14 pw=0 t=8a021406
+makeHospital 14 14 nh=0 nc=0 t=2dc3e9d6 rng=61202
+incRateOfGrowth 14 14 a=-1 rog=64
+evalRes 14 14 t=0 -> -2616
+evalCom 14 14 t=0 -> 225
+evalInd t=0 -> 0
+setZonePower 22 21 -> 1 t=2dc3e9d6
+getLandPollutionValue 22 21 -> 2
+doFreePop 22 21 -> 4
+evalLot 22 21 -> 1
+buildHouse 22 21 v=2 t=145ca3fd
+doResIn 22 21 p=14 v=2 t=730993c5 rog=-17
+doResOut 22 21 p=14 v=2 t=730993c5 rog=-21
+doComIn 22 21 p=2 v=2 t=41a61271
+doComOut 22 21 p=2 v=2 t=f43f0b53
+doIndIn 22 21 p=4 v=0 t=f43f0b53
+doIndOut 22 21 p=4 v=0 t=bb3eb91e
+resPlop 22 21 den=2 v=2 t=f4731abf
+comPlop 22 21 den=4 v=2 t=1a941667
+indPlop 22 21 den=2 v=0 t=bb3eb91e
+zonePlop 22 21 -> 1 t=f4a675b7
+setSmoke 22 21 pw=1 t=f4a675b7
+makeHospital 22 21 nh=0 nc=0 t=f4a675b7 rng=59742
+incRateOfGrowth 22 21 a=0 rog=-53
+evalRes 22 21 t=1 -> -184
+evalCom 22 21 t=1 -> 17
+evalInd t=1 -> 0
+setZonePower 36 95 -> 1 t=f4a675b7
+getLandPollutionValue 36 95 -> 2
+doFreePop 36 95 -> 0
+evalLot 36 95 -> 1
+buildHouse 36 95 v=3 t=8128c833
+doResIn 36 95 p=21 v=3 t=27898ce1 rog=-156
+doResOut 36 95 p=21 v=3 t=27898ce1 rog=-188
+doComIn 36 95 p=3 v=3 t=2462f22b
+doComOut 36 95 p=3 v=3 t=96e6245d
+doIndIn 36 95 p=1 v=1 t=2b5c6f33
+doIndOut 36 95 p=1 v=1 t=67a7c329
+resPlop 36 95 den=1 v=3 t=e7f3a0f2
+comPlop 36 95 den=1 v=3 t=96e6245d
+indPlop 36 95 den=1 v=1 t=2b5c6f33
+zonePlop 36 95 -> 1 t=f2e95358
+setSmoke 36 95 pw=0 t=f2e95358
+makeHospital 36 95 nh=0 nc=0 t=5709f5a5 rng=13149
+incRateOfGrowth 36 95 a=1 rog=-184
+evalRes 36 95 t=-1 -> -3000
+evalCom 36 95 t=-1 -> -3000
+evalInd t=-1 -> -1000
+setZonePower 45 98 -> 1 t=5709f5a5
+getLandPollutionValue 45 98 -> 0
+doFreePop 45 98 -> 8
+evalLot 45 98 -> 1
+buildHouse 45 98 v=0 t=5709f5a5
+doResIn 45 98 p=28 v=0 t=5709f5a5 rog=103
+doResOut 45 98 p=28 v=0 t=8e7277d3 rog=71
+doComIn 45 98 p=4 v=0 t=8e7277d3
+doComOut 45 98 p=4 v=0 t=f53b6130
+doIndIn 45 98 p=3 v=0 t=4fa15323
+doIndOut 45 98 p=3 v=0 t=1422ca21
+resPlop 45 98 den=0 v=0 t=8e7277d3
+comPlop 45 98 den=3 v=0 t=be1f61ad
+indPlop 45 98 den=0 v=0 t=103f0f2a
+zonePlop 45 98 -> 1 t=e1636e27
+setSmoke 45 98 pw=1 t=e1636e27
+makeHospital 45 98 nh=0 nc=0 t=ab085fa0 rng=18430
+incRateOfGrowth 45 98 a=2 rog=47
+evalRes 45 98 t=0 -> -2488
+evalCom 45 98 t=0 -> 45
+evalInd t=0 -> 0
+setZonePower 54 1 -> 1 t=ab085fa0
+getLandPollutionValue 54 1 -> 2
+doFreePop 54 1 -> 0
+evalLot 54 1 -> 2
+buildHouse 54 1 v=1 t=8c2fee9c
+doResIn 54 1 p=35 v=1 t=7c1f3cb4 rog=57
+doResOut 54 1 p=35 v=1 t=aef15b82 rog=25
+doComIn 54 1 p=5 v=1 t=aef15b82
+doComOut 54 1 p=5 v=1 t=496fbcf1
+doIndIn 54 1 p=0 v=1 t=78ff6124
+doIndOut 54 1 p=0 v=1 t=78ff6124
+resPlop 54 1 den=3 v=1 t=7c1f3cb4
+comPlop 54 1 den=0 v=1 t=d842bb0d
+indPlop 54 1 den=3 v=1 t=2f1ce411
+zonePlop 54 1 -> 1 t=aef15b82
+setSmoke 54 1 pw=0 t=aef15b82
+makeHospital 54 1 nh=0 nc=0 t=aef15b82 rng=57835
+incRateOfGrowth 54 1 a=-2 rog=17
+evalRes 54 1 t=1 -> -440
+evalCom 54 1 t=1 -> 129
+evalInd t=1 -> 0
+setZonePower 72 97 -> 1 t=aef15b82
+getLandPollutionValue 72 97 -> 3
+doFreePop 72 97 -> 2
+evalLot 72 97 -> 1
+buildHouse 72 97 v=2 t=f4f8ad87
+doResIn 72 97 p=0 v=2 t=f40a328d rog=129
+doResOut 72 97 p=0 v=2 t=f40a328d rog=129
+doComIn 72 97 p=0 v=2 t=3092c06b
+doComOut 72 97 p=0 v=2 t=3092c06b
+doIndIn 72 97 p=0 v=0 t=b0a8e6f8
+doIndOut 72 97 p=0 v=0 t=b0a8e6f8
+resPlop 72 97 den=0 v=2 t=82ab9455
+comPlop 72 97 den=0 v=2 t=3092c06b
+indPlop 72 97 den=0 v=0 t=b0a8e6f8
+zonePlop 72 97 -> 1 t=8d226447
+setSmoke 72 97 pw=1 t=8d226447
+makeHospital 72 97 nh=0 nc=0 t=bac03a1d rng=57455
+incRateOfGrowth 72 97 a=-1 rog=189
+evalRes 72 97 t=-1 -> -3000
+evalCom 72 97 t=-1 -> -3000
+evalInd t=-1 -> -1000
+setZonePower 90 20 -> 1 t=bac03a1d
+getLandPollutionValue 90 20 -> 2
+doFreePop 90 20 -> 0
+evalLot 90 20 -> 1
+buildHouse 90 20 v=3 t=b3b04012
+doResIn 90 20 p=7 v=3 t=930e9ad2 rog=58
+doResOut 90 20 p=7 v=3 t=930e9ad2 rog=54
+doComIn 90 20 p=1 v=3 t=616430ef
+doComOut 90 20 p=1 v=3 t=3a0a418d
+doIndIn 90 20 p=2 v=1 t=a4e7c500
+doIndOut 90 20 p=2 v=1 t=43148486
+resPlop 90 20 den=3 v=3 t=66446f46
+comPlop 90 20 den=2 v=3 t=6da028ee
+indPlop 90 20 den=3 v=1 t=37b8bf03
+zonePlop 90 20 -> 1 t=38c1713e
+setSmoke 90 20 pw=0 t=38c1713e
+makeHospital 90 20 nh=0 nc=0 t=782fa4c2 rng=57898
+incRateOfGrowth 90 20 a=0 rog=54
+evalRes 90 20 t=0 -> 72
+evalCom 90 20 t=0 -> 137
+evalInd t=0 -> 0
+setZonePower 107 24 -> 1 t=ff3c9842
+getLandPollutionValue 107 24 -> 1
+doFreePop 107 24 -> 1
+evalLot 107 24 -> 2
+buildHouse 107 24 v=0 t=ed69de4a
+doResIn 107 24 p=14 v=0 t=14f2ca6e rog=154
+doResOut 107 24 p=14 v=0 t=14f2ca6e rog=150
+doComIn 107 24 p=2 v=0 t=14f2ca6e
+doComOut 107 24 p=2 v=0 t=19f9fcf7
+doIndIn 107 24 p=4 v=0 t=19f9fcf7
+doIndOut 107 24 p=4 v=0 t=778ab265
+resPlop 107 24 den=2 v=0 t=0847dfd8
+comPlop 107 24 den=4 v=0 t=2ebde8fb
+indPlop 107 24 den=2 v=0 t=778ab265
+zonePlop 107 24 -> 1 t=85fb9ab6
+setSmoke 107 24 pw=1 t=85fb9ab6
+makeHospital 107 24 nh=0 nc=0 t=85fb9ab6 rng=10636
+incRateOfGrowth 107 24 a=1 rog=90
+evalRes 107 24 t=1 -> -1720
+evalCom 107 24 t=1 -> 113
+evalInd t=1 -> 0
+setZonePower 111 84 -> 0 t=6e1dcc36
+getLandPollutionValue 111 84 -> 0
+doFreePop 111 84 -> 4
+evalLot 111 84 -> 2
+buildHouse 111 84 v=1 t=a9a3829b
+doResIn 111 84 p=21 v=1 t=a326630e rog=200
+doResOut 111 84 p=21 v=1 t=0091cda9 rog=168
+doComIn 111 84 p=3 v=1 t=0091cda9
+doComOut 111 84 p=3 v=1 t=17741532
+doIndIn 111 84 p=1 v=1 t=e210a56f
+doIndOut 111 84 p=1 v=1 t=9caa99dd
+resPlop 111 84 den=1 v=1 t=a326630e
+comPlop 111 84 den=1 v=1 t=17741532
+indPlop 111 84 den=1 v=1 t=e210a56f
+zonePlop 111 84 -> 1 t=4df260e2
+setSmoke 111 84 pw=0 t=4df260e2
+makeHospital 111 84 nh=0 nc=0 t=efb11e6d rng=16068
+incRateOfGrowth 111 84 a=2 rog=144
+evalRes 111 84 t=-1 -> -3000
+evalCom 111 84 t=-1 -> -3000
+evalInd t=-1 -> -1000
+setZonePower 0 0 -> 0 t=efb11e6d
+getLandPollutionValue 0 0 -> 0
+doFreePop 0 0 -> 0
+evalLot 0 0 -> -1
+buildHouse 0 0 v=2 t=efb11e6d
+doResIn 0 0 p=28 v=2 t=43062e8b rog=-112
+doResOut 0 0 p=28 v=2 t=c7eb1f07 rog=-144
+doComIn 0 0 p=4 v=2 t=c7eb1f07
+doComOut 0 0 p=4 v=2 t=1b6033bb
+doIndIn 0 0 p=3 v=0 t=159901bb
+doIndOut 0 0 p=3 v=0 t=95285ff7
+resPlop 0 0 den=0 v=2 t=c7eb1f07
+comPlop 0 0 den=3 v=2 t=4e850427
+indPlop 0 0 den=0 v=0 t=864be157
+zonePlop 0 0 -> 1 t=43062e8b
+setSmoke 0 0 pw=1 t=43062e8b
+makeHospital 0 0 nh=0 nc=0 t=535d313b rng=58498
+incRateOfGrowth 0 0 a=-2 rog=-184
+evalRes 0 0 t=0 -> -3000
+evalCom 0 0 t=0 -> 49
+evalInd t=0 -> 0
+setZonePower 119 99 -> 1 t=df5ddbbb
+getLandPollutionValue 119 99 -> 1
+doFreePop 119 99 -> 0
+evalLot 119 99 -> -1
+buildHouse 119 99 v=3 t=df5ddbbb
+doResIn 119 99 p=35 v=3 t=629ff843 rog=57
+doResOut 119 99 p=35 v=3 t=7cf19077 rog=25
+doComIn 119 99 p=5 v=3 t=7cf19077
+doComOut 119 99 p=5 v=3 t=a6a3feab
+doIndIn 119 99 p=0 v=1 t=128e33f3
+doIndOut 119 99 p=0 v=1 t=128e33f3
+resPlop 119 99 den=3 v=3 t=629ff843
+comPlop 119 99 den=0 v=3 t=d25b4957
+indPlop 119 99 den=3 v=1 t=830ade5f
+zonePlop 119 99 -> 1 t=6c3a46d3
+setSmoke 119 99 pw=0 t=6c3a46d3
+makeHospital 119 99 nh=0 nc=0 t=6c3a46d3 rng=8444
+incRateOfGrowth 119 99 a=-1 rog=21
+evalRes 119 99 t=1 -> -1848
+evalCom 119 99 t=1 -> 5
+evalInd t=1 -> 0
+bh 49 tiles=31e9668f
+bh 99 tiles=d759db3f
+bh 149 tiles=46eb54f2
+bh 199 tiles=7f7b7d45
+po 0 ro=7f7b7d45 ri=c3d08f02 co=c3d08f02 ci=a9455fa2 io=a9455fa2 ii=e43bbe52
+po 1 ro=e43bbe52 ri=ab156492 co=bbcf06d5 ci=2630c150 io=9e78a68f ii=62ed8d99
+po 2 ro=62ed8d99 ri=22098796 co=199d8a89 ci=e23cbc97 io=e43bbe52 ii=e7ec4b30
+po 3 ro=e7ec4b30 ri=bda67dca co=b8571563 ci=92777e61 io=62ed8d99 ii=ea0bb107
+po 4 ro=ea0bb107 ri=c3d08f02 co=3107e7fc ci=1c667da6 io=e7ec4b30 ii=e7ec4b30
+po 5 ro=e7ec4b30 ri=ab156492 co=33a97caf ci=33a97caf io=ea0bb107 ii=ea0bb107
+po 6 ro=ea0bb107 ri=22098796 co=687506f5 ci=687506f5 io=687506f5 ii=e43bbe52
+po 7 ro=e43bbe52 ri=bda67dca co=9e78a68f ci=9e78a68f io=9e78a68f ii=62ed8d99
+po 8 ro=62ed8d99 ri=69d74ce3 co=69d74ce3 ci=a9455fa2 io=e43bbe52 ii=e7ec4b30
+po 9 ro=e7ec4b30 ri=c0e45717 co=bbcf06d5 ci=2630c150 io=62ed8d99 ii=ea0bb107
+po 10 ro=ea0bb107 ri=eb44a58b co=199d8a89 ci=e23cbc97 io=e7ec4b30 ii=e7ec4b30
+po 11 ro=e7ec4b30 ri=7cc1b11f co=b8571563 ci=92777e61 io=ea0bb107 ii=ea0bb107
+po 12 ro=ea0bb107 ri=69d74ce3 co=3107e7fc ci=1c667da6 io=1c667da6 ii=e43bbe52
+po 13 ro=e43bbe52 ri=c0e45717 co=33a97caf ci=33a97caf io=9e78a68f ii=62ed8d99
+po 14 ro=62ed8d99 ri=eb44a58b co=687506f5 ci=687506f5 io=e43bbe52 ii=e7ec4b30
+po 15 ro=e7ec4b30 ri=7cc1b11f co=9e78a68f ci=9e78a68f io=62ed8d99 ii=ea0bb107
+po 16 ro=899f4840 ri=69d74ce3 co=69d74ce3 ci=a9455fa2 io=e7ec4b30 ii=e7ec4b30
+po 17 ro=c0e45717 ri=08e745cc co=bbcf06d5 ci=2630c150 io=ea0bb107 ii=ea0bb107
+po 18 ro=eb44a58b ri=43dd0700 co=199d8a89 ci=e23cbc97 io=e23cbc97 ii=e43bbe52
+po 19 ro=7cc1b11f ri=2fb64104 co=b8571563 ci=92777e61 io=9e78a68f ii=62ed8d99
+po 20 ro=69d74ce3 ri=8eb4cba8 co=3107e7fc ci=1c667da6 io=e43bbe52 ii=e7ec4b30
+po 21 ro=c0e45717 ri=08e745cc co=33a97caf ci=33a97caf io=62ed8d99 ii=ea0bb107
+po 22 ro=eb44a58b ri=43dd0700 co=687506f5 ci=687506f5 io=e7ec4b30 ii=e7ec4b30
+po 23 ro=7cc1b11f ri=2fb64104 co=9e78a68f ci=9e78a68f io=ea0bb107 ii=ea0bb107
+po 24 ro=69d74ce3 ri=813581a5 co=813581a5 ci=a9455fa2 io=a9455fa2 ii=e43bbe52
+po 25 ro=c0e45717 ri=ef6d3c69 co=bbcf06d5 ci=2630c150 io=9e78a68f ii=62ed8d99
+po 26 ro=eb44a58b ri=ddbe46dd co=199d8a89 ci=e23cbc97 io=e43bbe52 ii=e7ec4b30
+po 27 ro=7cc1b11f ri=2ced6a21 co=b8571563 ci=92777e61 io=62ed8d99 ii=ea0bb107
+po 28 ro=69d74ce3 ri=813581a5 co=3107e7fc ci=1c667da6 io=e7ec4b30 ii=e7ec4b30
+po 29 ro=c0e45717 ri=ef6d3c69 co=33a97caf ci=33a97caf io=ea0bb107 ii=ea0bb107
+po 30 ro=eb44a58b ri=ddbe46dd co=687506f5 ci=687506f5 io=687506f5 ii=e43bbe52
+po 31 ro=7cc1b11f ri=2ced6a21 co=9e78a68f ci=9e78a68f io=9e78a68f ii=62ed8d99
+po 32 ro=8eb4cba8 ri=ab156492 co=ab156492 ci=a9455fa2 io=e43bbe52 ii=e7ec4b30
+po 33 ro=08e745cc ri=22098796 co=bbcf06d5 ci=2630c150 io=62ed8d99 ii=ea0bb107
+po 34 ro=43dd0700 ri=bda67dca co=199d8a89 ci=e23cbc97 io=e7ec4b30 ii=e7ec4b30
+po 35 ro=2fb64104 ri=aaad8cce co=b8571563 ci=92777e61 io=ea0bb107 ii=ea0bb107
+po 36 ro=8eb4cba8 ri=ab156492 co=3107e7fc ci=1c667da6 io=1c667da6 ii=e43bbe52
+po 37 ro=08e745cc ri=22098796 co=33a97caf ci=33a97caf io=9e78a68f ii=62ed8d99
+po 38 ro=43dd0700 ri=bda67dca co=687506f5 ci=687506f5 io=e43bbe52 ii=e7ec4b30
+po 39 ro=2fb64104 ri=aaad8cce co=9e78a68f ci=9e78a68f io=62ed8d99 ii=ea0bb107
+po 40 ro=813581a5 ri=813581a5 co=813581a5 ci=a9455fa2 io=e7ec4b30 ii=e7ec4b30
+po 41 ro=ef6d3c69 ri=ef6d3c69 co=bbcf06d5 ci=2630c150 io=ea0bb107 ii=ea0bb107
+getResZonePop hash=f9d3d6a40f237900
+getComZonePop hash=9f23eae9a528f3dc
+getIndZonePop hash=b5b7ee084120490e
+end tiles=ed86b952ea0bb107 rog=56e8be02ab952603 com=f4f95039a4741283
+end pz=441 uz=189 rz=210 rp=2184 cz=168 cp=281 iz=147 ip=294 hp=63 chp=42 rng=31218

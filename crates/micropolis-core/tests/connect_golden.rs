@@ -29,7 +29,12 @@ impl Fx {
 }
 
 impl Effects for Fx {
-    fn get_map_value(&self, x: i32, y: i32) -> Tile {
+    fn get_map_value(
+        &self,
+        _sim: &micropolis_core::simulation::Simulation,
+        x: i32,
+        y: i32,
+    ) -> Tile {
         self.map[Self::idx(x, y)]
     }
     fn set_map_value(&mut self, x: i32, y: i32, value: Tile) {

@@ -31,21 +31,15 @@ impl Simulation {
     pub(crate) fn do_meltdown(&mut self, _pos: Position) {
         todo!("sprite")
     }
-    // zone.cpp
+    // simulate.cpp / misc (fireZone lives with the disaster code in the C++ sprite/simulate files)
     pub(crate) fn fire_zone(&mut self, _pos: Position, _ch: Tile) {
         todo!("zone")
     }
-    pub(crate) fn do_free_pop(&self, _pos: Position) -> i16 {
-        todo!("zone")
+    pub(crate) fn repair_zone(&mut self, _pos: Position, _z_cent: Tile, _z_size: i16) {
+        todo!("simulate")
     }
-    pub(crate) fn get_res_zone_pop(&self, _t: u16) -> i16 {
-        todo!("zone")
-    }
-    pub(crate) fn get_com_zone_pop(&self, _t: u16) -> i16 {
-        todo!("zone")
-    }
-    pub(crate) fn get_ind_zone_pop(&self, _t: u16) -> i16 {
-        todo!("zone")
+    pub(crate) fn do_special_zone(&mut self, _pos: Position, _power_on: bool) {
+        todo!("simulate")
     }
     // evaluate.cpp
     pub(crate) fn get_population(&self) -> i64 {

@@ -10,7 +10,7 @@
 //! follow the original.
 
 use crate::position::{Direction, Position};
-use crate::shim_traffic::SPRITE_HELICOPTER;
+use crate::shim_pending::SPRITE_HELICOPTER;
 use crate::simulation::{Simulation, MAX_TRAFFIC_DISTANCE};
 use crate::tile::{
     Tile, COMBASE, DIRT, LASTPOWER, LASTRAIL, LHTHR, LOMASK, NUCLEAR, PORT, POWERBASE, ROADBASE,

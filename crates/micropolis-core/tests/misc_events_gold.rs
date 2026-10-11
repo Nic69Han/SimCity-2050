@@ -526,9 +526,9 @@ fn run() -> Vec<String> {
     s.set_population_density(-1, 0, 5);
     out.push(format!(
         "POPDENS {} {} {}",
-        s.get_population_density(3, 4),
-        s.get_population_density(-1, 0),
-        s.get_population_density(59, 49)
+        s.get_population_density_at(3, 4),
+        s.get_population_density_at(-1, 0),
+        s.get_population_density_at(59, 49)
     ));
     s.set_rate_of_growth(3, 4, 70000);
     s.set_rate_of_growth(15, 0, 1);
