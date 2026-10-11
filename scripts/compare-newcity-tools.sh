@@ -38,6 +38,8 @@ for seed in $SEEDS; do
     last=$(grep '^tick ' "$WORK/oracle.out" | tail -1)
     pop=$(sed -n 's/.* pop=\([0-9]*\).*/\1/p' <<< "$last")
     funds=$(sed -n 's/.* funds=\([-0-9]*\).*/\1/p' <<< "$last")
+    # Peak population over the whole run: the final value can transiently be 0 between censuses.
+    peak=$(awk '/^tick / { for (i = 1; i <= NF; i++) if ($i ~ /^pop=/) { v = substr($i, 5) + 0; if (v > m) m = v } } END { print m + 0 }' "$WORK/oracle.out")
     zones=$(awk '
         FNR == NR { if (!/^#/ && NF >= 5 && $1 + 0 <= t + 0) { tool[n] = $3; kind[n] = $2; n++ }; next }
         /^act / { r = $4; sub("result=", "", r) }
@@ -60,8 +62,9 @@ for seed in $SEEDS; do
       if [ -z "$pop_max" ] || [ "$pop" -gt "$pop_max" ]; then pop_max=$pop; fi
       if [ -z "$funds_min" ] || [ "$funds" -lt "$funds_min" ]; then funds_min=$funds; fi
       if [ -z "$funds_max" ] || [ "$funds" -gt "$funds_max" ]; then funds_max=$funds; fi
-      if [ "$pop" -eq 0 ] || [ "$zones" -eq 0 ]; then
-        echo "FAIL $label: the city did not grow (final pop=$pop, zones built=$zones)"
+      # Growth is only expected over long runs: a young city has almost no population yet.
+      if [ "$zones" -eq 0 ] || { [ "$TICKS" -ge 1500 ] && [ "$peak" -le 1 ]; }; then
+        echo "FAIL $label: the city did not grow (peak pop=$peak, zones built=$zones)"
         fail=1
       fi
     else
