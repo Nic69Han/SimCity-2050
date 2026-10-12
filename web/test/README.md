@@ -71,3 +71,20 @@ Files:
 
 Each test asserts that no console error, page error or failed request happened.
 There are no `todo` tests: a known page bug is fixed, or it is a failing test (the run fails).
+
+## Saves (web/saves.js, web/storage.js, web/errors.js)
+
+- `saves.test.mjs`: the autosave schedule with a fake clock (a write each minute only while
+  something changed, nothing before the startup question is answered), the digest skip, the
+  quota error path (reported, retried), names and metadata text, engine detection
+  (save_city / load_city, else save_cty / load_cty), page preferences (kept, corrupt values
+  ignored, a blocked store does not throw).
+- `storage.test.mjs`: the port over the in-memory adapter (copies, corrupt records listed as
+  corrupt, quota), and the IndexedDB adapter over a small fake IDBFactory (open, transactions,
+  a missing or refused IndexedDB is "unavailable").
+- `errors.test.mjs`: engine codes (`<code>: <detail>`) and the legacy English messages to French;
+  storage codes to French.
+
+Dev hook (end-to-end tests only): `window.__saves.flush()` writes the autosave now, when the city
+changed since the last write, and resolves to "saved", "same", "skipped", "idle" or "error". The
+timer is a minute; the tests do not wait for it. It holds no game state.

@@ -6,8 +6,9 @@ import { createRenderer } from "./render.js";
 import * as messages from "./messages.js";
 import * as budgetUi from "./budget-ui.js";
 import * as overlays from "./overlays.js";
+import * as saves from "./saves.js";
 import { parseSeed, supportsNewCity, applyEnginePreferences } from "./newcity.js";
-import { chooseSize, readLimits, supportsNewSized, isSaveable, saveNote, sizeErrorText } from "./sizes.js";
+import { chooseSize, readLimits, supportsNewSized, saveNote, sizeErrorText } from "./sizes.js";
 import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
 import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT } from "./status.js";
@@ -16,7 +17,7 @@ import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT 
 const MOCK = new URLSearchParams(location.search).has("mock");
 const { default: init, City } = MOCK ? await import("./dev-mock.js") : await import("./pkg/micropolis_wasm.js");
 // Selector entries for a city that is not a sample (added while shown, removed by a sample).
-const CHOICE_LABELS = Object.freeze({ random: "Ville aléatoire", local: "Fichier local" });
+const CHOICE_LABELS = Object.freeze({ random: "Ville aléatoire", local: "Fichier local", saved: "Partie enregistrée" });
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("map");
@@ -39,7 +40,7 @@ const playback = createPlayback({
 
 // Enregistrer only saves the original 120 x 100 map (a .cty file describes that size).
 function updateSaveButton() {
-  const saveable = isSaveable(city);
+  const saveable = saves.canSaveBytes(city);
   $("save").disabled = !saveable;
   $("save-note").textContent = saveNote(saveable);
 }
@@ -89,7 +90,7 @@ function unlock() {
 // the error the engine gave: the city, the status line and the playback are then left as they were.
 function load(bytes) {
   try {
-    city.load_cty(bytes);
+    saves.loadBytes(city, bytes); // load_city when the engine has it (any size), else load_cty
   } catch (e) {
     return e;
   }
@@ -126,7 +127,7 @@ function reportFailure(error) {
   if (!ready) status.textContent = NO_CITY_TEXT;
 }
 
-async function loadSample(name) {
+async function loadSample(name, user = true) {
   const ticket = latest.start();
   let bytes;
   try {
@@ -140,7 +141,10 @@ async function loadSample(name) {
   if (!latest.isCurrent(ticket)) return;
   const error = load(bytes);
   if (error) reportFailure(error);
-  else showCity(name);
+  else {
+    showCity(name);
+    saves.cityLoaded({ user });
+  }
 }
 
 // A new random city of the chosen size, in the same city object (the tools and the playback keep it).
@@ -189,6 +193,7 @@ function newCity() {
   showCity("random");
   $("query-panel").hidden = true;
   draw();
+  saves.cityLoaded({ user: true });
 }
 
 function buildLegend(list) {
@@ -207,8 +212,22 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi, overlays];
-const featureApi = { city: () => city, $, redraw: () => draw(), isReady: () => ready };
+const features = [messages, budgetUi, overlays, saves];
+const featureApi = {
+  city: () => city,
+  $,
+  redraw: () => draw(),
+  isReady: () => ready,
+  limits: () => sizeLimits,
+  // the page's name for the city now: the selector's entry and the seed of a random city
+  describe: () => ({ label: $("city").selectedOptions[0]?.textContent ?? "", seed: seedNote }),
+  // loads a save's bytes like an opened file; returns the engine's error, or null
+  replaceCity(bytes) {
+    const error = load(bytes);
+    if (!error) showCity("saved");
+    return error;
+  },
+};
 for (const f of features) f.setup?.(featureApi);
 buildLegend($("legend"));
 tools = setupTools({
@@ -246,22 +265,24 @@ $("file").onchange = async (ev) => {
   if (!latest.isCurrent(ticket)) return;
   const error = load(bytes);
   if (error) reportFailure(error);
-  else showCity("local");
+  else {
+    showCity("local");
+    saves.cityLoaded({ user: true });
+  }
 };
 $("play").onclick = () => setPlaying(!playback.playing);
 $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
 $("save").onclick = () => {
-  if (!ready || !isSaveable(city)) return;
-  const bytes = typeof city.save_checked === "function" ? city.save_checked() : city.save_cty();
+  if (!ready || !saves.canSaveBytes(city)) return;
+  const bytes = saves.saveBytes(city);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
   a.download = "city.cty";
   a.click();
   URL.revokeObjectURL(a.href);
 };
-if (MOCK) {
-  load(new Uint8Array(0));
-} else {
-  loadSample("haight");
-}
+// The startup sample loads first; the saves then offer the autosave, if there is one.
+if (MOCK) load(new Uint8Array(0));
+else await loadSample("haight", false);
+await saves.start();
