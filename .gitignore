@@ -2,3 +2,4 @@ target/
 web/pkg/
 web/cities/
 reference/build/
+dist/

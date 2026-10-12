@@ -57,3 +57,40 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests on the wasm engine
         run: ./scripts/e2e.sh
+  deploy:
+    # Publishes the site on Netlify after a merge to main, once every test above is green.
+    needs: [test, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: netlify-deploy
+      cancel-in-progress: false
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID || '7b6b283c-fc3b-4f1a-8a5f-df7364f3f5d0' }}
+      SITE_URL: https://simcity-2050.netlify.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+      - name: Package the site
+        run: ./scripts/package-web.sh
+      - name: Deploy to Netlify (production)
+        if: env.NETLIFY_AUTH_TOKEN != ''
+        run: npx -y netlify-cli@27.12.0 deploy --dir=dist --prod --site="$NETLIFY_SITE_ID" --message="${GITHUB_SHA::7} ${GITHUB_REPOSITORY}"
+      - name: Smoke test of the live site
+        if: env.NETLIFY_AUTH_TOKEN != ''
+        run: |
+          set -e
+          curl -fsS "$SITE_URL/" | grep -q "<title>SimCity 2050</title>"
+          curl -fsSI "$SITE_URL/pkg/micropolis_wasm_bg.wasm" | grep -qi "content-type: application/wasm"
+          curl -fsS "$SITE_URL/cities/haight.cty" -o /dev/null
+          echo "live site OK"
+      - name: Deployment skipped (no token)
+        if: env.NETLIFY_AUTH_TOKEN == ''
+        run: echo "::notice::Netlify deployment skipped - add the NETLIFY_AUTH_TOKEN repository secret (see docs/deploiement.md)."

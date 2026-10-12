@@ -52,7 +52,7 @@ export const MESSAGE_TEXT = Object.freeze({
   46: "La ville sauvegardée a été restaurée.",
   47: "Scénario gagné !",
   48: "Scénario perdu.",
-  49: "À propos de Micropolis.",
+  49: "À propos de SimCity 2050.",
   50: "Scénario : Dullsville.",
   51: "Scénario : San Francisco.",
   52: "Scénario : Hambourg.",
