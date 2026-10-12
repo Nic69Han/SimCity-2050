@@ -1,6 +1,6 @@
-# SimCity 2050 — Micropolis en Rust, jouable dans le navigateur
+# SimCity 2050 — jouable dans le navigateur (moteur Micropolis en Rust)
 
-Port en Rust du moteur de **MicropolisCore** (SimCity Classic, GPL), compilé en
+SimCity 2050 est un port en Rust du moteur de **MicropolisCore** (SimCity Classic, GPL), compilé en
 WebAssembly, avec une page web qui affiche et charge des villes `.cty`.
 
 Architecture: **hexagonale (ports & adapters)** autour d'un cœur fonctionnel — voir
@@ -40,6 +40,11 @@ l'adaptateur sur le vrai wasm), `scripts/e2e.sh` (navigateur Chromium, vrai mote
 ## Avancement du port
 Voir [crates/micropolis-core/README.md](crates/micropolis-core/README.md).
 
-## Licence
-GPL v3 (dérivé de code GPL). Si le nom « Micropolis » est conservé, la
-Micropolis Public Name License impose une attribution.
+## Licence et marques
+GPL v3 : le moteur est dérivé de Micropolis / MicropolisCore, le code de SimCity publié sous GPL v3 ; l'attribution
+à Micropolis est conservée (pied de page de la page web, `LICENSE`). Ce code a été publié sous le nom « Micropolis »
+parce que « SimCity » reste une marque d'Electronic Arts ; ce projet n'est affilié ni à Electronic Arts ni aux
+auteurs d'origine.
+
+## Déploiement
+Le site est publié sur Netlify après chaque fusion dans `main` (voir `docs/deploiement.md`).

@@ -49,7 +49,7 @@ export function engineErrorText(error, limits = DEFAULT_LIMITS) {
       return `Erreur : fichier invalide, taille incorrecte${bytes ? ` (${bytes} octets)` : ""}.`;
     }
     case "cty_bad_magic":
-      return "Erreur : fichier invalide, ce n'est pas une ville de Micropolis.";
+      return "Erreur : fichier invalide, ce n'est pas un fichier de ville valide.";
     case "cty_bad_version":
       return "Erreur : fichier invalide, version de format non prise en charge.";
     case "cty_size_out_of_range":
@@ -84,7 +84,7 @@ export function storageErrorText(error) {
     case "quota":
       return "Espace de stockage du navigateur plein : supprimez une partie enregistrée ou enregistrez dans un fichier.";
     case "blocked":
-      return "Le stockage du navigateur est utilisé par une autre fenêtre : fermez les autres onglets de Micropolis, puis réessayez.";
+      return "Le stockage du navigateur est utilisé par une autre fenêtre : fermez les autres onglets de SimCity 2050, puis réessayez.";
     case "corrupt":
       return "Cette sauvegarde est illisible.";
     default:
