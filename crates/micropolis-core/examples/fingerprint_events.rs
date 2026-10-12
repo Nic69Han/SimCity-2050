@@ -8,16 +8,10 @@
 //! tick. Lines: `act <tick> <index> result=<r> funds=<f>`, `<tick> M <num> <x> <y> <pic> <imp>`,
 //! `<tick> S <channel> <sound> <x> <y>`, `<tick> G <x> <y>`, `<tick> QUAKE <n>`,
 //! `<tick> LOSE|WIN|NEW`.
-//!
-//! The C++ `toolDown()` wrapper sends NOT_ENOUGH_FUNDS / BULLDOZE_AREA_FIRST messages (and
-//! their sounds) after `doTool()`; the core's `tool_down` does not (reported for tool.rs).
-//! This driver applies that wrapper itself, as `oracle_events.cpp` does, so that the
-//! streams can be compared.
 
 use micropolis_core::events::Event;
-use micropolis_core::message::{MESSAGE_BULLDOZE_AREA_FIRST, MESSAGE_NOT_ENOUGH_FUNDS};
-use micropolis_core::simulation::{Simulation, NOWHERE};
-use micropolis_core::tool::{EditingTool, ToolResult};
+use micropolis_core::simulation::Simulation;
+use micropolis_core::tool::EditingTool;
 
 /// One player action of a `.tools` script.
 struct Action {
@@ -104,38 +98,9 @@ fn print_events(s: &mut Simulation, tick: usize) {
     }
 }
 
-/// The C++ `toolDown()` wrapper: the tool, then its UI-only message and sound.
-fn tool_down_wrapped(s: &mut Simulation, tool: EditingTool, x: i32, y: i32) -> ToolResult {
-    let result = s.tool_down(tool, x, y);
-    match result {
-        ToolResult::NeedBulldoze => {
-            s.send_message(
-                MESSAGE_BULLDOZE_AREA_FIRST,
-                NOWHERE as i16,
-                NOWHERE as i16,
-                false,
-                true,
-            );
-            s.make_sound("interface", "UhUh", x * 16, y * 16);
-        }
-        ToolResult::NoMoney => {
-            s.send_message(
-                MESSAGE_NOT_ENOUGH_FUNDS,
-                NOWHERE as i16,
-                NOWHERE as i16,
-                false,
-                true,
-            );
-            s.make_sound("interface", "Sorry", x * 16, y * 16);
-        }
-        _ => {}
-    }
-    result
-}
-
 fn apply_action(s: &mut Simulation, a: &Action, index: usize) {
     let result = match a.drag_to {
-        None => tool_down_wrapped(s, a.tool, a.x0, a.y0) as i32,
+        None => s.tool_down(a.tool, a.x0, a.y0) as i32,
         Some((x1, y1)) => {
             s.tool_drag(a.tool, a.x0, a.y0, x1, y1);
             0

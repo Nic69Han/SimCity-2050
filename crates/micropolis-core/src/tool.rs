@@ -1153,11 +1153,36 @@ impl Simulation {
         ToolPreview { result, cost }
     }
 
-    /// Apply a tool from a mouse press (`toolDown`). The messages of the
-    /// original ("bulldoze the area first", "not enough funds") and its sound
-    /// are dropped; the result tells the adapter which one applies.
+    /// Apply a tool from a mouse press (`toolDown`). Like the original it also queues the
+    /// message and sound that explain a refused click ("bulldoze the area first", "not enough
+    /// funds"); the result tells the adapter the same thing.
     pub fn tool_down(&mut self, tool: EditingTool, tile_x: i32, tile_y: i32) -> ToolResult {
         let result = self.do_tool(tool, tile_x, tile_y);
+        // The original's `toolDown` tells the player why a click did nothing, with a message
+        // and a sound (not `doTool`, which drags and previews also use).
+        match result {
+            ToolResult::NeedBulldoze => {
+                self.send_message(
+                    crate::message::MESSAGE_BULLDOZE_AREA_FIRST,
+                    crate::simulation::NOWHERE as i16,
+                    crate::simulation::NOWHERE as i16,
+                    false,
+                    true,
+                );
+                self.make_sound("interface", "UhUh", tile_x * 16, tile_y * 16);
+            }
+            ToolResult::NoMoney => {
+                self.send_message(
+                    crate::message::MESSAGE_NOT_ENOUGH_FUNDS,
+                    crate::simulation::NOWHERE as i16,
+                    crate::simulation::NOWHERE as i16,
+                    false,
+                    true,
+                );
+                self.make_sound("interface", "Sorry", tile_x * 16, tile_y * 16);
+            }
+            _ => {}
+        }
         self.sim_pass = 0;
         self.tool_invalidate_maps();
         result
