@@ -3,7 +3,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { TOOL_LABELS } from "../tools.js";
 import {
-  launchBrowser, openPage, assertNoErrors, readStatus, readPalette, shot, mapDataUrl, pollUntil,
+  launchBrowser, openPage, assertNoErrors, readStatus, readPalette, shot, mapDigest, pollUntil,
   baseUrl,
 } from "./helpers.mjs";
 
@@ -78,11 +78,11 @@ describe("the page", () => {
   test("(a2) choosing another sample city in the selector loads it", { timeout: TIMEOUT }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
-      const haight = await mapDataUrl(page);
+      const haight = await mapDigest(page);
       await page.selectOption("#city", "kyoto");
       await page.waitForFunction(() => document.getElementById("status").textContent.includes("Kyoto") === false &&
         document.getElementById("status").textContent.includes("·"));
-      await pollUntil(async () => (await mapDataUrl(page)) !== haight, "the Kyoto map to be drawn");
+      await pollUntil(async () => (await mapDigest(page)) !== haight, "the Kyoto map to be drawn");
       assert.equal(await page.locator("#tool-msg").textContent(), "");
       assertNoErrors(errors);
     } finally {

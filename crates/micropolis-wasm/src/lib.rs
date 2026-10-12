@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::*;
 // Feature modules: each adds its own `#[wasm_bindgen] impl City` block (one owner per file).
 mod budget;
 mod messages;
+mod overlays;
 mod sizes;
 mod sprites;
 
