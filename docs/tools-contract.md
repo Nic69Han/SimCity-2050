@@ -51,3 +51,9 @@ wasm adapter: one file per feature, each with its own `#[wasm_bindgen] impl City
 `sizes.rs` (map size), `messages.rs` (game events), `budget.rs` (tax, budget, evaluation, history),
 `sprites.rs` (moving objects). Page: `render.js` (map drawing), `messages.js`, `budget-ui.js` export
 `setup(api)` / `update(api)`; `main.js` only wires them. Each agent edits its own files.
+
+## Status (wave 5 merged)
+Map sizes (`City.new_sized`, verified against the C++ recompiled at 80x67..512x512), game messages
+(`take_messages`, event streams identical to the C++), budget/evaluation/history (`budget`, `evaluation`,
+`history`, differential scripts with tax and budget actions) and rendering (procedural tiles, sprites,
+overlays) are integrated. `save_cty` now refuses sizes other than 120x100 (`size_not_saveable`).
