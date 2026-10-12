@@ -5,6 +5,7 @@ import { PALETTE, legendEntries } from "./palette.js";
 import { createRenderer } from "./render.js";
 import * as messages from "./messages.js";
 import * as budgetUi from "./budget-ui.js";
+import * as overlays from "./overlays.js";
 import { parseSeed, supportsNewCity, applyEnginePreferences } from "./newcity.js";
 import { chooseSize, readLimits, supportsNewSized, isSaveable, saveNote, sizeErrorText } from "./sizes.js";
 import { ticksPerFrame, createPlayback } from "./playback.js";
@@ -206,7 +207,7 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi];
+const features = [messages, budgetUi, overlays];
 const featureApi = { city: () => city, $, redraw: () => draw(), isReady: () => ready };
 for (const f of features) f.setup?.(featureApi);
 buildLegend($("legend"));

@@ -7,7 +7,7 @@ import { RESULT, resultMessage } from "../tools.js";
 import {
   launchBrowser, openPage, assertNoErrors, newCity, readStatus, readMap, readToolMessage,
   selectTool, hoverTile, outlineAt, clickTile, dragTiles, findRun, findBlock, findTile,
-  shadowCity, mapDataUrl, readQueryPanel, shot, DIRT_LABEL, WATER_LABEL, ROAD_LABEL,
+  shadowCity, mapDigest, readQueryPanel, shot, DIRT_LABEL, WATER_LABEL, ROAD_LABEL,
   tileXY, findPreview,
 } from "./helpers.mjs";
 
@@ -139,12 +139,12 @@ describe("building tools on the real engine", () => {
       assert.equal(await outlineAt(page, target.x, target.y), "bad", "red outline on water");
 
       const before = await readStatus(page);
-      const mapBefore = await mapDataUrl(page);
+      const mapBefore = await mapDigest(page);
       await clickTile(page, target.x, target.y);
       const message = await readToolMessage(page);
       assert.equal(message, resultMessage(target.result), "the French failure message");
       assert.doesNotMatch(message, /bulldozer/iu, "on water a bulldozer cannot help: the message must not suggest one");
-      assert.equal(await mapDataUrl(page), mapBefore, "nothing was built");
+      assert.equal(await mapDigest(page), mapBefore, "nothing was built");
       const after = await readStatus(page);
       assert.equal(after.funds, before.funds, "funds unchanged");
       assert.equal(after.funds, shadow.funds());
@@ -177,10 +177,10 @@ describe("building tools on the real engine", () => {
       assert.equal(shadow.preview("residential", spot.x, spot.y)[0], RESULT.NO_MONEY);
 
       await selectTool(page, "residential");
-      const mapBefore = await mapDataUrl(page);
+      const mapBefore = await mapDigest(page);
       await clickTile(page, spot.x, spot.y);
       assert.equal(await readToolMessage(page), "Pas assez d'argent", "the French message for -2");
-      assert.equal(await mapDataUrl(page), mapBefore, "nothing was built");
+      assert.equal(await mapDigest(page), mapBefore, "nothing was built");
       assert.equal((await readStatus(page)).funds, 0, "the funds are unchanged");
       assert.equal(shadow.funds(), 0);
       await shot(page, "d2-no-money");

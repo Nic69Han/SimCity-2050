@@ -5,7 +5,7 @@
 import { ToolStroke, attachPointer, tileAt } from "./input.js";
 import { formatZoneStatus } from "./query.js";
 
-export const TILE_PX = 6; // canvas pixels per tile (same as main.js)
+export const TILE_PX = 8; // canvas pixels per tile (same as main.js)
 
 // ToolResult codes returned by tool_down (docs/tools-contract.md).
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });

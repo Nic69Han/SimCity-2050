@@ -172,32 +172,31 @@ export async function readPalette(page) {
     })));
 }
 
-// The map as the page draws it: one colour per tile, sampled at the tile centre of the
-// canvas backing store (exact: the canvas is not resampled). Tiles are indexed by x and y.
+// The map as the page last drew it, from the tile data the renderer keeps on the canvas
+// (`canvas.mapTiles`, the engine's tiles). The canvas pixels are tile art now, not one colour per
+// tile, so the tests compare tile data: `at(x, y)` gives the raw tile word (status bits included)
+// and the label of its character (the palette's categories, by range). Tiles are indexed by x and y.
 export async function readMap(page) {
-  const { w, h, hexes } = await page.evaluate((tilePx) => {
-    const c = document.getElementById("map");
-    const { data } = c.getContext("2d").getImageData(0, 0, c.width, c.height);
-    const w = c.width / tilePx;
-    const h = c.height / tilePx;
-    const hexes = new Array(w * h);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = ((y * tilePx + 3) * c.width + (x * tilePx + 3)) * 4;
-        hexes[y * w + x] = ((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]).toString(16).padStart(6, "0");
-      }
-    }
-    return { w, h, hexes };
-  }, TILE_PX);
+  const { w, h, tiles } = await page.evaluate(() => {
+    const m = document.getElementById("map").mapTiles;
+    if (!m) throw new Error("the page has not drawn the map yet");
+    return { w: m.w, h: m.h, tiles: Array.from(m.tiles) };
+  });
   return {
     w,
     h,
     at(x, y) {
-      const hex = `#${hexes[y * w + x]}`;
-      const entry = PALETTE.find((e) => e.color.toLowerCase() === hex);
-      return { hex, label: entry ? entry.label : "couleur inconnue" };
+      const tile = tiles[x * h + y];
+      return { tile, label: labelOfTile(tile) };
     },
   };
+}
+
+// Label of a tile word: the palette category of its character (tile numbers, low 10 bits).
+export function labelOfTile(tile) {
+  const c = tile & 0x3ff;
+  const entry = PALETTE.find((e) => c >= e.lo && c <= e.hi);
+  return entry ? entry.label : "couleur inconnue";
 }
 
 export const DIRT_LABEL = "Terrain nu";
@@ -322,6 +321,19 @@ export async function hoverTile(page, x, y) {
 // Map pixels as a canvas data URL (identical maps give identical strings).
 export async function mapDataUrl(page) {
   return page.evaluate(() => document.getElementById("map").toDataURL("image/png"));
+}
+
+// A digest of the tile data the page last drew (the engine's tiles, status bits included): equal
+// maps give equal digests. Used to compare maps: the pixels are not the same for the same map,
+// since the water and the fire shimmer with the clock of the frame that draws them.
+export async function mapDigest(page) {
+  return page.evaluate(() => {
+    const m = document.getElementById("map").mapTiles;
+    if (!m) return "no map";
+    let h = 0x811c9dc5;
+    for (const t of m.tiles) h = Math.imul(h ^ t, 0x01000193) >>> 0;
+    return `${m.w}x${m.h}:${h.toString(16)}`;
+  });
 }
 
 // Waits until the status line differs from `before` (the page redraws after each change).
