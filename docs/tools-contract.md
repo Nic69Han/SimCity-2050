@@ -57,3 +57,21 @@ Map sizes (`City.new_sized`, verified against the C++ recompiled at 80x67..512x5
 (`take_messages`, event streams identical to the C++), budget/evaluation/history (`budget`, `evaluation`,
 `history`, differential scripts with tax and budget actions) and rendering (procedural tiles, sprites,
 overlays) are integrated. `save_cty` now refuses sizes other than 120x100 (`size_not_saveable`).
+
+## Wave 6: saving (contract)
+**Core / wasm (agent "savefmt")**: a city file for ANY map size.
+* 120x100 keeps the original `.cty` format byte for byte (compatible with the C++ game).
+* Other sizes use an extended file: magic `MCTY`, version u16, width u16, height u16 (big-endian), then the same
+  sections as a `.cty` (six histories of 240, the misc history of 120, then the width*height tile map, all
+  big-endian 16-bit, column-major).
+* `City.save_city() -> Uint8Array` (any size; 120x100 gives plain `.cty`), `City.load_city(bytes)` (detects
+  `.cty` by size, extended by magic; reloads the engine at the file's size, seeded like `load_cty`).
+  `save_cty`/`load_cty` stay as they are. `City.is_saveable()` becomes always true.
+* Errors thrown by the adapter carry a stable code as the message prefix, `<code>: <detail>`:
+  `cty_bad_size`, `cty_bad_magic`, `cty_bad_version`, `cty_size_out_of_range`, `cty_truncated`, `size_out_of_range`.
+* Loading must be a deterministic function of (bytes, seed): same file, same city.
+**Page (agent "saveui")**: IndexedDB storage of games: an autosave slot (written periodically and on page
+hide, only when a city exists) plus 3 named manual slots; "Reprendre la partie" at startup when an autosave
+exists; slot metadata (name, date, game date, funds, population, size, thumbnail) stored with the bytes; page
+preferences (speed, disasters, view mode) in localStorage; French messages for the error codes above. The page
+uses `save_city`/`load_city` when the engine has them, else `save_cty`/`load_cty`.
