@@ -82,7 +82,7 @@ impl City {
     /// `save_cty` has no size check and would write a file that does not describe the map.
     pub fn save_checked(&self) -> Result<Vec<u8>, JsError> {
         if self.is_saveable() {
-            Ok(self.save_cty())
+            Ok(self.sim.save_cty())
         } else {
             Err(JsError::new(ERR_SIZE_NOT_SAVEABLE))
         }
@@ -153,6 +153,9 @@ mod tests {
         plain.new_random_city(9);
         assert_eq!(sized.tiles(), plain.tiles());
         assert!(sized.is_saveable());
-        assert_eq!(sized.save_cty().len(), micropolis_core::fileio::CTY_SIZE);
+        assert_eq!(
+            sized.save_cty().unwrap().len(),
+            micropolis_core::fileio::CTY_SIZE
+        );
     }
 }

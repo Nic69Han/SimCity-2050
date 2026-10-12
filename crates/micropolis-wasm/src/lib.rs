@@ -57,8 +57,10 @@ impl City {
             .map_err(|e| JsError::new(&e.to_string()))
     }
 
-    pub fn save_cty(&self) -> Vec<u8> {
-        self.sim.save_cty()
+    /// Serialise the city; refused (`size_not_saveable`) when the map is not the original
+    /// 120x100 size, which is all a `.cty` file can describe.
+    pub fn save_cty(&self) -> Result<Vec<u8>, JsError> {
+        self.save_checked()
     }
 
     pub fn width(&self) -> i32 {
