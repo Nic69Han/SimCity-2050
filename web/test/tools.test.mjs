@@ -163,9 +163,9 @@ describe("shortcuts", () => {
 
 describe("hover outline geometry and verdict", () => {
   test("footprint in tiles becomes a pixel rectangle at TILE_PX per tile", () => {
-    assert.equal(TILE_PX, 6);
-    assert.deepEqual(outlineRect([4, 5, 1, 1]), { x: 24, y: 30, w: 6, h: 6 });
-    assert.deepEqual(outlineRect([4, 5, 3, 3]), { x: 24, y: 30, w: 18, h: 18 });
+    assert.equal(TILE_PX, 8);
+    assert.deepEqual(outlineRect([4, 5, 1, 1]), { x: 32, y: 40, w: 8, h: 8 });
+    assert.deepEqual(outlineRect([4, 5, 3, 3]), { x: 32, y: 40, w: 24, h: 24 });
     assert.deepEqual(outlineRect([2, 2, 6, 6], 10), { x: 20, y: 20, w: 60, h: 60 });
   });
 

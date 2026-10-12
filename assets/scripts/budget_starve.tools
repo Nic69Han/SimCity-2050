@@ -1,0 +1,15 @@
+# Budget differential: taxes at 0 and 1 starve the treasury (auto budget gives up,
+# the budget is scaled back, funds run out), then the player recovers the city.
+# Run by scripts/compare-budget.sh.
+0 budget 100 100 100
+0 tax 0
+400 tax 1
+800 budget 100 100 100
+1000 budget 0 0 0
+1200 tax 0
+1400 budget 100 100 100
+1800 tax 4
+2200 budget 100 100 0
+2400 tax 20
+2700 budget 50 50 50
+2950 tax 0

@@ -1,3 +1,5 @@
+import { engineErrorText } from "./errors.js";
+
 // Text of the status line and of the load messages (presentation only, ARCHITECTURE.md rule 5).
 // The numbers come from the engine; this only formats them.
 
@@ -22,7 +24,8 @@ export function formatStats({ population, score, demand }) {
     `demande R ${r} / C ${c} / I ${i}`;
 }
 
-// The message of a refused file or a failed load (the status line is not touched).
-export function formatLoadError(error) {
-  return `Erreur : ${error?.message ?? error}`;
+// The message of a refused file or a failed load (the status line is not touched). The French
+// text of the engine's error codes is in errors.js.
+export function formatLoadError(error, limits = undefined) {
+  return engineErrorText(error, limits);
 }

@@ -6,6 +6,7 @@
 
 pub mod animate;
 pub mod budget;
+pub mod budget_api;
 pub mod connect;
 pub mod disasters;
 pub mod evaluate;

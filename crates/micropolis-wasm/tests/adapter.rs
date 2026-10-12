@@ -230,7 +230,7 @@ fn save_and_load_round_trip_after_tools() {
     let zone_before = city.query(zx, zy);
     let funds = city.funds();
 
-    let saved = city.save_cty();
+    let saved = city.save_cty().unwrap();
     let mut loaded = City::new(1);
     if loaded.load_cty(&saved).is_err() {
         panic!("saved city must load");
@@ -269,5 +269,5 @@ fn loading_a_city_does_not_depend_on_the_previous_one() {
 
     assert_eq!(used.tiles(), fresh.tiles());
     assert_eq!(used.funds(), fresh.funds());
-    assert_eq!(used.save_cty(), fresh.save_cty());
+    assert_eq!(used.save_cty().unwrap(), fresh.save_cty().unwrap());
 }

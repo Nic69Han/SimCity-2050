@@ -45,3 +45,39 @@ Core API (`EditingTool::{ALL,cost,size,key,footprint}`, `Simulation::tool_previe
 tool-script and new-city differential tests, and the page (palette/input against a mock engine) are merged.
 Wave 2: wasm adapter implementing the list above, page changes (query formatting, "new city" button),
 differential test "new city + player builds", then an end-to-end browser test on the real wasm.
+
+## Wave 5 layout (hooks created by the integrator)
+wasm adapter: one file per feature, each with its own `#[wasm_bindgen] impl City` block:
+`sizes.rs` (map size), `messages.rs` (game events), `budget.rs` (tax, budget, evaluation, history),
+`sprites.rs` (moving objects). Page: `render.js` (map drawing), `messages.js`, `budget-ui.js` export
+`setup(api)` / `update(api)`; `main.js` only wires them. Each agent edits its own files.
+
+## Status (wave 5 merged)
+Map sizes (`City.new_sized`, verified against the C++ recompiled at 80x67..512x512), game messages
+(`take_messages`, event streams identical to the C++), budget/evaluation/history (`budget`, `evaluation`,
+`history`, differential scripts with tax and budget actions) and rendering (procedural tiles, sprites,
+overlays) are integrated. `save_cty` now refuses sizes other than 120x100 (`size_not_saveable`).
+
+## Wave 6: saving (contract)
+**Core / wasm (agent "savefmt")**: a city file for ANY map size.
+* 120x100 keeps the original `.cty` format byte for byte (compatible with the C++ game).
+* Other sizes use an extended file: magic `MCTY`, version u16, width u16, height u16 (big-endian), then the same
+  sections as a `.cty` (six histories of 240, the misc history of 120, then the width*height tile map, all
+  big-endian 16-bit, column-major).
+* `City.save_city() -> Uint8Array` (any size; 120x100 gives plain `.cty`), `City.load_city(bytes)` (detects
+  `.cty` by size, extended by magic; reloads the engine at the file's size, seeded like `load_cty`).
+  `save_cty`/`load_cty` stay as they are. `City.is_saveable()` becomes always true.
+* Errors thrown by the adapter carry a stable code as the message prefix, `<code>: <detail>`:
+  `cty_bad_size`, `cty_bad_magic`, `cty_bad_version`, `cty_size_out_of_range`, `cty_truncated`, `size_out_of_range`.
+* Loading must be a deterministic function of (bytes, seed): same file, same city.
+**Page (agent "saveui")**: IndexedDB storage of games: an autosave slot (written periodically and on page
+hide, only when a city exists) plus 3 named manual slots; "Reprendre la partie" at startup when an autosave
+exists; slot metadata (name, date, game date, funds, population, size, thumbnail) stored with the bytes; page
+preferences (speed, disasters, view mode) in localStorage; French messages for the error codes above. The page
+uses `save_city`/`load_city` when the engine has them, else `save_cty`/`load_cty`.
+
+## Status (wave 6 merged)
+`City.save_city` / `City.load_city` handle any map size (120x100 stays a plain `.cty`; other sizes use the `MCTY`
+extended file, extension `.mcty`), with stable error codes. Loading was compared with the original C++ `loadFile`
+at several sizes (scripts/compare-saveload.sh); this found and fixed one divergence (the original resets the
+funding levels on load). The page stores an autosave and 3 manual slots in IndexedDB and offers to resume.

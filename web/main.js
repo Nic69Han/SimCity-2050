@@ -1,8 +1,14 @@
 // Presentation adapter (ARCHITECTURE.md rule 5): draws what the engine
 // exposes and forwards user actions. No game rule lives here.
 import { TILE_PX as SCALE, setupTools } from "./tools.js";
-import { PALETTE, buildRgbTable, legendEntries } from "./palette.js";
+import { PALETTE, legendEntries } from "./palette.js";
+import { createRenderer } from "./render.js";
+import * as messages from "./messages.js";
+import * as budgetUi from "./budget-ui.js";
+import * as overlays from "./overlays.js";
+import * as saves from "./saves.js";
 import { parseSeed, supportsNewCity, applyEnginePreferences } from "./newcity.js";
+import { chooseSize, readLimits, supportsNewSized, saveNote, sizeErrorText } from "./sizes.js";
 import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
 import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT } from "./status.js";
@@ -10,19 +16,18 @@ import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
 const { default: init, City } = MOCK ? await import("./dev-mock.js") : await import("./pkg/micropolis_wasm.js");
-const LOMASK = 0x03ff;
-const rgb = buildRgbTable(PALETTE); // one ABGR word per tile character, from palette.js
 // Selector entries for a city that is not a sample (added while shown, removed by a sample).
-const CHOICE_LABELS = Object.freeze({ random: "Ville aléatoire", local: "Fichier local" });
+const CHOICE_LABELS = Object.freeze({ random: "Ville aléatoire", local: "Fichier local", saved: "Partie enregistrée" });
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("map");
-const ctx = canvas.getContext("2d");
+const renderer = createRenderer({ canvas, frame: $("map-frame") });
 const status = $("status");
-let city, image, tools = null;
+let city, tools = null;
 let ready = false; // true once a city is in the engine (sample, file or new city)
 let seedNote = null; // seed of the city made by "Nouvelle ville", shown in the status line
 let shown = "haight"; // the selector value of the city on the map
+let sizeLimits = null; // map size limits of the engine (City.size_limits), read at start
 const latest = createLatest(); // the newest load wins (a late sample never replaces a file)
 
 const playback = createPlayback({
@@ -33,26 +38,17 @@ const playback = createPlayback({
   },
 });
 
+// Enregistrer only saves the original 120 x 100 map (a .cty file describes that size).
+function updateSaveButton() {
+  const saveable = saves.canSaveBytes(city);
+  $("save").disabled = !saveable;
+  $("save-note").textContent = saveNote(saveable);
+}
+
 function draw() {
   if (!ready) return; // no city yet: the status line keeps "Chargement…", no numbers
-  const w = city.width(), h = city.height(), tiles = city.tiles();
-  if (!image || image.width !== w * SCALE) {
-    canvas.width = w * SCALE;
-    canvas.height = h * SCALE;
-    // CSS scales the frame to the viewport at this ratio (style.css); tiles stay exact.
-    $("map-frame").style.setProperty("--ratio", `${w} / ${h}`);
-    image = ctx.createImageData(w * SCALE, h * SCALE);
-  }
-  const px = new Uint32Array(image.data.buffer);
-  const stride = w * SCALE;
-  for (let x = 0; x < w; x++) {
-    for (let y = 0; y < h; y++) {
-      const c = rgb[tiles[x * h + y] & LOMASK];
-      const base = y * SCALE * stride + x * SCALE;
-      for (let dy = 0; dy < SCALE; dy++) px.fill(c, base + dy * stride, base + dy * stride + SCALE);
-    }
-  }
-  ctx.putImageData(image, 0, 0);
+  renderer.draw(city);
+  updateSaveButton();
   // funds are part of every redraw, so the status line shows them after every action
   status.textContent = formatStatus({
     seed: seedNote,
@@ -66,6 +62,7 @@ function draw() {
     demand: city.demand(),
   });
   tools?.render();
+  for (const f of features) f.update?.(featureApi);
 }
 
 function setPlaying(on) {
@@ -93,7 +90,7 @@ function unlock() {
 // the error the engine gave: the city, the status line and the playback are then left as they were.
 function load(bytes) {
   try {
-    city.load_cty(bytes);
+    saves.loadBytes(city, bytes); // load_city when the engine has it (any size), else load_cty
   } catch (e) {
     return e;
   }
@@ -130,7 +127,7 @@ function reportFailure(error) {
   if (!ready) status.textContent = NO_CITY_TEXT;
 }
 
-async function loadSample(name) {
+async function loadSample(name, user = true) {
   const ticket = latest.start();
   let bytes;
   try {
@@ -144,7 +141,16 @@ async function loadSample(name) {
   if (!latest.isCurrent(ticket)) return;
   const error = load(bytes);
   if (error) reportFailure(error);
-  else showCity(name);
+  else {
+    showCity(name);
+    saves.cityLoaded({ user });
+  }
+}
+
+// A new random city of the chosen size, in the same city object (the tools and the playback keep it).
+function makeCity(size, seed) {
+  if (supportsNewSized(City)) city.adopt(City.new_sized(size.width, size.height, seed));
+  else city.new_random_city(seed);
 }
 
 // "Nouvelle ville": stop playback, ask the engine for a city from the seed, keep the
@@ -153,6 +159,14 @@ function newCity() {
   const seedInput = $("seed");
   if (!ready) {
     $("new-msg").textContent = LOADING_TEXT;
+    return;
+  }
+  const size = chooseSize({ preset: $("size").value, width: $("size-w").value, height: $("size-h").value }, sizeLimits);
+  const sizeFields = { width: $("size-w"), height: $("size-h") };
+  for (const f of Object.values(sizeFields)) f.removeAttribute("aria-invalid");
+  if (size.error) {
+    $("new-msg").textContent = size.error;
+    if (size.field) sizeFields[size.field].setAttribute("aria-invalid", "true");
     return;
   }
   const parsed = parseSeed(seedInput.value);
@@ -165,7 +179,12 @@ function newCity() {
   seedInput.removeAttribute("aria-invalid");
   latest.start(); // a sample or file still loading must not replace this city
   setPlaying(false);
-  city.new_random_city(parsed.seed);
+  try {
+    makeCity(size, parsed.seed);
+  } catch (e) {
+    $("new-msg").textContent = sizeErrorText(String(e?.message ?? e), sizeLimits);
+    return;
+  }
   // the engine resets its speed and disasters on a new city: push the page's options again
   applyEnginePreferences(city, { speed: $("speed").value, disasters: $("disasters").checked });
   seedNote = parsed.seed;
@@ -174,6 +193,7 @@ function newCity() {
   showCity("random");
   $("query-panel").hidden = true;
   draw();
+  saves.cityLoaded({ user: true });
 }
 
 function buildLegend(list) {
@@ -190,6 +210,25 @@ function buildLegend(list) {
 
 await init();
 city = new City(1);
+// Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
+// engine has the methods it needs. `update` runs after every redraw.
+const features = [messages, budgetUi, overlays, saves];
+const featureApi = {
+  city: () => city,
+  $,
+  redraw: () => draw(),
+  isReady: () => ready,
+  limits: () => sizeLimits,
+  // the page's name for the city now: the selector's entry and the seed of a random city
+  describe: () => ({ label: $("city").selectedOptions[0]?.textContent ?? "", seed: seedNote }),
+  // loads a save's bytes like an opened file; returns the engine's error, or null
+  replaceCity(bytes) {
+    const error = load(bytes);
+    if (!error) showCity("saved");
+    return error;
+  },
+};
+for (const f of features) f.setup?.(featureApi);
 buildLegend($("legend"));
 tools = setupTools({
   city,
@@ -204,6 +243,14 @@ tools = setupTools({
 const hasNewCity = supportsNewCity(city);
 $("newcity").hidden = !hasNewCity;
 $("newcity-btn").onclick = newCity;
+sizeLimits = readLimits(City);
+$("size-w").min = sizeLimits.minWidth;
+$("size-w").max = sizeLimits.maxWidth;
+$("size-h").min = sizeLimits.minHeight;
+$("size-h").max = sizeLimits.maxHeight;
+$("size").onchange = (e) => {
+  $("size-custom").hidden = e.target.value !== "custom";
+};
 $("seed").onkeydown = (e) => {
   if (e.key === "Enter") newCity();
 };
@@ -218,21 +265,26 @@ $("file").onchange = async (ev) => {
   if (!latest.isCurrent(ticket)) return;
   const error = load(bytes);
   if (error) reportFailure(error);
-  else showCity("local");
+  else {
+    showCity("local");
+    saves.cityLoaded({ user: true });
+  }
 };
 $("play").onclick = () => setPlaying(!playback.playing);
 $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
 $("save").onclick = () => {
-  if (!ready) return;
+  if (!ready || !saves.canSaveBytes(city)) return;
+  const bytes = saves.saveBytes(city);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([city.save_cty()], { type: "application/octet-stream" }));
-  a.download = "city.cty";
+  a.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+  // the original 120x100 format keeps .cty; any other size uses the extended format (magic "MCTY")
+  const extended = bytes.length >= 4 && String.fromCharCode(...bytes.subarray(0, 4)) === "MCTY";
+  a.download = extended ? "city.mcty" : "city.cty";
   a.click();
   URL.revokeObjectURL(a.href);
 };
-if (MOCK) {
-  load(new Uint8Array(0));
-} else {
-  loadSample("haight");
-}
+// The startup sample loads first; the saves then offer the autosave, if there is one.
+if (MOCK) load(new Uint8Array(0));
+else await loadSample("haight", false);
+await saves.start();

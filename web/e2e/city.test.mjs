@@ -3,11 +3,10 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { stat } from "node:fs/promises";
 import {
-  launchBrowser, openPage, assertNoErrors, newCity, readStatus, readToolMessage, mapDataUrl,
+  launchBrowser, openPage, assertNoErrors, newCity, readStatus, readToolMessage, mapDigest,
   selectTool, clickTile, findBlock, readMap, shot, pollUntil, DIRT_LABEL, START_FUNDS,
   countFrames, readSample, shadowCity,
 } from "./helpers.mjs";
-import { tileColor } from "../palette.js";
 
 const TIMEOUT = 90000;
 const CTY_BYTES = 27120; // size of the sample cities, and of a saved one
@@ -26,20 +25,20 @@ describe("cities", () => {
     try {
       await newCity(page, "4242");
       const first = await readStatus(page);
-      const mapA = await mapDataUrl(page);
+      const mapA = await mapDigest(page);
       assert.equal(first.seed, 4242);
       assert.equal(first.funds, START_FUNDS);
 
       await newCity(page, "4242");
       const again = await readStatus(page);
-      assert.equal(await mapDataUrl(page), mapA, "same seed: identical canvas pixels");
+      assert.equal(await mapDigest(page), mapA, "same seed: identical tiles");
       assert.equal(again.funds, START_FUNDS);
 
       await newCity(page, "4243");
       const other = await readStatus(page);
       assert.equal(other.seed, 4243);
       assert.equal(other.funds, START_FUNDS);
-      assert.notEqual(await mapDataUrl(page), mapA, "another seed: another map");
+      assert.notEqual(await mapDigest(page), mapA, "another seed: another map");
 
       // Enter in the seed box makes the city too
       await page.fill("#seed", "4244");
@@ -48,10 +47,10 @@ describe("cities", () => {
       await newCity(page, "4243");
 
       // a bad seed is refused, the city stays
-      const mapB = await mapDataUrl(page);
+      const mapB = await mapDigest(page);
       await newCity(page, "12a");
       assert.equal(await page.locator("#new-msg").textContent(), "Graine invalide : entrer un nombre entier");
-      assert.equal(await mapDataUrl(page), mapB, "no new city for a bad seed");
+      assert.equal(await mapDigest(page), mapB, "no new city for a bad seed");
       assert.equal((await readStatus(page)).seed, 4243);
 
       // an empty seed picks a random one, shown in the status line
@@ -140,11 +139,11 @@ describe("cities", () => {
     const { page, errors, close } = await openPage(browser);
     try {
       await newCity(page, "4242");
-      const map = await mapDataUrl(page);
+      const map = await mapDigest(page);
       const funds = (await readStatus(page)).funds;
       await page.setInputFiles("#file", { name: "bad.cty", mimeType: "application/octet-stream", buffer: Buffer.from("not a city") });
       await pollUntil(async () => (await page.locator("#load-msg").textContent()).startsWith("Erreur"), "the error message");
-      assert.equal(await mapDataUrl(page), map, "the map is unchanged");
+      assert.equal(await mapDigest(page), map, "the map is unchanged");
       assert.equal((await readStatus(page)).funds, funds, "the funds are unchanged");
       await shot(page, "l-bad-file");
       assertNoErrors(errors);
@@ -176,18 +175,18 @@ describe("cities", () => {
     const { page, errors, close } = await openPage(browser);
     try {
       const selected = () => page.$eval("#city", (s) => s.options[s.selectedIndex].textContent);
-      const haight = await mapDataUrl(page);
+      const haight = await mapDigest(page);
       assert.equal(await selected(), "Haight-Ashbury");
 
       // a new city: the selector says so (and keeps the samples in its list)
       await newCity(page, "4242");
-      const random = await mapDataUrl(page);
+      const random = await mapDigest(page);
       assert.equal(await selected(), "Ville aléatoire");
       assert.equal(await page.locator("#city option").count(), 4);
 
       // a sample: the map and the selector are that sample's again
       await page.selectOption("#city", "haight");
-      await pollUntil(async () => (await mapDataUrl(page)) === haight, "the Haight-Ashbury map to come back");
+      await pollUntil(async () => (await mapDigest(page)) === haight, "the Haight-Ashbury map to come back");
       assert.equal(await selected(), "Haight-Ashbury");
       assert.equal(await page.locator("#city option").count(), 3, "the choice entry is gone");
       assert.equal((await readStatus(page)).funds, 1000000);
@@ -197,7 +196,7 @@ describe("cities", () => {
       // date and funds are Kyoto's. (Pixels are not compared across loads: a city loaded after
       // another one can differ in a few tile words, see the report.)
       await page.selectOption("#city", "kyoto");
-      await pollUntil(async () => (await mapDataUrl(page)) !== haight, "the Kyoto map");
+      await pollUntil(async () => (await mapDigest(page)) !== haight, "the Kyoto map");
       const kyotoStatus = await page.locator("#status").textContent();
       await page.selectOption("#city", "haight");
       await pollUntil(async () => (await page.locator("#status").textContent()) !== kyotoStatus, "Haight-Ashbury again");
@@ -217,16 +216,16 @@ describe("cities", () => {
 
   // Regression (fixed in micropolis-core): a .cty loaded into an engine that held another city used
   // to keep some state of that city, so Kyoto after Haight-Ashbury differed from a fresh engine's Kyoto.
-  // The fresh reference is the shadow engine (same bytes, a new City); the page's pixels are read
-  // per tile at the tile centre and compared with the palette colour of each tile word.
+  // The fresh reference is the shadow engine (same bytes, a new City); the page's tile data is compared
+  // word by word with it (the pixels are tile art, so they are not compared with a colour).
   test("(o) Kyoto loaded after Haight-Ashbury draws the same map as Kyoto in a fresh engine", {
     timeout: TIMEOUT,
   }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
-      const haight = await mapDataUrl(page);
+      const haight = await mapDigest(page);
       await page.selectOption("#city", "kyoto");
-      await pollUntil(async () => (await mapDataUrl(page)) !== haight, "the Kyoto map");
+      await pollUntil(async () => (await mapDigest(page)) !== haight, "the Kyoto map");
       const map = await readMap(page);
 
       const fresh = await shadowCity({ cty: await readSample("kyoto") });
@@ -236,8 +235,8 @@ describe("cities", () => {
       const wrong = [];
       for (let x = 0; x < map.w; x++) {
         for (let y = 0; y < map.h; y++) {
-          const want = tileColor(tiles[x * h + y]);
-          const got = map.at(x, y).hex;
+          const want = tiles[x * h + y];
+          const got = map.at(x, y).tile;
           if (want !== got) wrong.push(`${x},${y}: ${got} (fresh ${want})`);
         }
       }
@@ -253,7 +252,7 @@ describe("cities", () => {
     try {
       await newCity(page, "4242");
       const savedFunds = (await readStatus(page)).funds;
-      const savedMap = await mapDataUrl(page);
+      const savedMap = await mapDigest(page);
 
       const [download] = await Promise.all([page.waitForEvent("download"), page.click("#save")]);
       assert.equal(download.suggestedFilename(), "city.cty");
@@ -271,7 +270,7 @@ describe("cities", () => {
       await page.setInputFiles("#file", path);
       await pollUntil(async () => (await readStatus(page)).funds === savedFunds, "the saved funds to come back");
       assert.equal(await readToolMessage(page), "");
-      assert.equal(await mapDataUrl(page), savedMap, "the saved map is back");
+      assert.equal(await mapDigest(page), savedMap, "the saved map is back");
       assert.equal((await readStatus(page)).seed, null, "a loaded city has no seed");
       await shot(page, "k-reopened");
       assertNoErrors(errors);

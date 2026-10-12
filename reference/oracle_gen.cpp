@@ -26,6 +26,15 @@
 #include <cstring>
 #include <vector>
 
+// The world's tiles in column-major order (x * WORLD_H + y), independent of the map's
+// storage stride (the size oracles pad the storage; see scripts/build-oracle-size.sh).
+static std::vector<unsigned short> world_tiles(Micropolis& m) {
+    std::vector<unsigned short> t(WORLD_W * WORLD_H);
+    for (int x = 0; x < WORLD_W; x++)
+        for (int y = 0; y < WORLD_H; y++) t[x * WORLD_H + y] = m.map[x][y];
+    return t;
+}
+
 static uint64_t fnv(const unsigned short* p, int n) {
     uint64_t h = 1469598103934665603ULL;
     for (int i = 0; i < n; i++) { h ^= p[i] & 0xff; h *= 1099511628211ULL; h ^= p[i] >> 8; h *= 1099511628211ULL; }
@@ -118,7 +127,8 @@ int main(int argc, char** argv) {
     if (getenv("ORACLE_DUMP_MAP")) {
         FILE* f = fopen(getenv("ORACLE_DUMP_MAP"), "w");
         if (!f) { fprintf(stderr, "cannot write ORACLE_DUMP_MAP\n"); return 2; }
-        for (int i = 0; i < WORLD_W * WORLD_H; i++) fprintf(f, "%u\n", (&m.map[0][0])[i]);
+        std::vector<unsigned short> tiles = world_tiles(m);
+        for (int i = 0; i < WORLD_W * WORLD_H; i++) fprintf(f, "%u\n", tiles[i]);
         fclose(f);
     }
     m.setSpeed(3);
@@ -130,10 +140,11 @@ int main(int argc, char** argv) {
     for (int t = 0; t <= ticks; t++) {
         for (; next < acts.size() && acts[next].tick == t; next++) apply_action(m, acts[next], (int)next);
         if (t > 0) m.simTick();
+        std::vector<unsigned short> tiles = world_tiles(m);
         printf("tick %d time=%ld funds=%ld pop=%d res=%d com=%d ind=%d resV=%d comV=%d indV=%d crime=%d poll=%d lv=%d traf=%d maphash=%016llx\n",
                t, (long)m.cityTime, (long)m.totalFunds, (int)m.totalPop, (int)m.resPop, (int)m.comPop, (int)m.indPop,
                (int)m.resValve, (int)m.comValve, (int)m.indValve, (int)m.crimeAverage, (int)m.pollutionAverage,
-               (int)m.landValueAverage, (int)m.trafficAverage, (unsigned long long)fnv(&m.map[0][0], WORLD_W * WORLD_H));
+               (int)m.landValueAverage, (int)m.trafficAverage, (unsigned long long)fnv(tiles.data(), WORLD_W * WORLD_H));
     }
     return 0;
 }
