@@ -1,0 +1,14 @@
+# Expensive buildings until funds run out (NOT_ENOUGH_FUNDS from the toolDown wrapper), and clicks on
+# tiles already built on (BULLDOZE_AREA_FIRST). tools: 0 residential, 9 road, 10 stadium, 13 coal power, 15 airport
+1 drag 9 10 10 60 10
+2 down 10 20 14
+2 down 10 30 14
+2 down 10 40 14
+2 down 13 20 18
+2 down 13 30 18
+2 down 15 40 20
+3 down 0 10 10
+3 down 0 11 10
+4 down 10 25 25
+5 down 13 35 28
+6 down 15 55 30
