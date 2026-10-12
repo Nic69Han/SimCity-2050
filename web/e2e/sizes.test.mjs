@@ -56,9 +56,10 @@ describe("map sizes", () => {
       assert.equal(expected, 1, "the engine places a road at the far corner");
       assert.equal(await readFunds(page), shadow.funds(), "the page charged the same road");
 
-      // Enregistrer is off for this size, with the reason beside it
-      assert.equal(await page.locator("#save").isDisabled(), true);
-      assert.match(await page.locator("#save-note").textContent(), /120 × 100/);
+      // Enregistrer is on for this size too: every map is saved as a city file (wave 6, the
+      // engine's is_saveable is always true), so there is no note beside it
+      assert.equal(await page.locator("#save").isDisabled(), false);
+      assert.equal(await page.locator("#save-note").textContent(), "");
       assertNoErrors(errors);
     } finally {
       await close();
@@ -71,7 +72,7 @@ describe("map sizes", () => {
       await waitForReady(page);
       await page.selectOption("#size", "tres-grande");
       await newCity(page, "3");
-      assert.equal(await page.locator("#save").isDisabled(), true, "300 x 250 cannot be saved");
+      assert.equal(await page.locator("#save").isDisabled(), false, "300 x 250 can be saved (wave 6)");
       const g = await geometry(page);
       assert.equal(Math.round(g.w), 300);
       assert.equal(Math.round(g.h), 250);

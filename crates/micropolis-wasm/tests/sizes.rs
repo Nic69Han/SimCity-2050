@@ -1,5 +1,6 @@
 //! Native tests of the wasm adapter's map sizes on the real engine: `City::new_sized`, the
-//! size limits, tools at the far corners of a big map, and the saveable rule.
+//! size limits, tools at the far corners of a big map, and the saveable rule (every size is
+//! saveable since wave 6; `save_cty` still writes only 120x100).
 //! Error paths build a `JsError` and can only run on the wasm target; they are covered by
 //! the unit tests of `src/sizes.rs` and by web/test/wasm-sizes.test.mjs.
 
@@ -18,7 +19,7 @@ fn new_sized_builds_the_requested_map() {
         assert_eq!(city.tiles().len(), (w * h) as usize, "{w}x{h}");
         assert_eq!(city.speed(), 3);
         assert_eq!(city.year(), 1900);
-        assert!(!city.is_saveable() || (w, h) == (120, 100));
+        assert!(city.is_saveable(), "{w}x{h}: every size is saveable");
     }
 }
 
@@ -64,16 +65,17 @@ fn a_sized_city_runs_and_is_deterministic() {
 }
 
 #[test]
-fn only_the_original_size_is_saveable() {
-    assert!(!City::new_sized(100, 80, 1)
-        .expect("size in range")
-        .is_saveable());
-    assert!(!City::new_sized(120, 101, 1)
-        .expect("size in range")
-        .is_saveable());
-    assert!(City::new_sized(120, 100, 1)
-        .expect("size in range")
-        .is_saveable());
+fn every_size_is_saveable_as_a_city_file() {
+    for (w, h) in [(100, 80), (120, 101), (120, 100), (300, 250)] {
+        let city = City::new_sized(w, h, 1).expect("size in range");
+        assert!(city.is_saveable(), "{w}x{h}");
+        let file = city.save_city().expect("saved");
+        if (w, h) == (120, 100) {
+            assert_eq!(file.len(), 27_120);
+        } else {
+            assert_eq!(&file[..4], b"MCTY", "{w}x{h}");
+        }
+    }
 }
 
 #[test]
@@ -84,5 +86,5 @@ fn adopt_replaces_the_city_in_place() {
     city.adopt(fresh);
     assert_eq!((city.width(), city.height()), (160, 120));
     assert_eq!(city.tiles(), expected);
-    assert!(!city.is_saveable());
+    assert!(city.is_saveable());
 }

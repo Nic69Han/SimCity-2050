@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 mod budget;
 mod messages;
 mod overlays;
+mod saves;
 mod sizes;
 mod sprites;
 
@@ -51,17 +52,21 @@ impl City {
         City { sim }
     }
 
-    /// Load the bytes of a `.cty` file; the error is a readable message.
+    /// Load the bytes of a plain `.cty` file (120x100); the error is `<code>: <detail>`.
     pub fn load_cty(&mut self, bytes: &[u8]) -> Result<(), JsError> {
         self.sim
             .load_cty_seeded(bytes, LOAD_SEED)
             .map_err(|e| JsError::new(&e.to_string()))
     }
 
-    /// Serialise the city; refused (`size_not_saveable`) when the map is not the original
-    /// 120x100 size, which is all a `.cty` file can describe.
+    /// The plain `.cty` bytes of the city. Only the original 120x100 size can be written in
+    /// that format: any other size is refused with `size_not_saveable` (use `save_city`).
     pub fn save_cty(&self) -> Result<Vec<u8>, JsError> {
-        self.save_checked()
+        if sizes::is_cty_size(self.width(), self.height()) {
+            Ok(self.sim.save_cty())
+        } else {
+            Err(JsError::new(sizes::ERR_SIZE_NOT_SAVEABLE))
+        }
     }
 
     pub fn width(&self) -> i32 {

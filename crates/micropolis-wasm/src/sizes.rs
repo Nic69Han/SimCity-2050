@@ -1,26 +1,28 @@
 //! wasm adapter: map sizes (translation only, ARCHITECTURE.md rule 4).
 //!
 //! `City::new_sized` starts a new random city on a map of any size the engine accepts
-//! (80x67 minimum, 512x512 maximum; the original game is 120x100). A `.cty` file always
-//! describes a 120x100 map, so saving is only possible at that size: `save_checked` refuses
-//! any other size with the code `size_not_saveable`.
+//! (80x67 minimum, 512x512 maximum; the original game is 120x100). Every map can be saved:
+//! `save_city` (saves.rs) writes a plain `.cty` for 120x100 and an extended city file for other
+//! sizes. `save_cty` still writes only the plain `.cty` format, so it refuses any other size with
+//! the code `size_not_saveable`.
 //!
 //! Error values are stable codes (the JavaScript error message). The checks live in plain
 //! functions returning `&'static str` codes, so the native tests can run them: `JsError` can
 //! only be built on the wasm target.
 
 use crate::{City, NEW_CITY_PASSES, NEW_CITY_SPEED, STARTING_YEAR};
+use micropolis_core::fileio::{CITY_MAX_HEIGHT, CITY_MAX_WIDTH, CITY_MIN_HEIGHT, CITY_MIN_WIDTH};
 use micropolis_core::simulation::Simulation;
 use micropolis_core::{DEFAULT_WORLD_H, DEFAULT_WORLD_W};
 use wasm_bindgen::prelude::*;
 
 /// Smallest map the engine accepts: the original terrain generator needs room for its
 /// island, river and lake placements (80 wide, 67 high).
-pub const MIN_WIDTH: i32 = 80;
-pub const MIN_HEIGHT: i32 = 67;
+pub const MIN_WIDTH: i32 = CITY_MIN_WIDTH;
+pub const MIN_HEIGHT: i32 = CITY_MIN_HEIGHT;
 /// Largest map the page offers.
-pub const MAX_WIDTH: i32 = 512;
-pub const MAX_HEIGHT: i32 = 512;
+pub const MAX_WIDTH: i32 = CITY_MAX_WIDTH;
+pub const MAX_HEIGHT: i32 = CITY_MAX_HEIGHT;
 
 /// Stable error codes.
 pub const ERR_SIZE_OUT_OF_RANGE: &str = "size_out_of_range";
@@ -47,8 +49,8 @@ pub fn new_sized_city(width: i32, height: i32, seed: i32) -> Result<City, &'stat
     Ok(City { sim })
 }
 
-/// Whether a map of this size can be saved as a `.cty` file.
-pub fn is_saveable_size(width: i32, height: i32) -> bool {
+/// Whether a map of this size is the original 120x100, the only size a plain `.cty` describes.
+pub fn is_cty_size(width: i32, height: i32) -> bool {
     (width, height) == (DEFAULT_WORLD_W, DEFAULT_WORLD_H)
 }
 
@@ -65,9 +67,9 @@ impl City {
         vec![MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT]
     }
 
-    /// Whether [`City::save_checked`] will succeed (only the original 120x100 size).
+    /// Whether the city can be saved: always true, since `save_city` writes every size.
     pub fn is_saveable(&self) -> bool {
-        is_saveable_size(self.width(), self.height())
+        true
     }
 
     /// Makes this city the city of `other` (made by `new_sized`), in place: this JavaScript
@@ -77,15 +79,9 @@ impl City {
         self.sim = other.sim;
     }
 
-    /// The `.cty` bytes, or the error `size_not_saveable` for a map that is not 120x100.
-    /// The page must use this instead of `save_cty` for any size that is not the original:
-    /// `save_cty` has no size check and would write a file that does not describe the map.
+    /// The city file of any size (the same as `save_city`, kept for the page).
     pub fn save_checked(&self) -> Result<Vec<u8>, JsError> {
-        if self.is_saveable() {
-            Ok(self.sim.save_cty())
-        } else {
-            Err(JsError::new(ERR_SIZE_NOT_SAVEABLE))
-        }
+        self.save_city()
     }
 }
 
@@ -107,11 +103,11 @@ mod tests {
     }
 
     #[test]
-    fn only_the_original_size_is_saveable() {
-        assert!(is_saveable_size(120, 100));
-        assert!(!is_saveable_size(100, 80));
-        assert!(!is_saveable_size(120, 101));
-        assert!(!is_saveable_size(300, 250));
+    fn only_the_original_size_is_a_cty_size() {
+        assert!(is_cty_size(120, 100));
+        assert!(!is_cty_size(100, 80));
+        assert!(!is_cty_size(120, 101));
+        assert!(!is_cty_size(300, 250));
     }
 
     #[test]
@@ -120,7 +116,7 @@ mod tests {
         assert_eq!((city.width(), city.height()), (160, 120));
         assert_eq!(city.tiles().len(), 160 * 120);
         assert_eq!(city.speed(), NEW_CITY_SPEED as i32);
-        assert!(!city.is_saveable());
+        assert!(city.is_saveable());
         assert_eq!(city.year(), STARTING_YEAR as i32);
     }
 
@@ -157,5 +153,19 @@ mod tests {
             sized.save_cty().unwrap().len(),
             micropolis_core::fileio::CTY_SIZE
         );
+    }
+
+    #[test]
+    fn save_checked_writes_every_size() {
+        // 120x100 is a plain .cty; another size is an extended file (saves.rs, save_city).
+        let original = new_sized_city(120, 100, 9).expect("valid size");
+        assert_eq!(
+            original.save_checked().unwrap().len(),
+            micropolis_core::fileio::CTY_SIZE
+        );
+        let big = new_sized_city(160, 120, 9).expect("valid size");
+        let bytes = big.save_checked().unwrap();
+        assert_eq!(&bytes[..4], b"MCTY");
+        assert!(big.is_saveable());
     }
 }

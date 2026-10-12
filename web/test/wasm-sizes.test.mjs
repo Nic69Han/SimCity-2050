@@ -34,7 +34,7 @@ describe("wasm map sizes", { skip: SKIP }, () => {
       assert.equal(city.height(), h);
       assert.equal(city.tiles().length, w * h, `${w}x${h} tiles`);
       assert.equal(city.speed(), 3);
-      assert.equal(city.is_saveable(), false);
+      assert.equal(city.is_saveable(), true); // every size is saveable (wave 6)
     }
   });
 
@@ -52,14 +52,17 @@ describe("wasm map sizes", { skip: SKIP }, () => {
     }
   });
 
-  test("only 120x100 can be saved; save_checked throws size_not_saveable otherwise", () => {
+  test("every size can be saved; save_cty still refuses all but 120x100 (size_not_saveable)", () => {
     const big = City.new_sized(300, 250, 1);
-    assert.equal(big.is_saveable(), false);
-    assert.throws(() => big.save_checked(), (e) => e.message === "size_not_saveable");
+    assert.equal(big.is_saveable(), true);
+    assert.throws(() => big.save_cty(), (e) => e.message === "size_not_saveable");
+    const bytes = big.save_checked();
+    assert.deepEqual(Array.from(bytes.slice(0, 4)), [77, 67, 84, 89]);
 
     const original = City.new_sized(120, 100, 1);
     assert.equal(original.is_saveable(), true);
     assert.equal(original.save_checked().length, CTY_SIZE);
+    assert.equal(original.save_cty().length, CTY_SIZE);
   });
 
   test("a saved original city loads back into a city of the same map", () => {
