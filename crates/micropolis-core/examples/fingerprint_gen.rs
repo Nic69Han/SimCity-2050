@@ -4,6 +4,8 @@
 //!        cargo run --release --example fingerprint_gen -- seed ticks [some|map]
 //! (`some`: `new_random_city(seed)`; `map`: `generate_map()` with the generator seeded by `seed`.)
 //! Compare: diff <(reference/build/oracle_gen seed ticks) <(that command)
+//! Other world sizes: ORACLE_SIZE=WxH (default 120x100) selects `Simulation::new(W, H)`;
+//! compare against reference/build/oracle_gen_WxH (scripts/build-oracle-size.sh W H).
 //!
 //! With ORACLE_SCRIPT, player actions are applied before the tick they name (tick 0 =
 //! right after generation) and printed as `act <tick> <index> result=<ToolResult or 0
@@ -108,6 +110,26 @@ fn apply_action(s: &mut Simulation, a: &Action, index: usize) {
     );
 }
 
+/// `ORACLE_SIZE=WxH` (default 120x100).
+fn world_size_from_env() -> (i32, i32) {
+    let Ok(spec) = std::env::var("ORACLE_SIZE") else {
+        return (
+            micropolis_core::DEFAULT_WORLD_W,
+            micropolis_core::DEFAULT_WORLD_H,
+        );
+    };
+    let parsed = spec
+        .split_once(['x', 'X'])
+        .and_then(|(w, h)| Some((w.parse::<i32>().ok()?, h.parse::<i32>().ok()?)));
+    match parsed {
+        Some((w, h)) if w > 0 && h > 0 => (w, h),
+        _ => {
+            eprintln!("ORACLE_SIZE must be WxH, got {spec:?}");
+            std::process::exit(2)
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
@@ -116,7 +138,8 @@ fn main() {
     }
     let seed: i32 = args[1].parse().unwrap();
     let ticks: usize = args[2].parse().unwrap();
-    let mut s = Simulation::with_default_size();
+    let (w, h) = world_size_from_env();
+    let mut s = Simulation::new(w, h);
     if args.get(3).map(String::as_str) == Some("map") {
         // The oracle's constructor leaves the generator seeded with `seed`; generateMap()
         // then draws its seed from it.

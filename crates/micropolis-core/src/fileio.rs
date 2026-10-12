@@ -68,6 +68,14 @@ fn set_long(misc: &mut [i16], i: usize, v: i32) {
     misc[i + 1] = v as i16;
 }
 
+/// The file must be exactly [`CTY_SIZE`] bytes.
+fn check_file_size(bytes: &[u8]) -> Result<(), CtyError> {
+    if bytes.len() != CTY_SIZE {
+        return Err(CtyError::BadSize(bytes.len()));
+    }
+    Ok(())
+}
+
 impl Simulation {
     /// Whether `bytes` can be loaded into this engine (size of the file and of the world).
     fn check_cty(&self, bytes: &[u8]) -> Result<(), CtyError> {
@@ -86,16 +94,16 @@ impl Simulation {
     /// Port of `loadFile`: replace the city with the one in `bytes`, run
     /// `doSimInit` (scans, census, power) like the original does.
     ///
-    /// The result depends only on `bytes` and the current random generator state, never on what
-    /// the engine held before: the engine is rebuilt first (the C++ loads into a freshly
-    /// constructed engine). Only the generator state and the start year survive. A refused
-    /// file leaves the engine untouched.
+    /// A `.cty` file describes the original 120x100 world, so the engine is 120x100 after a
+    /// successful load, whatever size it had before. The result depends only on `bytes` and the
+    /// current random generator state, never on what the engine held before: the engine is
+    /// rebuilt first (the C++ loads into a freshly constructed engine). Only the generator state
+    /// and the start year survive. A refused file leaves the engine untouched.
     pub fn load_cty(&mut self, bytes: &[u8]) -> Result<(), CtyError> {
-        self.check_cty(bytes)?;
-        let (w, h) = self.world_size();
+        check_file_size(bytes)?;
         let rng = self.rng.clone();
         let starting_year = self.starting_year;
-        *self = Simulation::new(w, h);
+        *self = Simulation::new(DEFAULT_WORLD_W, DEFAULT_WORLD_H);
         self.rng = rng;
         self.starting_year = starting_year;
         self.load_cty_data(bytes)?;
@@ -112,7 +120,7 @@ impl Simulation {
     /// [`load_cty`](Self::load_cty) after seeding the random generator: the result depends on
     /// `bytes` and `seed` only. (The original seeds from the clock, which is not reproducible.)
     pub fn load_cty_seeded(&mut self, bytes: &[u8], seed: i32) -> Result<(), CtyError> {
-        self.check_cty(bytes)?;
+        check_file_size(bytes)?;
         self.rng.seed(seed);
         self.load_cty(bytes)
     }
@@ -212,10 +220,16 @@ mod tests {
     }
 
     #[test]
-    fn world_size_is_checked() {
+    fn load_gives_the_original_size() {
+        // A .cty file is a 120x100 city: loading one into another size gives 120x100.
         let mut s = Simulation::new(50, 50);
+        s.load_cty(HAIGHT).unwrap();
+        assert_eq!(s.world_size(), (120, 100));
+        assert_eq!(s.tiles.len(), 120 * 100);
+        // The raw data loader still needs a 120x100 engine: it fills the current arrays.
+        let mut t = Simulation::new(50, 50);
         assert!(matches!(
-            s.load_cty(HAIGHT),
+            t.load_cty_data(HAIGHT),
             Err(CtyError::WorldSizeMismatch { .. })
         ));
     }
