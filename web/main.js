@@ -278,7 +278,9 @@ $("save").onclick = () => {
   const bytes = saves.saveBytes(city);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
-  a.download = "city.cty";
+  // the original 120x100 format keeps .cty; any other size uses the extended format (magic "MCTY")
+  const extended = bytes.length >= 4 && String.fromCharCode(...bytes.subarray(0, 4)) === "MCTY";
+  a.download = extended ? "city.mcty" : "city.cty";
   a.click();
   URL.revokeObjectURL(a.href);
 };

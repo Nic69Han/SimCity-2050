@@ -17,8 +17,8 @@ La page charge Haight-Ashbury (ou Kyoto, Yokohama, ou un `.cty` local); « Lectu
 tourner la simulation, « Enregistrer » exporte la ville, « Nouvelle ville » génère un terrain (graine
 visible, rejouable). La palette d'outils permet de construire (routes, lignes, zones, services,
 centrales, parcs, bulldozer, requête) à la souris ou au doigt, avec aperçu du coût et de la validité.
-Cartes de 80×67 jusqu'à 512×512 (taille au choix pour une nouvelle ville ; l'export `.cty` reste limité à
-120×100), journal des messages de la ville, impôts et budget, évaluation et courbes d'historique,
+Cartes de 80×67 jusqu'à 512×512 (taille au choix pour une nouvelle ville ; fichiers `.cty` pour 120×100, `.mcty`
+au-delà), sauvegarde automatique et 3 emplacements dans le navigateur avec reprise de la partie, journal des messages de la ville, impôts et budget, évaluation et courbes d'historique,
 vues de carte (densité, valeur du terrain, criminalité, pollution, trafic, électricité, pompiers, police),
 tuiles et objets mobiles dessinés par programme (aucune image d'origine n'est utilisée).
 

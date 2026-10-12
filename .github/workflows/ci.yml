@@ -27,6 +27,8 @@ jobs:
         run: ./scripts/compare-events.sh
       - name: Differential test at other map sizes
         run: ./scripts/compare-bigmap.sh 300
+      - name: Differential test of saving and loading (any map size)
+        run: ./scripts/compare-saveload.sh
       - run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
       - run: ./scripts/build-web.sh
       - uses: actions/setup-node@v4

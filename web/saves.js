@@ -369,7 +369,7 @@ function renderNote() {
   const note = els.note;
   if (storageState === "opening") note.textContent = "Ouverture du stockage…";
   else if (storageState === "unavailable") {
-    note.textContent = `${storageErrorText(storageError ?? { code: "unavailable" })} Le fichier .cty reste disponible : Enregistrer et Ouvrir un .cty.`;
+    note.textContent = `${storageErrorText(storageError ?? { code: "unavailable" })} Les fichiers de ville restent disponibles : Enregistrer et Ouvrir un fichier.`;
   } else {
     note.textContent = "Les parties sont gardées dans ce navigateur. Un fichier .cty reste possible à côté.";
   }
@@ -718,7 +718,7 @@ export function setup(theApi) {
     autoSection,
     slotsSection,
     msg,
-    el("p", { class: "saves-hint", text: "Pour un fichier .cty, utilisez Enregistrer et Ouvrir un .cty dans l'en-tête." }),
+    el("p", { class: "saves-hint", text: "Pour un fichier de ville (.cty ou .mcty), utilisez Enregistrer et Ouvrir un fichier dans l'en-tête." }),
   );
 
   // the banner: a question that does not block the page

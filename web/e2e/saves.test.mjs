@@ -184,7 +184,7 @@ describe("saved games", () => {
       await pollUntil(async () => (await page.locator("#saves-slot-3").textContent()).includes("illisible"), "the unreadable slot");
       await page.click("#saves-slot-2 button[data-act=load]");
       await pollUntil(async () => (await page.locator("#saves-msg").textContent()).startsWith("Erreur : fichier invalide"), "the French error");
-      assert.match(await page.locator("#saves-msg").textContent(), /taille incorrecte \(3 octets\)/);
+      assert.match(await page.locator("#saves-msg").textContent(), /fichier tronqué/);
       assert.equal(await page.locator("#saves-msg").getAttribute("class"), "is-error");
       // the page works: a zone can still be built
       await buildRoad(page);

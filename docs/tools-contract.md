@@ -75,3 +75,9 @@ hide, only when a city exists) plus 3 named manual slots; "Reprendre la partie" 
 exists; slot metadata (name, date, game date, funds, population, size, thumbnail) stored with the bytes; page
 preferences (speed, disasters, view mode) in localStorage; French messages for the error codes above. The page
 uses `save_city`/`load_city` when the engine has them, else `save_cty`/`load_cty`.
+
+## Status (wave 6 merged)
+`City.save_city` / `City.load_city` handle any map size (120x100 stays a plain `.cty`; other sizes use the `MCTY`
+extended file, extension `.mcty`), with stable error codes. Loading was compared with the original C++ `loadFile`
+at several sizes (scripts/compare-saveload.sh); this found and fixed one divergence (the original resets the
+funding levels on load). The page stores an autosave and 3 manual slots in IndexedDB and offers to resume.
