@@ -61,13 +61,11 @@ impl City {
     }
 
     /// The plain `.cty` bytes of the city. Only the original 120x100 size can be written in
-    /// that format: any other size is refused with `size_not_saveable` (use `save_city`).
+    /// that format: any other size is refused with `size_not_saveable` (use `save_city`). A
+    /// `.cty` has no relief block, so a city with an edited relief or with the relief rules on
+    /// is refused with `relief_not_saveable` (use `save_city`).
     pub fn save_cty(&self) -> Result<Vec<u8>, JsError> {
-        if sizes::is_cty_size(self.width(), self.height()) {
-            Ok(self.sim.save_cty())
-        } else {
-            Err(JsError::new(sizes::ERR_SIZE_NOT_SAVEABLE))
-        }
+        saves::save_cty_bytes(self).map_err(JsError::new)
     }
 
     pub fn width(&self) -> i32 {

@@ -1,10 +1,12 @@
 //! wasm adapter: saving and loading city files (translation only, ARCHITECTURE.md rule 4).
 //!
 //! `save_city` writes the city of any map size: a plain `.cty` for 120x100 (byte for byte the
-//! original format) and an extended `MCTY` file for the other sizes (see `micropolis_core::fileio`).
-//! `load_city` reads both, detecting the format from the bytes. Every error is the core's
-//! `CityFileError`, shown as `<code>: <detail>` (`cty_bad_size`, `cty_bad_magic`,
-//! `cty_bad_version`, `cty_size_out_of_range`, `cty_truncated`). A refused file leaves the city
+//! original format) while its relief is not edited and its relief rules are off, and an extended
+//! `MCTY` file otherwise (version 2 carries the relief block; see `micropolis_core::fileio`).
+//! `load_city` reads all of them, detecting the format from the bytes, and restores the relief
+//! and the rules of an `MCTY` version 2 file. Every error is the core's `CityFileError`, shown as
+//! `<code>: <detail>` (`cty_bad_size`, `cty_bad_magic`, `cty_bad_version`,
+//! `cty_size_out_of_range`, `cty_truncated`, `cty_bad_relief`). A refused file leaves the city
 //! untouched. The generator is seeded with the same seed as `load_cty`, so the same file always
 //! gives the same city.
 //!
@@ -15,9 +17,26 @@ use crate::{City, LOAD_SEED};
 use micropolis_core::fileio::CityFileError;
 use wasm_bindgen::prelude::*;
 
+/// Code of `save_cty` on a city whose relief was edited or whose relief rules are on: a plain
+/// `.cty` has no relief block, so the city can only be saved with `save_city`.
+pub const ERR_RELIEF_NOT_SAVEABLE: &str = "relief_not_saveable";
+
 /// The city file of `city`, any size.
 pub fn save_bytes(city: &City) -> Vec<u8> {
     city.sim.save_city()
+}
+
+/// The plain `.cty` bytes of `city`: 120x100 only (`size_not_saveable` otherwise, as before), and
+/// only when the relief is neither edited nor governed by the rules (`relief_not_saveable`),
+/// since a `.cty` cannot hold them and would lose them silently.
+pub fn save_cty_bytes(city: &City) -> Result<Vec<u8>, &'static str> {
+    if !crate::sizes::is_cty_size(city.width(), city.height()) {
+        return Err(crate::sizes::ERR_SIZE_NOT_SAVEABLE);
+    }
+    if city.sim.relief_edited() || city.sim.relief_rules() {
+        return Err(ERR_RELIEF_NOT_SAVEABLE);
+    }
+    Ok(city.sim.save_cty())
 }
 
 /// Replaces the city of `city` by the one in `bytes` (any size, seeded with `LOAD_SEED`).
@@ -27,14 +46,15 @@ pub fn load_bytes(city: &mut City, bytes: &[u8]) -> Result<(), CityFileError> {
 
 #[wasm_bindgen]
 impl City {
-    /// The city file of this city, for a map of any size: a `.cty` for 120x100, an extended
-    /// `MCTY` file otherwise.
+    /// The city file of this city, for a map of any size: a `.cty` for 120x100 (unless its relief
+    /// was edited or its relief rules are on), an extended `MCTY` file otherwise.
     pub fn save_city(&self) -> Result<Vec<u8>, JsError> {
         Ok(save_bytes(self))
     }
 
     /// Replaces this city by the city of a city file (a `.cty` or an `MCTY` file of any size
-    /// from 80x67 to 512x512). On error, the message is `<code>: <detail>` and the city is
+    /// from 80x67 to 512x512, version 1 or 2). An `MCTY` file with a relief block restores the
+    /// relief and the relief rules. On error, the message is `<code>: <detail>` and the city is
     /// unchanged.
     pub fn load_city(&mut self, bytes: &[u8]) -> Result<(), JsError> {
         load_bytes(self, bytes).map_err(|e| JsError::new(&e.to_string()))
@@ -93,6 +113,44 @@ mod tests {
         let mut longer = save_bytes(&city);
         longer.push(0);
         assert_eq!(code(&longer, &mut city), "cty_bad_size");
+    }
+
+    #[test]
+    fn an_edited_relief_and_the_rules_survive_save_and_load() {
+        let mut city = new_sized_city(120, 100, 6).expect("valid size");
+        city.sim.relief_mut().set_height_at(10, 10, 40);
+        city.sim.set_relief_rules(true);
+        let bytes = save_bytes(&city);
+        assert_eq!(&bytes[..4], b"MCTY");
+        let mut back = new_sized_city(80, 67, 1).expect("valid size");
+        load_bytes(&mut back, &bytes).expect("a file this crate wrote");
+        assert_eq!(back.sim.relief().as_slice(), city.sim.relief().as_slice());
+        assert!(back.sim.relief_rules());
+        assert!(back.sim.relief_edited());
+    }
+
+    #[test]
+    fn save_cty_refuses_what_a_cty_cannot_hold() {
+        let mut city = new_sized_city(120, 100, 6).expect("valid size");
+        assert!(save_cty_bytes(&city).is_ok());
+        city.sim.set_relief_rules(true);
+        assert_eq!(save_cty_bytes(&city), Err(ERR_RELIEF_NOT_SAVEABLE));
+        let big = new_sized_city(97, 83, 6).expect("valid size");
+        assert_eq!(
+            save_cty_bytes(&big),
+            Err(crate::sizes::ERR_SIZE_NOT_SAVEABLE)
+        );
+    }
+
+    #[test]
+    fn a_corrupt_relief_block_is_cty_bad_relief() {
+        let mut city = new_sized_city(97, 83, 1).expect("valid size");
+        city.sim.relief_mut().set_height_at(3, 3, 20);
+        let mut bytes = save_bytes(&city);
+        let len = bytes.len();
+        bytes[len - 5] ^= 1;
+        let err = load_bytes(&mut city, &bytes).expect_err("refused");
+        assert_eq!(err.code(), "cty_bad_relief");
     }
 
     #[test]

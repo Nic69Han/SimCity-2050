@@ -626,6 +626,12 @@ impl Simulation {
         self.relief_edited
     }
 
+    /// Sets the edited flag as a loaded file records it (after [`set_relief`](Self::set_relief),
+    /// which marks the relief edited).
+    pub(crate) fn set_relief_edited(&mut self, on: bool) {
+        self.relief_edited = on;
+    }
+
     /// Makes the relief come from `seed` and drops any relief computed for the old map.
     pub(crate) fn set_relief_source(&mut self, seed: i32) {
         self.relief_seed = seed;
