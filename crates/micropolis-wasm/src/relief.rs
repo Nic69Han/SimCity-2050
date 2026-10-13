@@ -12,6 +12,16 @@ impl City {
     pub fn heights(&self) -> Vec<u8> {
         self.sim.relief().as_slice().to_vec()
     }
+
+    /// Whether the relief rules are on (off by default: the engine then equals the original).
+    pub fn relief_rules(&self) -> bool {
+        self.sim.relief_rules()
+    }
+
+    /// Turns the relief rules on or off.
+    pub fn set_relief_rules(&mut self, on: bool) {
+        self.sim.set_relief_rules(on);
+    }
 }
 
 #[cfg(test)]
