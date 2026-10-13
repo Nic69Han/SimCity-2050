@@ -14,6 +14,14 @@
 //   - footprint origin: size 1 at (x, y); size 3 starts at (x-1, y-1); size 4 at (x-1, y-1);
 //     size 6 at (x-2, y-2)
 //   - heights() is the relief: one altitude 0..=63 per tile, index x * height + y, sea level 8
+//   - relief rules (docs/3d.md, roadmap step 1): relief_rules() is off by default and after a new
+//     city or a load (a file's flag is not modelled). Off, terraform returns 0 (Failed) and
+//     terraform_preview [0, 0]. On, terraform(x, y, delta) moves the tile by one step (+1 raise,
+//     -1 lower), then each dirt or tree neighbour whose slope to a moved tile is more than 2 steps
+//     follows by one step, up to 3 tiles from the origin (each tile moves at most once). Cost:
+//     10 dollars per moved tile. Water is refused (0), a building or rubble needs a bulldozer
+//     (-1), a tile at 0 or 63 cannot move past it (0), funds below the cost give -2. Building
+//     tools do not add a levelling surcharge in the mock.
 //   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
 //   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
 //     so tool_preview's cost differs from the catalog price (the page must show the preview's)
@@ -30,6 +38,11 @@ export const RUBBLE = 44;
 export const RESIDENTIAL = 240;
 export const START_FUNDS = 20000;
 export const TREE_CLEAR = 10; // extra dollars per tree tile cleared by a building tool
+export const SEA_LEVEL = 8;
+export const ALT_MAX = 63;
+export const SLOPE = 2; // steps of altitude a neighbour may differ before the cascade follows
+export const CASCADE_DEPTH = 3; // tiles from the origin a terraforming step can reach
+export const TERRAFORM_COST = 10; // dollars per tile moved
 const NO_TERRAIN_COST = new Set(["query", "bulldozer", "water", "land", "forest"]);
 
 // Tile written by a successful build, per tool key (the rest of the tools write residential).
@@ -88,6 +101,8 @@ export class MockCity {
   #speed = 2;
   #rubble = 60;
   #disasters = true;
+  #alt; // relief: one altitude per tile, index x * height + y (City.heights)
+  #rules = false; // relief rules (City.relief_rules)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -105,6 +120,7 @@ export class MockCity {
   #generate(seed) {
     this.seed = seed | 0;
     this.#map = new Uint16Array(this.#width * this.#height).fill(DIRT);
+    this.#alt = this.#reliefOf(this.seed);
     const rnd = lcg(this.seed);
     for (let x = 3; x < 10; x++) for (let y = 3; y < 8; y++) this.#set(x, y, WATER);
     for (let i = 0; i < this.#rubble; i++) {
@@ -121,6 +137,7 @@ export class MockCity {
     this.#funds = START_FUNDS;
     this.#speed = 3; // engine defaults after a new city
     this.#disasters = true;
+    this.#rules = false; // a new city starts with the rules off
   }
 
   #inside(x, y) {
@@ -239,19 +256,78 @@ export class MockCity {
   }
   // Relief (City.heights, docs/3d.md): one altitude per tile, index x * height + y like tiles(),
   // 0..=63, sea level 8. A smooth fake hill country, independent of the tiles, deterministic for
-  // the seed; neighbouring tiles differ by at most 2.
+  // the seed; neighbouring tiles differ by at most 2 (until terraforming changes them).
   heights() {
+    return this.#alt.slice();
+  }
+  #reliefOf(seed) {
     const w = this.#width, h = this.#height;
     const out = new Uint8Array(w * h);
-    const phase = ((this.seed >>> 0) % 997) * 0.01;
+    const phase = ((seed >>> 0) % 997) * 0.01;
     for (let x = 0; x < w; x++) {
       for (let y = 0; y < h; y++) {
-        const v = 8 + 4 * Math.sin(x * 0.11 + phase) + 3 * Math.cos(y * 0.13 - 2 * phase) +
+        const v = SEA_LEVEL + 4 * Math.sin(x * 0.11 + phase) + 3 * Math.cos(y * 0.13 - 2 * phase) +
           2 * Math.sin((x + y) * 0.05 + 3 * phase);
-        out[x * h + y] = Math.min(63, Math.max(0, Math.round(v)));
+        out[x * h + y] = Math.min(ALT_MAX, Math.max(0, Math.round(v)));
       }
     }
     return out;
+  }
+  relief_rules() {
+    return this.#rules;
+  }
+  set_relief_rules(on) {
+    this.#rules = Boolean(on);
+  }
+  // Dry run of terraform(x, y, delta): { result, cost, moves: [[index, altitude], ...] }.
+  #terraformPlan(x, y, delta) {
+    const none = { result: RESULT.FAILED, cost: 0, moves: [] };
+    if (!this.#rules || !this.#inside(x, y) || (delta !== 1 && delta !== -1)) return none;
+    const h = this.#height;
+    const tile = this.#get(x, y);
+    if (tile === WATER) return none;
+    if (tile !== DIRT && tile !== TREES) return { result: RESULT.NEED_BULLDOZE, cost: 0, moves: [] };
+    const at = new Map(); // index -> new altitude of the moved tiles
+    const altOf = (i) => (at.has(i) ? at.get(i) : this.#alt[i]);
+    const start = this.#alt[x * h + y] + delta;
+    if (start < 0 || start > ALT_MAX) return none;
+    at.set(x * h + y, start);
+    const queue = [{ x, y, d: 0 }];
+    for (let q = 0; q < queue.length; q++) {
+      const c = queue[q];
+      if (c.d === CASCADE_DEPTH) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = c.x + dx, ny = c.y + dy;
+        if (!this.#inside(nx, ny)) continue;
+        const ni = nx * h + ny;
+        if (at.has(ni)) continue;
+        const nt = this.#get(nx, ny);
+        if (nt !== DIRT && nt !== TREES) continue; // water, buildings and rubble stay as they are
+        const here = altOf(c.x * h + c.y), cur = this.#alt[ni];
+        let target = cur;
+        if (here - cur > SLOPE) target = cur + 1;
+        else if (cur - here > SLOPE) target = cur - 1;
+        if (target === cur || target < 0 || target > ALT_MAX) continue;
+        at.set(ni, target);
+        queue.push({ x: nx, y: ny, d: c.d + 1 });
+      }
+    }
+    const cost = TERRAFORM_COST * at.size;
+    const result = this.#funds < cost ? RESULT.NO_MONEY : RESULT.OK;
+    return { result, cost, moves: [...at] };
+  }
+  terraform_preview(x, y, delta) {
+    const p = this.#terraformPlan(x, y, delta);
+    return Int32Array.of(p.result, p.result === RESULT.OK || p.result === RESULT.NO_MONEY ? p.cost : 0);
+  }
+  terraform(x, y, delta) {
+    const p = this.#terraformPlan(x, y, delta);
+    if (p.result === RESULT.OK) {
+      this.#funds -= p.cost;
+      for (const [i, v] of p.moves) this.#alt[i] = v;
+    }
+    this.log.push({ op: "terraform", x, y, delta, result: p.result });
+    return p.result;
   }
   funds() {
     return this.#funds;
@@ -284,7 +360,10 @@ export class MockCity {
     return this.#disasters;
   }
   tick() {}
-  load_cty() {}
+  // A loaded file: the page's checks read the flag from the engine, and this one is off after a load.
+  load_cty() {
+    this.#rules = false;
+  }
   take_events() {
     return 0;
   }

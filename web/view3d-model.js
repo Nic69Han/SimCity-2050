@@ -138,7 +138,10 @@ export function chunkBounds(grid, chunk) {
 
 // Chunks to rebuild between two snapshots { w, h, tiles, alt }. No previous snapshot, or another
 // size: every chunk. A tile whose character, status bits or altitude changed dirties its own chunk
-// and the chunks of its eight neighbours, since corner heights and normals depend on them.
+// and the chunks of the tiles within REACH of it: the geometry of a tile uses the corner heights
+// of the tiles one step away, and the normals of those corners use the corners one step further.
+export const REACH = 2;
+
 export function dirtyChunks(prev, next, grid) {
   const all = () => Array.from({ length: grid.count }, (_, i) => i);
   if (!prev || prev.w !== next.w || prev.h !== next.h) return all();
@@ -148,8 +151,8 @@ export function dirtyChunks(prev, next, grid) {
     for (let y = 0; y < h; y++) {
       const i = x * h + y;
       if (prev.tiles[i] === next.tiles[i] && prev.alt[i] === next.alt[i]) continue;
-      for (let nx = Math.max(0, x - 1); nx <= Math.min(w - 1, x + 1); nx++) {
-        for (let ny = Math.max(0, y - 1); ny <= Math.min(h - 1, y + 1); ny++) {
+      for (let nx = Math.max(0, x - REACH); nx <= Math.min(w - 1, x + REACH); nx++) {
+        for (let ny = Math.max(0, y - REACH); ny <= Math.min(h - 1, y + REACH); ny++) {
           dirty[chunkOf(nx, ny, grid)] = 1;
         }
       }
