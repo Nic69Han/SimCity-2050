@@ -38,6 +38,9 @@ Files:
   classification, chunk geometry and volumes, picking by ray, and the mock's relief.
 - `pointer-seam.test.mjs`: `attachPointer` with a view's own `tileOf` and the abort signal.
 - `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.
+- `relief.test.mjs`: relief rules (`web/relief.js`: the checkbox reads and sets the engine's flag, the
+  reason the terraforming buttons are off), the terraforming catalog entries (keys U and D, the Terrain
+  group, the engine calls and the drag line), and the mock's terraform rules (cost, cascade, refusals).
 
 ## End-to-end tests (web/e2e)
 
@@ -70,6 +73,9 @@ Files:
   no frame while paused), a refused file (its own live region, the status line kept), the city
   selector ("Ville aléatoire", "Fichier local", a sample re-loads), save and re-open of a .cty
   (27 120 bytes).
+- `relief.test.mjs` (e2e, `?mock=1`): the Règles de relief checkbox, the disabled buttons and their reasons,
+  raise/lower/refusal in the 3D view against the mock's costs, a new city and a loaded file showing the
+  engine's flag. The real-engine part is skipped while the wasm build has no `terraform()`.
 - `play.test.mjs`: the speed slider and the Catastrophes checkbox reach the engine: after N
   frames the status and stats lines equal those of the shadow engine run for the same ticks.
 

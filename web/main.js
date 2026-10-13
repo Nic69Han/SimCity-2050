@@ -12,6 +12,7 @@ import { chooseSize, readLimits, supportsNewSized, saveNote, sizeErrorText } fro
 import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
 import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT } from "./status.js";
+import { supportsRelief, readRelief, setRelief } from "./relief.js";
 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
@@ -137,10 +138,20 @@ function load(bytes) {
   seedNote = null;
   city.set_speed(Number($("speed").value));
   city.enable_disasters($("disasters").checked);
+  syncRelief();
   setLoadMessage("");
   unlock();
   draw();
   return null;
+}
+
+// The relief checkbox and the terraforming buttons show the engine's flag. It is read after a
+// load or a new city (a file may carry it on), never pushed into the city.
+function syncRelief() {
+  $("relief-label").hidden = !supportsRelief(city);
+  const on = readRelief(city);
+  $("relief").checked = on;
+  tools?.setRelief(on);
 }
 
 // Shows `value` in the city selector: a sample name, or "random" / "local" (an extra entry).
@@ -225,6 +236,7 @@ function newCity() {
   }
   // the engine resets its speed and disasters on a new city: push the page's options again
   applyEnginePreferences(city, { speed: $("speed").value, disasters: $("disasters").checked });
+  syncRelief();
   seedNote = parsed.seed;
   seedInput.value = String(parsed.seed);
   setLoadMessage("");
@@ -281,6 +293,7 @@ tools = setupTools({
 const hasNewCity = supportsNewCity(city);
 $("newcity").hidden = !hasNewCity;
 $("newcity-btn").onclick = newCity;
+syncRelief();
 sizeLimits = readLimits(City);
 $("size-w").min = sizeLimits.minWidth;
 $("size-w").max = sizeLimits.maxWidth;
@@ -311,6 +324,11 @@ $("file").onchange = async (ev) => {
 $("play").onclick = () => setPlaying(!playback.playing);
 $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
+$("relief").onchange = (e) => {
+  $("relief").checked = setRelief(city, e.target.checked); // the engine's answer
+  tools?.setRelief(readRelief(city));
+  draw();
+};
 $("save").onclick = () => {
   if (!ready || !saves.canSaveBytes(city)) return;
   const bytes = saves.saveBytes(city);

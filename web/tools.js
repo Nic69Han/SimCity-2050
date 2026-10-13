@@ -4,6 +4,7 @@
 // the only function that touches the page, and it is called at runtime only.
 import { ToolStroke, attachPointer, tileAt } from "./input.js";
 import { formatZoneStatus } from "./query.js";
+import { supportsTerraform, reliefBlockedReason, lineTiles } from "./relief.js";
 
 export const TILE_PX = 8; // canvas pixels per tile (same as main.js)
 
@@ -60,6 +61,8 @@ export const TOOL_LABELS = Object.freeze({
   land: "Terrain nu",
   forest: "Forêt",
   query: "Requête",
+  relever: "Relever",
+  abaisser: "Abaisser",
 });
 
 // Palette groups, in display order. Keys not listed fall into "Autres".
@@ -68,7 +71,7 @@ export const TOOL_GROUPS = Object.freeze([
   { id: "zones", label: "Zones", keys: ["residential", "commercial", "industrial"] },
   { id: "services", label: "Services", keys: ["fire_station", "police_station", "stadium", "park"] },
   { id: "energie", label: "Énergie et transport", keys: ["coal_power", "nuclear_power", "seaport", "airport"] },
-  { id: "terrain", label: "Terrain", keys: ["bulldozer", "water", "land", "forest"] },
+  { id: "terrain", label: "Terrain", keys: ["bulldozer", "water", "land", "forest", "relever", "abaisser"] },
   { id: "requete", label: "Information", keys: ["query"] },
 ]);
 const OTHER_GROUP = Object.freeze({ id: "autres", label: "Autres" });
@@ -98,7 +101,16 @@ export const SHORTCUTS = Object.freeze({
   land: "l",
   forest: "v",
   query: "q",
+  relever: "u", // "r" is the road, so the terraforming keys are U (up) and D (down)
+  abaisser: "d",
 });
+
+// Terraforming tools (roadmap step 1): not engine tool ids. Each one calls terraform(x, y, delta)
+// and terraform_preview(x, y, delta). Their catalog entries have id "relief:<delta>".
+const RELIEF_TOOLS = Object.freeze([
+  { key: "relever", delta: 1 },
+  { key: "abaisser", delta: -1 },
+]);
 
 export function shortcutFor(key) {
   return Object.hasOwn(SHORTCUTS, key) ? SHORTCUTS[key] : null;
@@ -143,6 +155,56 @@ export function readCatalog(city) {
     });
   }
   return out;
+}
+
+// Catalog entries of the terraforming tools, when the engine has terraform and terraform_preview.
+// Same shape as readCatalog's, plus kind "relief" and delta (+1 raise, -1 lower). Their cost is
+// shown on the hover label only (the engine prices each tile), so the catalog cost is 0.
+export function reliefCatalog(city) {
+  if (!supportsTerraform(city)) return [];
+  return RELIEF_TOOLS.map((r) => ({
+    id: `relief:${r.delta}`,
+    key: r.key,
+    label: TOOL_LABELS[r.key],
+    group: groupOf(r.key).id,
+    groupLabel: groupOf(r.key).label,
+    cost: 0,
+    size: 1,
+    shortcut: shortcutFor(r.key),
+    kind: "relief",
+    delta: r.delta,
+  }));
+}
+
+// The engine calls of one catalog entry: { footprint, preview, down, drag }, each taking tile
+// coordinates. Building tools go to tool_*; terraforming goes to terraform* one tile at a time
+// (a drag terraforms every tile its pointer crosses, from the tile after the start).
+export function callsFor(city, entry) {
+  if (entry.kind === "relief") {
+    const d = entry.delta;
+    return {
+      footprint: (x, y) => Int32Array.of(x, y, 1, 1),
+      preview: (x, y) => city.terraform_preview(x, y, d),
+      down: (x, y) => city.terraform(x, y, d),
+      drag(x0, y0, x1, y1) {
+        let r = 0;
+        for (const t of lineTiles(x0, y0, x1, y1)) r = city.terraform(t.x, t.y, d);
+        return r;
+      },
+    };
+  }
+  return {
+    footprint: (x, y) => city.tool_footprint(entry.id, x, y),
+    preview: (x, y) => city.tool_preview(entry.id, x, y),
+    down: (x, y) => city.tool_down(entry.id, x, y),
+    drag: (x0, y0, x1, y1) => city.tool_drag(entry.id, x0, y0, x1, y1),
+  };
+}
+
+// Label of a terraforming hover: the engine's cost when the step is allowed, else a dash
+// (a refused step has no price to show).
+export function reliefLabel(preview) {
+  return preview[0] === RESULT.OK ? formatCost(preview[1]) : "—";
 }
 
 // Catalog grouped in display order; empty groups are dropped.
@@ -196,9 +258,11 @@ function buildHelp(dl, rows) {
   }
 }
 
-// Builds the palette buttons into `container`. Returns { select(id | null) }.
+// Builds the palette buttons into `container`. Returns { select(id | null), setRelief(reason) }:
+// setRelief("") enables the terraforming buttons, a non-empty reason disables them and is their title.
 function buildPalette(container, catalog, onPick) {
   const buttons = new Map();
+  const reliefButtons = [];
   for (const group of groupCatalog(catalog)) {
     const fieldset = el("fieldset", "tool-group");
     fieldset.append(el("legend", null, group.label));
@@ -209,13 +273,15 @@ function buildPalette(container, catalog, onPick) {
       b.dataset.tool = t.key;
       b.setAttribute("aria-pressed", "false");
       const shortcut = t.shortcut ? t.shortcut.toUpperCase() : null;
-      b.title = `${t.label} : ${formatCost(t.cost)}, taille ${t.size}×${t.size}` +
+      const costText = t.kind === "relief" ? "selon pente" : formatCost(t.cost);
+      b.title = `${t.label} : ${costText}, taille ${t.size}×${t.size}` +
         (shortcut ? ` (raccourci ${shortcut})` : "");
       if (shortcut) b.setAttribute("aria-keyshortcuts", shortcut);
-      b.append(el("span", "tool-name", t.label), el("span", "tool-cost", formatCost(t.cost)));
+      b.append(el("span", "tool-name", t.label), el("span", "tool-cost", costText));
       if (shortcut) b.append(el("kbd", "tool-key", shortcut));
       b.addEventListener("click", () => onPick(t.id));
       buttons.set(t.id, b);
+      if (t.kind === "relief") reliefButtons.push({ tool: t, b });
       row.append(b);
     }
     fieldset.append(row);
@@ -229,12 +295,19 @@ function buildPalette(container, catalog, onPick) {
         b.classList.toggle("active", on);
       }
     },
+    setRelief(reason) {
+      for (const { tool, b } of reliefButtons) {
+        b.disabled = reason !== "";
+        b.title = `${tool.label} : ${reason || "coût affiché au survol"}` +
+          (tool.shortcut ? ` (raccourci ${tool.shortcut.toUpperCase()})` : "");
+      }
+    },
   };
 }
 
 // `price` is the tool's catalog cost, shown when the preview charges nothing (a failed
-// placement), so the label always tells what the tool costs.
-function paintHover(g, rect, preview, price) {
+// placement), so the label always tells what the tool costs. `label` overrides the text (relief).
+function paintHover(g, rect, preview, price, label) {
   const ok = hoverVerdict(preview) === "ok";
   const color = ok ? "#1e8e3e" : "#d93025";
   g.save();
@@ -243,7 +316,7 @@ function paintHover(g, rect, preview, price) {
   g.strokeStyle = color;
   g.lineWidth = 2;
   g.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
-  const text = costLabel(preview, price);
+  const text = label ?? costLabel(preview, price);
   g.font = "bold 14px system-ui, sans-serif";
   const boxW = g.measureText(text).width + 8;
   const boxH = 18;
@@ -279,16 +352,17 @@ function flatSurface(canvas, overlay) {
       const g = sync();
       g.clearRect(0, 0, overlay.width, overlay.height);
     },
-    outline(fp, preview, price) {
-      paintHover(sync(), outlineRect(fp), preview, price);
+    outline(fp, preview, price, label) {
+      paintHover(sync(), outlineRect(fp), preview, price, label);
     },
   };
 }
 
 // Wires the palette, keyboard shortcuts, pointer input and the hover outline.
-// Returns { render(), useSurface(surface | null) } or null when the engine has no tool API (the
-// palette and overlay are then hidden and the page works as before). render() after every redraw
-// of the map; useSurface(s) moves the pointer and the outline to another view (null: back to the flat map).
+// Returns { render(), useSurface(surface | null), setRelief(on) } or null when the engine has no
+// tool API (the palette and overlay are then hidden and the page works as before). render() after
+// every redraw of the map; useSurface(s) moves the pointer and the outline to another view (null:
+// back to the flat map); setRelief(flag) tells the terraforming buttons the engine's relief flag.
 //   onChange(): redraws the whole page after an action (the map and funds change).
 //   help (optional): <dl> that receives the keyboard shortcut rows; hidden without the tool API.
 export function setupTools({ city, canvas, overlay, palette, message, queryPanel, help = null, onChange }) {
@@ -302,12 +376,13 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
 
   palette.hidden = false;
   overlay.hidden = false;
-  const catalog = readCatalog(city);
+  const catalog = [...readCatalog(city), ...reliefCatalog(city)];
   if (help) {
     buildHelp(help, shortcutRows(catalog));
     help.closest("details").hidden = false;
   }
   const byId = new Map(catalog.map((t) => [t.id, t]));
+  const calls = new Map(catalog.map((t) => [t.id, callsFor(city, t)]));
   const queryId = catalog.find((t) => t.key === "query")?.id ?? null;
   const isInspect = (id) => id === queryId && typeof city.query === "function";
   const say = (text) => {
@@ -316,11 +391,17 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
 
   let activeId = null;
   let hover = null;
+  let rules = false; // the engine's relief flag, as the page last read it (setRelief)
   const flat = flatSurface(canvas, overlay);
   let surface = flat;
   let pointerAbort = null;
 
-  const stroke = new ToolStroke(city, {
+  // ToolStroke talks to the engine by tool id; the adapter routes each id to its engine calls.
+  const strokeEngine = {
+    tool_down: (id, x, y) => calls.get(id).down(x, y),
+    tool_drag: (id, x0, y0, x1, y1) => calls.get(id).drag(x0, y0, x1, y1),
+  };
+  const stroke = new ToolStroke(strokeEngine, {
     isInspect,
     onResult: (code) => say(resultMessage(code)),
     onInspect: (tile) => {
@@ -336,7 +417,20 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
 
   const ui = buildPalette(palette, catalog, (id) => select(id));
 
+  // Why tool `id` cannot be selected now ("" when it can). Only terraforming has a condition.
+  function blockedReason(id) {
+    if (byId.get(id)?.kind !== "relief") return "";
+    return reliefBlockedReason({ rules, in3d: surface !== flat });
+  }
+
   function select(id) {
+    if (id !== null) {
+      const reason = blockedReason(id);
+      if (reason) {
+        say(reason);
+        return;
+      }
+    }
     activeId = id;
     ui.select(id);
     surface.canvas.style.cursor = id === null ? "" : "crosshair";
@@ -348,9 +442,20 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
   function render() {
     surface.clear();
     if (activeId === null || hover === null || isInspect(activeId)) return;
-    const fp = city.tool_footprint(activeId, hover.x, hover.y);
-    const preview = city.tool_preview(activeId, hover.x, hover.y);
-    surface.outline(fp, preview, byId.get(activeId)?.cost ?? 0);
+    const entry = byId.get(activeId);
+    const c = calls.get(activeId);
+    const fp = c.footprint(hover.x, hover.y);
+    const preview = c.preview(hover.x, hover.y);
+    const label = entry?.kind === "relief" ? reliefLabel(preview) : undefined;
+    surface.outline(fp, preview, entry?.cost ?? 0, label);
+  }
+
+  // The terraforming buttons follow the rules flag and the view: a selected one is dropped when
+  // it stops being allowed.
+  function refreshRelief() {
+    const reason = reliefBlockedReason({ rules, in3d: surface !== flat });
+    ui.setRelief(reason);
+    if (activeId !== null && blockedReason(activeId)) select(null);
   }
 
   // Pointer events of the current surface only: the previous surface's listeners are removed.
@@ -363,7 +468,14 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
     surface.canvas.style.cursor = activeId === null ? "" : "crosshair";
     const handlers = surface.tileOf ? { ...pointerHandlers, tileOf: surface.tileOf } : pointerHandlers;
     attachPointer(surface.canvas, handlers, { signal: pointerAbort.signal });
+    refreshRelief();
     render();
+  }
+
+  // The engine's relief flag, read by the page after each change or new city.
+  function setRelief(on) {
+    rules = Boolean(on);
+    refreshRelief();
   }
 
   const pointerHandlers = {
@@ -408,5 +520,5 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
     if (id !== null) select(id);
   });
 
-  return { render, useSurface };
+  return { render, useSurface, setRelief };
 }
