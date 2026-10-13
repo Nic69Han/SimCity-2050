@@ -136,7 +136,7 @@ impl Relief {
 }
 
 /// Whether a tile is water: river, river edge, channel (the `WATER_LOW..=WATER_HIGH` range).
-fn is_water(tile: Tile) -> bool {
+pub(crate) fn is_water(tile: Tile) -> bool {
     (WATER_LOW..=WATER_HIGH).contains(&character(tile))
 }
 
