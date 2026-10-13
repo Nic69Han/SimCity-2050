@@ -40,10 +40,11 @@ export async function loadPlaywright() {
   return import("playwright");
 }
 
-export async function launchBrowser() {
+// `args`: extra Chromium switches (the 3D test asks for software WebGL).
+export async function launchBrowser({ args = [] } = {}) {
   const { chromium } = await loadPlaywright();
   const executablePath = process.env.E2E_CHROMIUM || (existsSync(LOCAL_CHROMIUM) ? LOCAL_CHROMIUM : undefined);
-  return chromium.launch({ headless: true, executablePath });
+  return chromium.launch({ headless: true, executablePath, args });
 }
 
 // A new browser context and page on the app, with every console error, page error and

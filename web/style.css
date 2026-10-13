@@ -76,6 +76,10 @@ button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visi
    under the pointer is still exact (input.js reads the displayed rectangle). */
 .map-frame { position: relative; width: min(100%, calc(72vh * var(--ratio))); margin: 0 auto; border: 1px solid var(--line); background: #000; }
 #map { display: block; width: 100%; height: auto; border: 0; background: #000; image-rendering: pixelated; touch-action: none; }
+/* the 3D view replaces the flat map canvas (and its layers) while on; main.js sets is-3d */
+#map3d { display: none; width: 100%; height: auto; aspect-ratio: var(--ratio); background: #000; touch-action: none; }
+.map-frame.is-3d > canvas:not(#map3d) { display: none; }
+.map-frame.is-3d > #map3d { display: block; }
 #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: transparent; }
 #tool-msg, #load-msg { min-height: 1.4em; margin: .5rem 0 0; color: var(--bad); font-weight: 600; }
 #tool-msg:empty, #load-msg:empty { min-height: 0; }
