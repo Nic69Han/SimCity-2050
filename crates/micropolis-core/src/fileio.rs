@@ -297,6 +297,7 @@ impl Simulation {
     /// Reads the histories, the misc history (funds, time, tax, speed, flags, percents) and
     /// the tile map of `bytes` (a payload of this engine's size; checked by the callers).
     fn read_payload(&mut self, bytes: &[u8]) {
+        self.clear_relief();
         let mut at = 0;
         for h in [
             &mut self.res_hist,

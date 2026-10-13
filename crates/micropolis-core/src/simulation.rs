@@ -13,8 +13,13 @@
 use crate::events::Event;
 use crate::map::Map;
 use crate::position::Position;
+use crate::relief::Relief;
 use crate::rng::Rng;
 use crate::tile::Tile;
+use std::cell::OnceCell;
+
+/// Seed of the relief of a city that did not come from a seeded generator (a loaded file).
+const LOADED_CITY_RELIEF_SEED: i32 = 0x5EED;
 
 pub const PASSES_PER_CITYTIME: i32 = 16;
 pub const CITYTIMES_PER_MONTH: i32 = 4;
@@ -100,6 +105,11 @@ pub struct Simulation {
     pub tiles: Vec<Tile>,
     pub rng: Rng,
     events: Vec<Event>,
+    /// Terrain relief (docs/3d.md), computed on first use by [`Simulation::relief`]; it is a
+    /// view of the map and changes nothing in the simulation.
+    relief: OnceCell<Relief>,
+    /// Seed of the relief: the city's seed for a generated city.
+    relief_seed: i32,
 
     // ---- density / effect maps (block size in the name of the field's doc) ----
     pub population_density_map: Map<u8>, // 2
@@ -348,6 +358,8 @@ impl Simulation {
             tiles: vec![0; (world_w as usize) * (world_h as usize)],
             rng: Rng::new(1),
             events: Vec::new(),
+            relief: OnceCell::new(),
+            relief_seed: LOADED_CITY_RELIEF_SEED,
 
             population_density_map: m(2),
             traffic_density_map: m(2),
@@ -561,6 +573,30 @@ impl Simulation {
         }
     }
 
+    /// Terrain relief of the current map (docs/3d.md, section 2): one altitude per tile, water at
+    /// `SEA_LEVEL`. It is computed from the map and the city's seed the first time it is asked
+    /// for, then kept until the map is replaced (a city is loaded or generated). Later edits of
+    /// the tiles do not change it. Reading it consumes no random number and changes no state the
+    /// simulation uses.
+    pub fn relief(&self) -> &Relief {
+        self.relief.get_or_init(|| {
+            let (w, h) = self.world_size();
+            Relief::generate(&self.tiles, w, h, self.relief_seed)
+        })
+    }
+
+    /// Makes the relief come from `seed` and drops any relief computed for the old map.
+    pub(crate) fn set_relief_source(&mut self, seed: i32) {
+        self.relief_seed = seed;
+        self.relief = OnceCell::new();
+    }
+
+    /// Drops the relief computed for the old map (a loaded file, a regenerated map), keeping the
+    /// seed in use.
+    pub(crate) fn clear_relief(&mut self) {
+        self.relief = OnceCell::new();
+    }
+
     /// Simulator for the original 120x100 world.
     pub fn with_default_size() -> Self {
         Self::new(crate::DEFAULT_WORLD_W, crate::DEFAULT_WORLD_H)
@@ -751,6 +787,7 @@ impl Simulation {
     /// seed for the random generator.
     pub fn new_city(&mut self, level: GameLevel, seed: i32) {
         self.tiles.fill(0);
+        self.set_relief_source(seed);
         self.rng.seed(seed);
         self.init_will_stuff();
         self.init_sim_memory();
