@@ -19,6 +19,7 @@
   <button id="save" disabled>Enregistrer</button>
   <button id="saves-toggle" type="button">Parties</button>
   <button id="play" aria-pressed="false" disabled>▶ Lecture</button>
+  <button id="view3d" type="button" aria-pressed="false" disabled>Vue 3D</button>
   <label>Vitesse <input id="speed" type="range" min="1" max="3" value="2"></label>
   <label><input id="disasters" type="checkbox"> Catastrophes</label>
   <div id="newcity" class="newcity" hidden>
@@ -44,6 +45,7 @@
 <main>
   <div id="map-frame" class="map-frame" inert>
     <canvas id="map" aria-label="Carte de la ville"></canvas>
+    <canvas id="map3d" aria-label="Carte de la ville en 3D"></canvas>
     <canvas id="overlay" aria-hidden="true" hidden></canvas>
   </div>
   <div id="resume-banner" class="box" role="region" aria-label="Reprendre la partie" hidden></div>
@@ -63,7 +65,6 @@
     <dl id="shortcuts" class="shortcuts"></dl>
   </details>
 </main>
-<footer>SimCity 2050 est un port Rust du moteur Micropolis (MicropolisCore, GPL v3), compilé en WebAssembly.</footer>
 <script type="module" src="main.js"></script>
 </body>
 </html>

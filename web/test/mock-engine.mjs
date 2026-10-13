@@ -13,6 +13,7 @@
 //     values are deterministic functions of (x, y) covering every index of web/query.js.
 //   - footprint origin: size 1 at (x, y); size 3 starts at (x-1, y-1); size 4 at (x-1, y-1);
 //     size 6 at (x-2, y-2)
+//   - heights() is the relief: one altitude 0..=63 per tile, index x * height + y, sea level 8
 //   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
 //   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
 //     so tool_preview's cost differs from the catalog price (the page must show the preview's)
@@ -235,6 +236,22 @@ export class MockCity {
   }
   tiles() {
     return this.#map.slice();
+  }
+  // Relief (City.heights, docs/3d.md): one altitude per tile, index x * height + y like tiles(),
+  // 0..=63, sea level 8. A smooth fake hill country, independent of the tiles, deterministic for
+  // the seed; neighbouring tiles differ by at most 2.
+  heights() {
+    const w = this.#width, h = this.#height;
+    const out = new Uint8Array(w * h);
+    const phase = ((this.seed >>> 0) % 997) * 0.01;
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        const v = 8 + 4 * Math.sin(x * 0.11 + phase) + 3 * Math.cos(y * 0.13 - 2 * phase) +
+          2 * Math.sin((x + y) * 0.05 + 3 * phase);
+        out[x * h + y] = Math.min(63, Math.max(0, Math.round(v)));
+      }
+    }
+    return out;
   }
   funds() {
     return this.#funds;

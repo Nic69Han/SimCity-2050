@@ -29,6 +29,7 @@ pub mod events;
 pub mod fileio;
 pub mod map;
 pub mod position;
+pub mod relief;
 pub mod rng;
 pub mod simulation;
 pub mod tile;

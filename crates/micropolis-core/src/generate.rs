@@ -260,6 +260,7 @@ impl Simulation {
     /// Port of `generateMap(int seed)`: lay out the terrain from `seed`.
     pub fn generate_map_seed(&mut self, seed: i32) {
         self.generated_city_seed = seed;
+        self.set_relief_source(seed);
 
         self.rng.seed(seed);
 

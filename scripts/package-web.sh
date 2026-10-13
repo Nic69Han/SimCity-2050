@@ -13,4 +13,6 @@ for f in web/*.js; do
 done
 cp web/pkg/micropolis_wasm.js web/pkg/micropolis_wasm_bg.wasm dist/pkg/
 cp assets/cities/*.cty dist/cities/
+# third-party scripts (Three.js for the 3D view, loaded on demand); their licence is in vendor/
+cp -r web/vendor dist/vendor
 echo "dist/ ready: $(find dist -type f | wc -l) files, $(du -sh dist | cut -f1)"

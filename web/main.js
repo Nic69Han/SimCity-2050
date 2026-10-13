@@ -47,7 +47,12 @@ function updateSaveButton() {
 
 function draw() {
   if (!ready) return; // no city yet: the status line keeps "Chargement…", no numbers
-  renderer.draw(city);
+  if (in3d) {
+    frame.style.setProperty("--ratio", `${city.width()} / ${city.height()}`);
+    view3d.update(city);
+  } else {
+    renderer.draw(city);
+  }
   updateSaveButton();
   // funds are part of every redraw, so the status line shows them after every action
   status.textContent = formatStatus({
@@ -65,6 +70,38 @@ function draw() {
   for (const f of features) f.update?.(featureApi);
 }
 
+// «Vue 3D»: the 3D view replaces the map canvas while it is on. Three.js is loaded at the first
+// press only. The simulation keeps ticking: draw() hands the city to whichever view is shown.
+const frame = $("map-frame");
+const view3dButton = $("view3d");
+let view3d = null; // web/view3d.js, once loaded
+let in3d = false;
+let switching = false;
+async function setView3d(on) {
+  if (switching || !ready || on === in3d) return;
+  switching = true;
+  try {
+    if (on) {
+      view3d ??= await import("./view3d.js");
+      frame.classList.add("is-3d");
+      view3d.mount(city, $("map3d"));
+      in3d = true;
+      tools?.useSurface(view3d.surface());
+    } else {
+      tools?.useSurface(null);
+      view3d.dispose();
+      frame.classList.remove("is-3d");
+      in3d = false;
+    }
+    view3dButton.textContent = in3d ? "Vue 2D" : "Vue 3D";
+    view3dButton.setAttribute("aria-pressed", String(in3d));
+    draw();
+  } finally {
+    switching = false;
+  }
+}
+view3dButton.onclick = () => setView3d(!in3d);
+
 function setPlaying(on) {
   playback.set(on);
   const playing = playback.playing;
@@ -81,6 +118,7 @@ function setLoadMessage(text) {
 function unlock() {
   ready = true;
   $("play").disabled = false;
+  $("view3d").disabled = false;
   $("save").disabled = false;
   $("palette").inert = false;
   $("map-frame").inert = false;

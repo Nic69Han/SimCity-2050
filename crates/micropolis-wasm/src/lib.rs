@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 mod budget;
 mod messages;
 mod overlays;
+mod relief;
 mod saves;
 mod sizes;
 mod sprites;
