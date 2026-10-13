@@ -33,6 +33,10 @@ Files:
 - `latest.test.mjs`: "latest wins" for the asynchronous city loads (a late sample does not
   replace a newer city or file).
 - `status.test.mjs`: status line, stats line and load message text (formatted from engine numbers).
+- `view3d-model.test.mjs`: the 3D view's pure part (`web/view3d-model.js`): altitudes and their
+  column-major layout (`heights[i]` matches `tiles[i]`), height to world units, chunk diffing, tile
+  classification, chunk geometry and volumes, picking by ray, and the mock's relief.
+- `pointer-seam.test.mjs`: `attachPointer` with a view's own `tileOf` and the abort signal.
 - `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.
 
 ## End-to-end tests (web/e2e)

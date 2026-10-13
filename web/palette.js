@@ -41,10 +41,15 @@ export function buildRgbTable(palette = PALETTE) {
   return rgb;
 }
 
+// Palette entry ({ lo, hi, color, label }) of a tile character, or null when no range covers it.
+export function tileEntry(tile, palette = PALETTE) {
+  const t = tile & (TILE_LIMIT - 1);
+  return palette.find((e) => t >= e.lo && t <= e.hi) ?? null;
+}
+
 // Colour (hex) of a tile character, or null when no range covers it.
 export function tileColor(tile, palette = PALETTE) {
-  const t = tile & (TILE_LIMIT - 1);
-  const hit = palette.find((e) => t >= e.lo && t <= e.hi);
+  const hit = tileEntry(tile, palette);
   return hit ? hit.color : null;
 }
 

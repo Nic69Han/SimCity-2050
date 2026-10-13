@@ -97,10 +97,14 @@ export class ToolStroke {
 //   onUp()                   released or cancelled
 //   onLeave()                pointer left the canvas while not pressed
 // The canvas must have `touch-action: none` so touch drags are not taken by scrolling.
-export function attachPointer(canvas, handlers) {
+// handlers.tileOf(ev) (optional) gives the tile of an event for a view that is not the flat map
+// (the 3D view picks by ray); without it the flat map's geometry is used.
+// options.signal (optional): an AbortSignal that removes the listeners when aborted.
+export function attachPointer(canvas, handlers, { signal } = {}) {
   let dragging = false;
 
   const tileOf = (ev) => {
+    if (handlers.tileOf) return handlers.tileOf(ev);
     const { w, h } = handlers.mapSize();
     return tileAt(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), w, h);
   };
@@ -116,12 +120,12 @@ export function attachPointer(canvas, handlers) {
       // capture is best effort: a drag that leaves the canvas still works via clamping
     }
     handlers.onDown(tile);
-  });
+  }, { signal });
 
   canvas.addEventListener("pointermove", (ev) => {
     const tile = tileOf(ev);
     if (tile) handlers.onMove(tile, dragging);
-  });
+  }, { signal });
 
   const end = (ev) => {
     if (!dragging) return;
@@ -133,10 +137,10 @@ export function attachPointer(canvas, handlers) {
     }
     handlers.onUp();
   };
-  canvas.addEventListener("pointerup", end);
-  canvas.addEventListener("pointercancel", end);
+  canvas.addEventListener("pointerup", end, { signal });
+  canvas.addEventListener("pointercancel", end, { signal });
 
   canvas.addEventListener("pointerleave", () => {
     if (!dragging) handlers.onLeave();
-  });
+  }, { signal });
 }

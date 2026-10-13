@@ -258,9 +258,37 @@ function paintHover(g, rect, preview, price) {
   g.restore();
 }
 
-// Wires the palette, keyboard shortcuts, pointer input and the hover overlay.
-// Returns { render() } to call after every redraw of the map, or null when the engine
-// has no tool API (the palette and overlay are then hidden and the page works as before).
+// The surface the tools draw on and take pointers from. The flat map is the default: its hover
+// outline is painted on the overlay canvas. Another view (3D) gives the same four things:
+//   canvas            the element the pointer events come from
+//   tileOf(ev)        the tile under a pointer event, or null (optional: flat geometry without it)
+//   clear()           removes the hover outline
+//   outline(fp, preview, price)  draws the outline of footprint fp, with tool_preview's verdict
+//   setTool(on)       optional: a tool was selected (on) or dropped
+function flatSurface(canvas, overlay) {
+  const sync = () => {
+    if (overlay.width !== canvas.width || overlay.height !== canvas.height) {
+      overlay.width = canvas.width;
+      overlay.height = canvas.height;
+    }
+    return overlay.getContext("2d");
+  };
+  return {
+    canvas,
+    clear() {
+      const g = sync();
+      g.clearRect(0, 0, overlay.width, overlay.height);
+    },
+    outline(fp, preview, price) {
+      paintHover(sync(), outlineRect(fp), preview, price);
+    },
+  };
+}
+
+// Wires the palette, keyboard shortcuts, pointer input and the hover outline.
+// Returns { render(), useSurface(surface | null) } or null when the engine has no tool API (the
+// palette and overlay are then hidden and the page works as before). render() after every redraw
+// of the map; useSurface(s) moves the pointer and the outline to another view (null: back to the flat map).
 //   onChange(): redraws the whole page after an action (the map and funds change).
 //   help (optional): <dl> that receives the keyboard shortcut rows; hidden without the tool API.
 export function setupTools({ city, canvas, overlay, palette, message, queryPanel, help = null, onChange }) {
@@ -288,6 +316,9 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
 
   let activeId = null;
   let hover = null;
+  const flat = flatSurface(canvas, overlay);
+  let surface = flat;
+  let pointerAbort = null;
 
   const stroke = new ToolStroke(city, {
     isInspect,
@@ -308,25 +339,34 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
   function select(id) {
     activeId = id;
     ui.select(id);
-    canvas.style.cursor = id === null ? "" : "crosshair";
+    surface.canvas.style.cursor = id === null ? "" : "crosshair";
+    surface.setTool?.(id !== null);
     say("");
     render();
   }
 
   function render() {
-    if (overlay.width !== canvas.width || overlay.height !== canvas.height) {
-      overlay.width = canvas.width;
-      overlay.height = canvas.height;
-    }
-    const g = overlay.getContext("2d");
-    g.clearRect(0, 0, overlay.width, overlay.height);
+    surface.clear();
     if (activeId === null || hover === null || isInspect(activeId)) return;
     const fp = city.tool_footprint(activeId, hover.x, hover.y);
     const preview = city.tool_preview(activeId, hover.x, hover.y);
-    paintHover(g, outlineRect(fp), preview, byId.get(activeId)?.cost ?? 0);
+    surface.outline(fp, preview, byId.get(activeId)?.cost ?? 0);
   }
 
-  attachPointer(canvas, {
+  // Pointer events of the current surface only: the previous surface's listeners are removed.
+  function useSurface(next = null) {
+    pointerAbort?.abort();
+    pointerAbort = new AbortController();
+    surface.canvas.style.cursor = "";
+    surface = next ?? flat;
+    surface.setTool?.(activeId !== null);
+    surface.canvas.style.cursor = activeId === null ? "" : "crosshair";
+    const handlers = surface.tileOf ? { ...pointerHandlers, tileOf: surface.tileOf } : pointerHandlers;
+    attachPointer(surface.canvas, handlers, { signal: pointerAbort.signal });
+    render();
+  }
+
+  const pointerHandlers = {
     mapSize: () => ({ w: city.width(), h: city.height() }),
     onDown(tile) {
       if (activeId === null) return;
@@ -351,7 +391,8 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
       hover = null;
       render();
     },
-  });
+  };
+  useSurface(null);
 
   document.addEventListener("keydown", (ev) => {
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
@@ -367,5 +408,5 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
     if (id !== null) select(id);
   });
 
-  return { render };
+  return { render, useSurface };
 }
