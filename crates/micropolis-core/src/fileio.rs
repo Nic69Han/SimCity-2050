@@ -9,9 +9,18 @@
 //! Other map sizes (wave 6, the "extended" file): the same sections for a
 //! `width` x `height` map, behind a 10-byte header: the magic `MCTY`, the
 //! format version (u16) and the width and height (u16 each), all big-endian.
-//! A 120x100 city is always written as a plain `.cty`, byte for byte as the
-//! original game writes it.
+//! A 120x100 city is written as a plain `.cty`, byte for byte as the original
+//! game writes it, unless its relief was edited or the relief rules are on.
+//!
+//! Version 2 (docs/roadmap.md, step 1) appends a relief block after the tile map:
+//! a flags byte (bit0: relief rules on, bit1: relief edited), the number of
+//! altitudes (u32, `width * height`), the altitudes (one byte per tile, column-major
+//! like `Simulation::relief`) and a checksum (u32, FNV-1a of the flags, the count and
+//! the altitudes). Version 1 has no relief block. A city whose relief is not edited and
+//! whose rules are off is written without it: a plain `.cty` at 120x100, else version 1,
+//! so the files written before the relief block stay byte for byte the same.
 
+use crate::relief::Relief;
 use crate::simulation::{Scenario, Simulation, HISTORY_LEN, MISC_HISTORY_LEN};
 use crate::{DEFAULT_WORLD_H, DEFAULT_WORLD_W};
 
@@ -20,8 +29,17 @@ pub const CTY_SIZE: usize = 27_120;
 
 /// First four bytes of an extended city file.
 pub const CITY_FILE_MAGIC: [u8; 4] = *b"MCTY";
-/// Version of the extended city file; the only one this reader knows.
-pub const CITY_FILE_VERSION: u16 = 1;
+/// Version of an extended file without a relief block.
+pub const CITY_FILE_VERSION_1: u16 = 1;
+/// Version of an extended file with a relief block: the newest one, written when the relief
+/// is edited or the rules are on.
+pub const CITY_FILE_VERSION: u16 = 2;
+/// Bit0 of the relief block's flags: the relief rules are on.
+pub const RELIEF_FLAG_RULES: u8 = 0b01;
+/// Bit1 of the relief block's flags: the relief was changed by the player.
+pub const RELIEF_FLAG_EDITED: u8 = 0b10;
+/// Bytes of the relief block besides the altitudes: flags (1), count (4), checksum (4).
+pub const RELIEF_BLOCK_OVERHEAD: usize = 9;
 /// Bytes of the extended file header: magic, version, width, height.
 pub const CITY_FILE_HEADER_SIZE: usize = 10;
 
@@ -58,6 +76,9 @@ pub enum CityFileError {
         expected: (i32, i32),
         actual: (i32, i32),
     },
+    /// The relief block of a version-2 file is corrupt: an unknown flag, a count that is not the
+    /// map's size, a checksum that does not match, or an altitude above `MAX_HEIGHT`.
+    BadRelief { reason: &'static str },
 }
 
 /// Former name of [`CityFileError`], kept for the `.cty` functions.
@@ -73,6 +94,7 @@ impl CityFileError {
             CityFileError::SizeOutOfRange { .. } => "cty_size_out_of_range",
             CityFileError::Truncated { .. } => "cty_truncated",
             CityFileError::WorldSizeMismatch { .. } => "cty_world_size_mismatch",
+            CityFileError::BadRelief { .. } => "cty_bad_relief",
         }
     }
 }
@@ -90,7 +112,7 @@ impl std::fmt::Display for CityFileError {
             ),
             CityFileError::BadVersion(v) => write!(
                 f,
-                "{code}: city file version {v}, this reader reads version {CITY_FILE_VERSION}"
+                "{code}: city file version {v}, this reader reads versions {CITY_FILE_VERSION_1} and {CITY_FILE_VERSION}"
             ),
             CityFileError::SizeOutOfRange { width, height } => write!(
                 f,
@@ -103,6 +125,7 @@ impl std::fmt::Display for CityFileError {
                 f,
                 "{code}: world {actual:?} does not match the .cty size {expected:?}"
             ),
+            CityFileError::BadRelief { reason } => write!(f, "{code}: {reason}"),
         }
     }
 }
@@ -139,18 +162,63 @@ fn set_long(misc: &mut [i16], i: usize, v: i32) {
     misc[i + 1] = v as i16;
 }
 
+/// The relief block of a version-2 file, checked.
+struct ReliefBlock {
+    rules: bool,
+    edited: bool,
+    relief: Relief,
+}
+
 /// A city file split into its map size and its data: the header is already checked.
 struct CityFile<'a> {
     width: i32,
     height: i32,
-    /// The data after the header (the whole file for a plain `.cty`).
+    /// The data after the header (the whole file for a plain `.cty`), without the relief block.
     payload: &'a [u8],
     /// A plain `.cty` file (no header, 120x100).
     plain_cty: bool,
+    /// The relief block of a version-2 file.
+    relief: Option<ReliefBlock>,
 }
 
-/// Checks a city file completely (magic, version, size, exact length) without touching any
-/// engine: a refused file never changes anything.
+/// FNV-1a over bytes, 32 bits: the checksum of the relief block.
+fn relief_checksum(bytes: &[u8]) -> u32 {
+    let mut h: u32 = 0x811c_9dc5;
+    for &b in bytes {
+        h ^= u32::from(b);
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    h
+}
+
+/// Checks the relief block of a version-2 file: `block` is exactly `RELIEF_BLOCK_OVERHEAD` plus
+/// one byte per tile long (the caller checked the length).
+fn parse_relief_block(block: &[u8], width: i32, height: i32) -> Result<ReliefBlock, CityFileError> {
+    let bad = |reason: &'static str| CityFileError::BadRelief { reason };
+    let n = (width as usize) * (height as usize);
+    let flags = block[0];
+    let count = u32::from_be_bytes([block[1], block[2], block[3], block[4]]);
+    let sum = u32::from_be_bytes([block[5 + n], block[6 + n], block[7 + n], block[8 + n]]);
+    if flags & !(RELIEF_FLAG_RULES | RELIEF_FLAG_EDITED) != 0 {
+        return Err(bad("unknown relief flag"));
+    }
+    if count as usize != n {
+        return Err(bad("relief altitude count does not match the map"));
+    }
+    if relief_checksum(&block[..5 + n]) != sum {
+        return Err(bad("relief checksum does not match"));
+    }
+    let relief = Relief::from_raw(width, height, block[5..5 + n].to_vec())
+        .ok_or_else(|| bad("relief altitude above 63"))?;
+    Ok(ReliefBlock {
+        rules: flags & RELIEF_FLAG_RULES != 0,
+        edited: flags & RELIEF_FLAG_EDITED != 0,
+        relief,
+    })
+}
+
+/// Checks a city file completely (magic, version, size, exact length, relief block) without
+/// touching any engine: a refused file never changes anything.
 fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
     let len = bytes.len();
     if len == CTY_SIZE {
@@ -159,6 +227,7 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
             height: DEFAULT_WORLD_H,
             payload: bytes,
             plain_cty: true,
+            relief: None,
         });
     }
     if len < 4 || bytes[..4] != CITY_FILE_MAGIC {
@@ -179,7 +248,7 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
         });
     }
     let version = u16::from_be_bytes([bytes[4], bytes[5]]);
-    if version != CITY_FILE_VERSION {
+    if version != CITY_FILE_VERSION_1 && version != CITY_FILE_VERSION {
         return Err(CityFileError::BadVersion(version));
     }
     let width = i32::from(u16::from_be_bytes([bytes[6], bytes[7]]));
@@ -189,16 +258,30 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
     {
         return Err(CityFileError::SizeOutOfRange { width, height });
     }
-    let expected = CITY_FILE_HEADER_SIZE + payload_size(width, height);
+    let data_end = CITY_FILE_HEADER_SIZE + payload_size(width, height);
+    let has_relief = version == CITY_FILE_VERSION;
+    let expected = if has_relief {
+        data_end + RELIEF_BLOCK_OVERHEAD + (width as usize) * (height as usize)
+    } else {
+        data_end
+    };
     match len.cmp(&expected) {
         std::cmp::Ordering::Less => Err(CityFileError::Truncated { len, expected }),
         std::cmp::Ordering::Greater => Err(CityFileError::BadSize { len, expected }),
-        std::cmp::Ordering::Equal => Ok(CityFile {
-            width,
-            height,
-            payload: &bytes[CITY_FILE_HEADER_SIZE..],
-            plain_cty: false,
-        }),
+        std::cmp::Ordering::Equal => {
+            let relief = if has_relief {
+                Some(parse_relief_block(&bytes[data_end..], width, height)?)
+            } else {
+                None
+            };
+            Ok(CityFile {
+                width,
+                height,
+                payload: &bytes[CITY_FILE_HEADER_SIZE..data_end],
+                plain_cty: false,
+                relief,
+            })
+        }
     }
 }
 
@@ -275,6 +358,10 @@ impl Simulation {
     /// file's size; the result depends on `bytes` and `seed` only. The whole file is checked
     /// before anything changes: a refused file leaves the engine untouched.
     ///
+    /// A version-2 file then restores its relief (the altitudes, the rules flag and the edited
+    /// flag) after the rebuild. A file without a relief block gives the relief regenerated from
+    /// the map, as a plain `.cty` does, with the rules off.
+    ///
     /// [`load_cty_seeded`]: Self::load_cty_seeded
     pub fn load_city(&mut self, bytes: &[u8], seed: i32) -> Result<(), CityFileError> {
         let file = parse_city_file(bytes)?;
@@ -283,6 +370,12 @@ impl Simulation {
         }
         self.rng.seed(seed);
         self.install_payload(file.width, file.height, file.payload);
+        if let Some(block) = file.relief {
+            self.set_relief_rules(block.rules);
+            let applied = self.set_relief(block.relief);
+            debug_assert!(applied, "the relief block has the size of the map");
+            self.set_relief_edited(block.edited);
+        }
         Ok(())
     }
 
@@ -339,30 +432,59 @@ impl Simulation {
     }
 
     /// Port of `saveFile`: serialise the city. Takes `&self`; the misc history
-    /// is patched in a copy. This is the data of a `.cty` (the payload of any size).
+    /// is patched in a copy. This is the data of a `.cty` (the payload of any size), without
+    /// the relief block: [`save_city`](Self::save_city) keeps the relief.
     pub fn save_cty(&self) -> Vec<u8> {
         self.save_payload()
     }
 
-    /// Serialise the city in the format of its size: a 120x100 city is a plain `.cty` (the
-    /// bytes of [`save_cty`](Self::save_cty)); any other size is an extended file with the
-    /// `MCTY` header. [`load_city`](Self::load_city) reads both back.
+    /// Serialise the city in the format its state needs. A 120x100 city whose relief is not
+    /// edited and whose rules are off is a plain `.cty` (the bytes of
+    /// [`save_cty`](Self::save_cty)). Otherwise it is an extended `MCTY` file: version 2 with the
+    /// relief block when the relief is edited or the rules are on, version 1 (no relief block)
+    /// for another size. [`load_city`](Self::load_city) reads all of them back.
     pub fn save_city(&self) -> Vec<u8> {
         let payload = self.save_payload();
         let (width, height) = self.world_size();
-        if (width, height) == (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
+        let rules = self.relief_rules();
+        let with_relief = rules || self.relief_edited();
+        if !with_relief && (width, height) == (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
             return payload;
         }
-        let mut out = Vec::with_capacity(CITY_FILE_HEADER_SIZE + payload.len());
+        let version = if with_relief {
+            CITY_FILE_VERSION
+        } else {
+            CITY_FILE_VERSION_1
+        };
+        let relief = self.relief().as_slice();
+        let mut out = Vec::with_capacity(
+            CITY_FILE_HEADER_SIZE + payload.len() + RELIEF_BLOCK_OVERHEAD + relief.len(),
+        );
         out.extend_from_slice(&CITY_FILE_MAGIC);
-        out.extend_from_slice(&CITY_FILE_VERSION.to_be_bytes());
+        out.extend_from_slice(&version.to_be_bytes());
         out.extend_from_slice(&(width as u16).to_be_bytes());
         out.extend_from_slice(&(height as u16).to_be_bytes());
         out.extend_from_slice(&payload);
+        if with_relief {
+            let block_start = out.len();
+            let mut flags = 0u8;
+            if rules {
+                flags |= RELIEF_FLAG_RULES;
+            }
+            if self.relief_edited() {
+                flags |= RELIEF_FLAG_EDITED;
+            }
+            out.push(flags);
+            out.extend_from_slice(&(relief.len() as u32).to_be_bytes());
+            out.extend_from_slice(relief);
+            let sum = relief_checksum(&out[block_start..]);
+            out.extend_from_slice(&sum.to_be_bytes());
+        }
         out
     }
 
-    /// The data of a city file (histories, misc history, tile map), of any world size.
+    /// The data of a city file (histories, misc history, tile map), of any world size. No
+    /// relief block: that is the part [`save_city`](Self::save_city) adds.
     fn save_payload(&self) -> Vec<u8> {
         let mut misc = self.misc_hist.clone();
         set_long(&mut misc, M_FUNDS, self.total_funds as i32);

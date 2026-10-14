@@ -109,10 +109,34 @@ impl Relief {
     pub fn as_slice(&self) -> &[u8] {
         &self.heights
     }
+
+    /// A relief from raw altitudes (a loaded file). `None` when the size does not match or an
+    /// altitude is above `MAX_HEIGHT`.
+    pub fn from_raw(width: i32, height: i32, heights: Vec<u8>) -> Option<Relief> {
+        let valid = width > 0
+            && height > 0
+            && heights.len() == (width as usize) * (height as usize)
+            && heights.iter().all(|&v| v <= MAX_HEIGHT);
+        valid.then_some(Relief {
+            width,
+            height,
+            heights,
+        })
+    }
+
+    /// Sets the altitude at `(x, y)`, clamped to `0..=MAX_HEIGHT`. Returns false when off the map.
+    pub fn set_height_at(&mut self, x: i32, y: i32, value: u8) -> bool {
+        if (0..self.width).contains(&x) && (0..self.height).contains(&y) {
+            self.heights[index(x, y, self.height)] = value.min(MAX_HEIGHT);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 /// Whether a tile is water: river, river edge, channel (the `WATER_LOW..=WATER_HIGH` range).
-fn is_water(tile: Tile) -> bool {
+pub(crate) fn is_water(tile: Tile) -> bool {
     (WATER_LOW..=WATER_HIGH).contains(&character(tile))
 }
 

@@ -18,7 +18,7 @@ after(async () => {
 });
 
 describe("the page", () => {
-  test("(a) loads the sample city with a date, funds and the palette of 20 French tools", { timeout: TIMEOUT }, async () => {
+  test("(a) loads the sample city with a date, funds and the palette of 22 French tools (20 building tools and the 2 relief tools)", { timeout: TIMEOUT }, async () => {
     const { page, errors, close } = await openPage(browser);
     try {
       const status = await readStatus(page);
@@ -29,11 +29,11 @@ describe("the page", () => {
       assert.equal(await page.inputValue("#city"), "haight", "the sample selector shows Haight-Ashbury");
 
       const palette = await readPalette(page);
-      assert.equal(palette.length, 20, "20 building tools");
-      assert.equal(new Set(palette.map((p) => p.key)).size, 20, "each tool once");
+      assert.equal(palette.length, 22, "20 building tools and 2 relief tools");
+      assert.equal(new Set(palette.map((p) => p.key)).size, 22, "each tool once");
       for (const p of palette) {
         assert.equal(p.label, TOOL_LABELS[p.key], `French label for ${p.key}`);
-        assert.ok(p.cost.endsWith("$") || p.cost === "gratuit", `cost shown for ${p.key}: ${p.cost}`);
+        assert.ok(p.cost.endsWith("$") || p.cost === "gratuit" || p.cost === "selon pente", `cost shown for ${p.key}: ${p.cost}`);
         assert.equal(p.pressed, false, "no tool selected at start");
       }
       assert.ok((await page.locator("#legend li").count()) > 5, "the colour legend is filled");
@@ -136,7 +136,7 @@ describe("the page", () => {
           const r = el.getBoundingClientRect();
           return { key: el.dataset.tool, left: r.left, right: r.right, width: r.width, height: r.height };
         }));
-      assert.equal(boxes.length, 20);
+      assert.equal(boxes.length, 22);
       for (const b of boxes) {
         assert.ok(b.left >= 0 && b.right <= 390, `${b.key} fits the width: ${b.left}..${b.right}`);
         // WCAG 2.2 AA target size (24 px minimum)

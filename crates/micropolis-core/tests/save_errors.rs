@@ -57,7 +57,7 @@ fn a_file_that_is_neither_a_cty_nor_an_extended_file_is_cty_bad_magic() {
 #[test]
 fn an_unknown_version_is_cty_bad_version() {
     let mut bytes = extended(97, 83);
-    bytes[4..6].copy_from_slice(&2u16.to_be_bytes());
+    bytes[4..6].copy_from_slice(&3u16.to_be_bytes());
     assert_eq!(code_of(&bytes), "cty_bad_version");
 }
 

@@ -170,6 +170,51 @@ describe("which chunks to rebuild", () => {
     const next = snap(40, 30, flat(40, 30), alt2);
     assert.deepEqual(dirtyChunks(prev, next, g), [0, 1, 3, 4]);
   });
+
+  // The geometry of a chunk, as buildChunk writes it (terrain, strips, volumes), as a string.
+  const signature = (s, g) => {
+    const out = [];
+    for (let c = 0; c < g.count; c++) {
+      const { geometry, volumes } = buildChunk({
+        grid: g, chunk: c, tiles: s.tiles, alt: s.alt,
+        corners: cornerAltitudes(s.alt, s.w, s.h), tops: new Float32Array(s.w * s.h),
+      });
+      out.push(JSON.stringify([
+        Array.from(geometry.positions), Array.from(geometry.normals), Array.from(geometry.colours),
+        Array.from(geometry.indices), volumes,
+      ]));
+    }
+    return out;
+  };
+
+  test("brute force: every chunk whose geometry changes is dirty (one tile, altitude or kind)", () => {
+    // A relief with slopes in every direction, so corners and normals differ from tile to tile.
+    const w = 40, h = 35, g = chunkGrid(w, h);
+    const alt = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) alt[x * h + y] = 10 + ((x * 7 + y * 3) % 9);
+    const base = snap(w, h, flat(w, h), alt);
+    const before = signature(base, g);
+    // Tiles on and next to every chunk border, where the reach of a change is the question.
+    const spots = [[0, 0], [1, 5], [14, 5], [15, 5], [16, 5], [17, 5], [13, 20], [30, 30], [31, 16], [32, 16], [34, 34]];
+    for (const [x, y] of spots) {
+      const alt2 = Uint8Array.from(alt);
+      alt2[x * h + y] = alt[x * h + y] + 6 > ALT_MAX ? alt[x * h + y] - 6 : alt[x * h + y] + 6;
+      const altered = snap(w, h, flat(w, h), alt2);
+      const after = signature(altered, g);
+      const dirty = new Set(dirtyChunks(base, altered, g));
+      for (let c = 0; c < g.count; c++) {
+        if (before[c] !== after[c]) assert.ok(dirty.has(c), `tile (${x}, ${y}): chunk ${c} changed but is not rebuilt`);
+      }
+      const tiles2 = flat(w, h);
+      tiles2[x * h + y] = ROAD;
+      const kindChanged = snap(w, h, tiles2, alt);
+      const dirtyKind = new Set(dirtyChunks(base, kindChanged, g));
+      const afterKind = signature(kindChanged, g);
+      for (let c = 0; c < g.count; c++) {
+        if (before[c] !== afterKind[c]) assert.ok(dirtyKind.has(c), `tile (${x}, ${y}) kind: chunk ${c} not rebuilt`);
+      }
+    }
+  });
 });
 
 describe("what a tile is drawn as", () => {

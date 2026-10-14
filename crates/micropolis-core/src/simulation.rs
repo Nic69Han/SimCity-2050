@@ -110,6 +110,11 @@ pub struct Simulation {
     relief: OnceCell<Relief>,
     /// Seed of the relief: the city's seed for a generated city.
     relief_seed: i32,
+    /// Whether the relief rules (docs/roadmap.md, step 1) are on: off by default, the engine then
+    /// behaves exactly like the original.
+    relief_rules: bool,
+    /// Whether the relief was changed by the player (terraforming); such a relief is saved.
+    relief_edited: bool,
 
     // ---- density / effect maps (block size in the name of the field's doc) ----
     pub population_density_map: Map<u8>, // 2
@@ -360,6 +365,8 @@ impl Simulation {
             events: Vec::new(),
             relief: OnceCell::new(),
             relief_seed: LOADED_CITY_RELIEF_SEED,
+            relief_rules: false,
+            relief_edited: false,
 
             population_density_map: m(2),
             traffic_density_map: m(2),
@@ -585,16 +592,58 @@ impl Simulation {
         })
     }
 
+    /// Mutable access to the relief, for the relief rules and for loading. Marks it as edited.
+    pub fn relief_mut(&mut self) -> &mut Relief {
+        self.relief();
+        self.relief_edited = true;
+        self.relief.get_mut().expect("relief was just initialised")
+    }
+
+    /// Replaces the relief (a loaded file). Returns false, changing nothing, when its size is not
+    /// the map's size.
+    pub fn set_relief(&mut self, relief: Relief) -> bool {
+        let (w, h) = self.world_size();
+        if relief.width() != w || relief.height() != h {
+            return false;
+        }
+        self.relief = OnceCell::from(relief);
+        self.relief_edited = true;
+        true
+    }
+
+    /// Whether the relief rules are on (off by default).
+    pub fn relief_rules(&self) -> bool {
+        self.relief_rules
+    }
+
+    /// Turns the relief rules on or off. Off, the engine is identical to the original.
+    pub fn set_relief_rules(&mut self, on: bool) {
+        self.relief_rules = on;
+    }
+
+    /// Whether the player changed the relief since it was generated or loaded as generated.
+    pub fn relief_edited(&self) -> bool {
+        self.relief_edited
+    }
+
+    /// Sets the edited flag as a loaded file records it (after [`set_relief`](Self::set_relief),
+    /// which marks the relief edited).
+    pub(crate) fn set_relief_edited(&mut self, on: bool) {
+        self.relief_edited = on;
+    }
+
     /// Makes the relief come from `seed` and drops any relief computed for the old map.
     pub(crate) fn set_relief_source(&mut self, seed: i32) {
         self.relief_seed = seed;
         self.relief = OnceCell::new();
+        self.relief_edited = false;
     }
 
     /// Drops the relief computed for the old map (a loaded file, a regenerated map), keeping the
     /// seed in use.
     pub(crate) fn clear_relief(&mut self) {
         self.relief = OnceCell::new();
+        self.relief_edited = false;
     }
 
     /// Simulator for the original 120x100 world.

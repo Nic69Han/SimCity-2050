@@ -12,6 +12,29 @@ impl City {
     pub fn heights(&self) -> Vec<u8> {
         self.sim.relief().as_slice().to_vec()
     }
+
+    /// Whether the relief rules are on (off by default: the engine then equals the original).
+    pub fn relief_rules(&self) -> bool {
+        self.sim.relief_rules()
+    }
+
+    /// Turns the relief rules on or off.
+    pub fn set_relief_rules(&mut self, on: bool) {
+        self.sim.set_relief_rules(on);
+    }
+
+    /// Raises (`delta` 1) or lowers (`delta` -1) the tile at `(x, y)` one altitude step, with the
+    /// neighbours it drags along. Returns the tool result code, as `tool_down` does; refused
+    /// (`0`) with the rules off.
+    pub fn terraform(&mut self, x: i32, y: i32, delta: i32) -> i32 {
+        self.sim.terraform(x, y, delta) as i32
+    }
+
+    /// `[result, cost]` of what `terraform` would do, without changing the city.
+    pub fn terraform_preview(&self, x: i32, y: i32, delta: i32) -> Vec<i32> {
+        let preview = self.sim.terraform_preview(x, y, delta);
+        vec![preview.result as i32, preview.cost]
+    }
 }
 
 #[cfg(test)]

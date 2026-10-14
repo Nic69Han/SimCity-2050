@@ -348,6 +348,8 @@ pub struct ToolEffects {
     cost: i32,
     /// Collected world modifications, by position.
     modifications: BTreeMap<Position, Tile>,
+    /// Altitudes set by the relief rules, by position (empty with the rules off).
+    heights: BTreeMap<Position, u8>,
 }
 
 impl ToolEffects {
@@ -360,6 +362,7 @@ impl ToolEffects {
     pub fn clear(&mut self) {
         self.cost = 0;
         self.modifications.clear();
+        self.heights.clear();
     }
 
     /// Copy the effects to the world and spend the cost (`modifyWorld`).
@@ -373,7 +376,35 @@ impl ToolEffects {
         for (pos, value) in &self.modifications {
             sim.set_tile(pos.x, pos.y, *value);
         }
+        // Only the altitudes that really change: a relief that is not touched stays unedited.
+        let moved: Vec<(i32, i32, u8)> = self
+            .heights
+            .iter()
+            .filter(|(pos, &v)| sim.relief().height_at(pos.x, pos.y) != Some(v))
+            .map(|(pos, &v)| (pos.x, pos.y, v))
+            .collect();
+        if !moved.is_empty() {
+            let relief = sim.relief_mut();
+            for (x, y, v) in moved {
+                relief.set_height_at(x, y, v);
+            }
+        }
         self.clear();
+    }
+
+    /// Record the altitude of a tile (relief rules only).
+    pub(crate) fn set_height(&mut self, x: i32, y: i32, value: u8) {
+        self.heights.insert(Position::new(x, y), value);
+    }
+
+    /// Altitude recorded for a tile, if the relief rules changed it.
+    pub(crate) fn get_height(&self, x: i32, y: i32) -> Option<u8> {
+        self.heights.get(&Position::new(x, y)).copied()
+    }
+
+    /// Every altitude recorded so far, as `(x, y, altitude)`.
+    pub(crate) fn heights(&self) -> impl Iterator<Item = (i32, i32, u8)> + '_ {
+        self.heights.iter().map(|(pos, &v)| (pos.x, pos.y, v))
     }
 
     /// Apply the effects only if the funds cover the cost
@@ -1063,6 +1094,21 @@ impl Simulation {
         rng: &mut Rng,
         effects: &mut ToolEffects,
     ) -> ToolResult {
+        let planned = self.plan_tool_unpriced(tool, tile_x, tile_y, rng, effects);
+        // Relief rules (docs/roadmap.md, step 1): levelling and slope costs. A no-op with the
+        // rules off, so the plan is then exactly the original one.
+        self.price_relief(tool, tile_x, tile_y, planned, effects)
+    }
+
+    /// The original planning step of a tool, without the relief rules.
+    fn plan_tool_unpriced(
+        &self,
+        tool: EditingTool,
+        tile_x: i32,
+        tile_y: i32,
+        rng: &mut Rng,
+        effects: &mut ToolEffects,
+    ) -> ToolResult {
         match tool {
             EditingTool::Residential => {
                 self.build_building(tile_x, tile_y, &RESIDENTIAL_ZONE_BUILDING, effects)
@@ -1158,8 +1204,15 @@ impl Simulation {
     /// funds"); the result tells the adapter the same thing.
     pub fn tool_down(&mut self, tool: EditingTool, tile_x: i32, tile_y: i32) -> ToolResult {
         let result = self.do_tool(tool, tile_x, tile_y);
-        // The original's `toolDown` tells the player why a click did nothing, with a message
-        // and a sound (not `doTool`, which drags and previews also use).
+        self.report_refusal(result, tile_x, tile_y);
+        self.sim_pass = 0;
+        self.tool_invalidate_maps();
+        result
+    }
+
+    /// The original's `toolDown` tells the player why a click did nothing, with a message
+    /// and a sound (not `doTool`, which drags and previews also use).
+    pub(crate) fn report_refusal(&mut self, result: ToolResult, tile_x: i32, tile_y: i32) {
         match result {
             ToolResult::NeedBulldoze => {
                 self.send_message(
@@ -1183,9 +1236,6 @@ impl Simulation {
             }
             _ => {}
         }
-        self.sim_pass = 0;
-        self.tool_invalidate_maps();
-        result
     }
 
     /// Apply a tool along a line from `(from_x, from_y)` to `(to_x, to_y)`
@@ -1264,7 +1314,7 @@ impl Simulation {
 
     /// `invalidateMaps` (stubs.cpp): the map serial changes, so the front-end
     /// redraws. Its update notice is dropped.
-    fn tool_invalidate_maps(&mut self) {
+    pub(crate) fn tool_invalidate_maps(&mut self) {
         self.map_serial = self.map_serial.wrapping_add(1);
     }
 }
