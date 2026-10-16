@@ -82,8 +82,10 @@ export function setup(api) {
 export function update(api) {
   if (!panel || !api.isReady()) return;
   const city = api.city();
-  // cheap guard: the engine's own numbers that move the advice; skip the rest when none changed
-  const reads = [call(city, "year"), call(city, "month"), call(city, "funds"), call(city, "population"), call(city, "budget")?.join(), call(city, "demand")?.join()].join("|");
+  // cheap guard: the evaluation and the histories move at most once a game month, so the advice is
+  // recomputed on a new month, or when the player changes the funds, the tax or the budget. Not on
+  // demand or population, which change on almost every tick and would recompute it every frame.
+  const reads = [call(city, "year"), call(city, "month"), call(city, "funds"), call(city, "budget")?.join()].join("|");
   if (reads === lastReads) return;
   lastReads = reads;
   render(advise(readSnapshot(city)));
