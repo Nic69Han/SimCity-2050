@@ -1,1 +1,14 @@
-/* advisors: styles of web/advisors.js (docs/game-design.md). */
+/* advisors: styles of web/advisors.js (docs/game-design.md). Severity is written as text too. */
+#advisors-panel h2 { margin: 0 0 .3rem; font-size: 1.05rem; }
+.adv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.adv { border-left: 4px solid var(--ok); padding: .15rem 0 .15rem .6rem; font-size: .9rem; }
+.adv-attention { border-left-color: var(--accent); }
+.adv-urgent { border-left-color: var(--bad); }
+.adv h3 { margin: 0; font-size: .95rem; display: flex; flex-wrap: wrap; gap: .1rem .5rem; align-items: baseline; }
+.adv-sev { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ok); }
+.adv-attention .adv-sev { color: var(--accent); }
+.adv-urgent .adv-sev { color: var(--bad); }
+.adv p { margin: .1rem 0; }
+@media (min-width: 700px) {
+  .adv-list { grid-template-columns: repeat(2, 1fr); gap: .5rem 1rem; }
+}
