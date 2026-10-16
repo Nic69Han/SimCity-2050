@@ -1,1 +1,5 @@
-/* sound: styles of web/sound.js (docs/game-design.md). */
+/* sound: styles of web/sound.js (docs/game-design.md). The container's own display is left to
+   its hidden attribute; only the button is styled here. */
+#sound-toggle {
+  min-width: 9.5rem;
+}

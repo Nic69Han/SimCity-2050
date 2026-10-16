@@ -83,6 +83,25 @@ export function itemsOf(records, date) {
   return records.filter((r) => r.kind === KIND.MESSAGE).map((r) => messageItem(r, date));
 }
 
+/** The sound events of a drain as {name, x, y} in the order sent; `nameOf(index)` gives the name. */
+export function soundEventsOf(records, nameOf) {
+  return records
+    .filter((r) => r.kind === KIND.SOUND)
+    .map((r) => ({ name: nameOf(r.a), x: r.b, y: r.c }));
+}
+
+const soundListeners = new Set();
+
+/**
+ * Subscribes to the engine's sound events, read in update() with the messages (read-only: the
+ * ticker is unchanged). listener({name, x, y}) runs for each event; name is City.sound_name's
+ * "channel/sound" ("" when unknown). Returns the function that unsubscribes.
+ */
+export function onSound(listener) {
+  soundListeners.add(listener);
+  return () => soundListeners.delete(listener);
+}
+
 /**
  * The news ticker: the newest item first, at most `max` items. `add` takes the new items in the
  * order they were sent and returns them, for the announcement.
@@ -203,7 +222,14 @@ export function update(api) {
   if (!view) return;
   const city = api.city();
   const date = dateText(city.month(), city.year());
-  const fresh = ticker.add(itemsOf(decodeRecords(city.take_messages()), date));
+  const records = decodeRecords(city.take_messages());
+  if (soundListeners.size > 0) {
+    const nameOf = (index) => city.constructor.sound_name?.(index) ?? "";
+    for (const event of soundEventsOf(records, nameOf)) {
+      for (const listener of soundListeners) listener(event);
+    }
+  }
+  const fresh = ticker.add(itemsOf(records, date));
   if (fresh.length === 0) return;
   render();
   view.announce.textContent = fresh.map((item) => `${item.date} : ${item.text}`).join(" ");
