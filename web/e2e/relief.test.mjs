@@ -36,7 +36,7 @@ async function openMock(b) {
     if (m.type() === "error") errors.push(`console: ${m.text()}`);
   });
   page.on("requestfailed", (r) => errors.push(`request failed: ${r.url()}`));
-  await page.goto(`${baseUrl()}?mock=1`);
+  await page.goto(`${baseUrl()}?mock=1&lite=1`);
   await page.waitForFunction(() => {
     const status = document.getElementById("status")?.textContent ?? "";
     return document.querySelectorAll("#palette button.tool").length > 0 && !status.includes("Chargement");
@@ -209,7 +209,7 @@ describe("relief rules on the real wasm engine", { skip: realSkip }, () => {
     page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
     page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));
     const sample = page.waitForResponse((r) => r.url().endsWith("/cities/haight.cty"));
-    await page.goto(baseUrl());
+    await page.goto(`${baseUrl()}?lite=1`); // the relief tools do not need the scenery
     await sample;
     await pollUntil(async () => (await readFunds(page)) === 1000000, "the sample city");
     try {

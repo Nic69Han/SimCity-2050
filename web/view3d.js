@@ -17,7 +17,7 @@ import {
   chunkGrid, dirtyChunks, altitudesOf, cornerAltitudes, buildChunk, writeVolumeMatrix, pickTile,
   footprintTop, tileCentreY, frameSeconds, SLOTS, WATER_Y,
 } from "./view3d-model.js";
-import { LAYERS } from "./view3d-layers.js";
+import { layersFor } from "./view3d-layers.js";
 
 const KINDS = ["residential", "commercial", "industrial", "tree"];
 const SKY = 0xbcd6ea;
@@ -88,6 +88,7 @@ export function mount(api, canvas) {
     grid: null, snapshot: null, corners: null, tops: null, maxTop: 0,
     chunks: [], instances: {}, water: null, frameId: null, observer: null,
     lights: { hemi, sun }, chunkVolumes: [], hiddenKinds: new Set(), layers: [], ctx: null, loopId: null,
+    renderWanted: false,
   };
   outlineMesh.material = view.materials.ok;
   // the orbit control takes the left button only while no tool is selected (a tool drag builds)
@@ -107,7 +108,7 @@ export function mount(api, canvas) {
   view.observer.observe(canvas);
   canvas.tileScreen = screenOf; // the page's tests read where a tile is on the screen
   view.ctx = makeContext();
-  for (const module of LAYERS) {
+  for (const module of layersFor(globalThis.location?.search)) {
     const layer = module.createLayer();
     view.layers.push(layer);
     layer.mount?.(view.ctx);
@@ -194,8 +195,13 @@ export function surface() {
 // --- internals ----------------------------------------------------------------------------------
 
 function requestRender() {
-  // while the animation loop runs, it renders every frame
-  if (!view || view.frameId !== null || view.loopId !== null) return;
+  if (!view) return;
+  // while the animation loop runs, it renders the wanted frame at its next step
+  if (view.loopId !== null) {
+    view.renderWanted = true;
+    return;
+  }
+  if (view.frameId !== null) return;
   view.frameId = requestAnimationFrame(() => {
     const v = view;
     if (!v) return;
@@ -204,17 +210,24 @@ function requestRender() {
   });
 }
 
-// The animation loop: each frame, the layers' frame(ctx, seconds) then one render. The time step is
-// bounded (frameSeconds), so a hidden tab coming back does not replay the time it missed.
+// The animation loop: at most ANIMATION_FPS times a second, the layers' frame(ctx, seconds) then one
+// render; a render asked for by an action (requestRender) is drawn at the next step. Slow ambient
+// motion (day and night, water) does not need more, and it spares weak devices and batteries. The
+// time step is bounded (frameSeconds), so a hidden tab coming back does not replay the time it missed.
+const ANIMATION_FPS = 15;
 function startLoop() {
   let last = performance.now();
   const step = (now) => {
     const v = view;
     if (!v) return;
-    const dt = frameSeconds(last, now);
-    last = now;
-    for (const layer of v.layers) layer.frame?.(v.ctx, dt);
-    v.renderer.render(v.scene, v.camera);
+    const due = now - last >= 1000 / ANIMATION_FPS;
+    if (due || v.renderWanted) {
+      const dt = frameSeconds(last, now);
+      last = now;
+      v.renderWanted = false;
+      for (const layer of v.layers) layer.frame?.(v.ctx, dt);
+      v.renderer.render(v.scene, v.camera);
+    }
     v.loopId = requestAnimationFrame(step);
   };
   view.loopId = requestAnimationFrame(step);

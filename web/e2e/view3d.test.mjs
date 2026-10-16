@@ -22,7 +22,10 @@ after(async () => {
 
 // Count of distinct colours (quantised) in the PNG of the 3D canvas, read by the page itself.
 async function colourCount(page) {
-  const png = await page.locator("#map3d").screenshot();
+  // a page screenshot clipped to the canvas: an element screenshot waits for the element to be
+  // "stable", which never happens while the day/night animation draws (and is slow without a GPU)
+  const box = await page.locator("#map3d").boundingBox();
+  const png = await page.screenshot({ clip: box });
   return page.evaluate(async (b64) => {
     const img = new Image();
     img.src = `data:image/png;base64,${b64}`;
@@ -67,8 +70,10 @@ async function pickVisibleTile(page, shadow) {
 }
 
 describe("the 3D view", () => {
+  // Interaction on the simple 3D view (?lite=1): without a GPU the scenery layers make every frame
+  // slow, which would only test the machine. The scenery has its own test below.
   test("«Vue 3D» draws the city, a tool click reaches the engine, «Vue 2D» brings the map back", { timeout: TIMEOUT }, async () => {
-    const { page, errors, close } = await openPage(browser);
+    const { page, errors, close } = await openPage(browser, { query: "?lite=1" });
     try {
       // the button is in the header, next to the play control
       const toggle = page.locator("#view3d"); // its label is «Vue 3D», then «Vue 2D» while on
@@ -82,17 +87,6 @@ describe("the 3D view", () => {
       assert.ok(colours > 20, `the 3D canvas is blank: ${colours} colours`);
       await shot(page, "view3d-on");
 
-      // the building models load in the background (canvas.modelStats, a read-only test hook of
-      // view3d-models.js): then buildings and trees are drawn as models and no request failed
-      await page.waitForFunction(() => document.getElementById("map3d").modelStats?.().ready, null, { timeout: 60000 });
-      const stats = await page.evaluate(() => document.getElementById("map3d").modelStats());
-      assert.equal(stats.failed, false, "the models loaded");
-      assert.deepEqual(stats.kinds.sort(), ["commercial", "industrial", "residential", "tree"]);
-      assert.ok(stats.instances > 50, `model instances are drawn: ${stats.instances}`);
-      assert.ok(stats.meshes > 5, `model meshes are visible: ${stats.meshes}`);
-      assert.ok(stats.byKind.residential > 0 && stats.byKind.tree > 0, JSON.stringify(stats.byKind));
-      assert.equal(stats.overflow, 0);
-      await shot(page, "view3d-models");
 
       // a residential zone built by a click in the 3D view
       const shadow = await shadowCity({ cty: await readSample("haight") });
@@ -115,6 +109,30 @@ describe("the 3D view", () => {
       // the flat map shows the zone on the tile that was clicked (not a neighbour of the same cost)
       const map = await readMap(page);
       assert.equal(map.at(spot.x, spot.y).label, "Zone résidentielle", `tile (${spot.x}, ${spot.y}) on the flat map`);
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  test("the scenery: building models load and are drawn, the day/night animation runs, no error", { timeout: TIMEOUT }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      await page.locator("#view3d").click();
+      await page.waitForFunction(() => document.getElementById("map-frame").classList.contains("is-3d"));
+      // the building models load in the background (canvas.modelStats, a read-only test hook of
+      // view3d-models.js): then buildings and trees are drawn as models and no request failed
+      await page.waitForFunction(() => document.getElementById("map3d").modelStats?.().ready, null, { timeout: 60000 });
+      const stats = await page.evaluate(() => document.getElementById("map3d").modelStats());
+      assert.equal(stats.failed, false, "the models loaded");
+      assert.deepEqual(stats.kinds.sort(), ["commercial", "industrial", "residential", "tree"]);
+      assert.ok(stats.instances > 50, `model instances are drawn: ${stats.instances}`);
+      assert.ok(stats.meshes > 5, `model meshes are visible: ${stats.meshes}`);
+      assert.ok(stats.byKind.residential > 0 && stats.byKind.tree > 0, JSON.stringify(stats.byKind));
+      assert.equal(stats.overflow, 0);
+      await shot(page, "view3d-models");
+      const colours = await colourCount(page);
+      assert.ok(colours > 20, `the 3D canvas is blank: ${colours} colours`);
       assertNoErrors(errors);
     } finally {
       await close();

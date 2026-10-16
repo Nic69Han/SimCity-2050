@@ -51,7 +51,7 @@ async function panView(page) {
 
 describe("the camera of the 3D view", () => {
   test("buttons and keys turn, zoom and recentre the view; no console error", { timeout: TIMEOUT }, async () => {
-    const { page, errors, close } = await openPage(browser);
+    const { page, errors, close } = await openPage(browser, { query: "?lite=1" }); // the camera does not need the scenery
     try {
       await page.locator("#view3d").click();
       await page.waitForFunction(() => document.getElementById("map-frame").classList.contains("is-3d"));
@@ -133,7 +133,7 @@ describe("the camera of the 3D view", () => {
   });
 
   test("a phone (390 px, touch): the strip stays in the corner of the 3D canvas and a tap turns the view", { timeout: TIMEOUT }, async () => {
-    const { page, errors, close } = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true });
+    const { page, errors, close } = await openPage(browser, { query: "?lite=1", viewport: { width: 390, height: 844 }, hasTouch: true });
     try {
       await page.locator("#view3d").tap();
       await page.waitForFunction(() => document.getElementById("map-frame").classList.contains("is-3d"));

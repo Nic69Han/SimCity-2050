@@ -49,12 +49,15 @@ export async function launchBrowser({ args = [] } = {}) {
 
 // A new browser context and page on the app, with every console error, page error and
 // failed HTTP response collected in `errors`. Call assertNoErrors(errors) at the end of a test.
+// `query` (e.g. "?lite=1", the simple 3D view without the heavy layers) is added to the page address;
+// the other options go to the browser context.
 export async function openPage(browser, options = {}) {
+  const { query = "", ...contextOptions } = options;
   const context = await browser.newContext({
     viewport: { width: 1280, height: 900 },
     acceptDownloads: true,
     locale: "fr-FR",
-    ...options,
+    ...contextOptions,
   });
   const page = await context.newPage();
   const errors = [];
@@ -68,7 +71,7 @@ export async function openPage(browser, options = {}) {
   page.on("requestfailed", (r) => errors.push(`request failed: ${r.url()} (${r.failure()?.errorText})`));
   // The page first draws an empty city, then fetches the sample; wait for the sample.
   const sample = page.waitForResponse((r) => r.url().endsWith("/cities/haight.cty"));
-  await page.goto(baseUrl());
+  await page.goto(baseUrl() + query);
   await sample;
   await waitForReady(page);
   return {
