@@ -47,6 +47,9 @@ function createBank(THREE) {
       : "plain|" + source.color.getHexString();
     let own = materials.get(key);
     if (!own) {
+      // the scene draws sRGB values as they are (ColorManagement off in view3d.js): the texture must
+      // not be decoded from sRGB either, or the buildings come out darker than the terrain
+      if (m) m.colorSpace = THREE.NoColorSpace;
       own = new THREE.MeshLambertMaterial({ map: m ?? null, color: m ? 0xffffff : source.color });
       materials.set(key, own);
     } else if (m) {
