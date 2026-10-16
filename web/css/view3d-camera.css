@@ -1,1 +1,11 @@
-/* view3d-camera: styles of web/view3d-camera.js (docs/game-design.md). */
+/* view3d-camera: styles of web/view3d-camera.js (docs/game-design.md). The strip is shared with other
+   3D layers: it sits in the top right corner of the 3D canvas, small enough not to hide the city. */
+#view3d-controls { position: absolute; top: 8px; right: 8px; z-index: 2; }
+#view3d-controls[hidden] { display: none; }
+.view3d-camera { display: grid; grid-template-columns: repeat(3, 2rem); gap: 4px; }
+.view3d-camera button {
+  width: 2rem; height: 2rem; padding: 0; font-size: 1.05rem; line-height: 1;
+  color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  touch-action: manipulation;
+}
+.view3d-camera button:hover { background: var(--accent); color: var(--on-accent); }

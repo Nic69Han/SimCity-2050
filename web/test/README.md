@@ -36,6 +36,8 @@ Files:
 - `view3d-model.test.mjs`: the 3D view's pure part (`web/view3d-model.js`): altitudes and their
   column-major layout (`heights[i]` matches `tiles[i]`), height to world units, chunk diffing, tile
   classification, chunk geometry and volumes, picking by ray, and the mock's relief.
+- `view3d-camera.test.mjs`: the camera's pure part (`web/view3d-camera-model.js`): quarter turns,
+  zoom levels and steps, the orbit's maths, the camera keys (no collision with the tool shortcuts).
 - `pointer-seam.test.mjs`: `attachPointer` with a view's own `tileOf` and the abort signal.
 - `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.
 - `relief.test.mjs`: relief rules (`web/relief.js`: the checkbox reads and sets the engine's flag, the
