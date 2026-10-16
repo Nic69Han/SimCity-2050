@@ -384,3 +384,13 @@ describe("the mock's relief (City.heights)", () => {
     assert.ok(new Set(alt).size > 3);
   });
 });
+
+describe("frameSeconds", () => {
+  test("is the elapsed time in seconds, bounded by MAX_FRAME_SECONDS", async () => {
+    const { frameSeconds, MAX_FRAME_SECONDS } = await import("../view3d-model.js");
+    assert.equal(frameSeconds(1000, 1016), 0.016);
+    assert.equal(frameSeconds(0, 60_000), MAX_FRAME_SECONDS, "a long pause is not replayed");
+    assert.equal(frameSeconds(1000, 900), 0, "a clock going back gives no step");
+    assert.equal(frameSeconds(1000, NaN), 0);
+  });
+});

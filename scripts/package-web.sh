@@ -15,4 +15,9 @@ cp web/pkg/micropolis_wasm.js web/pkg/micropolis_wasm_bg.wasm dist/pkg/
 cp assets/cities/*.cty dist/cities/
 # third-party scripts (Three.js for the 3D view, loaded on demand); their licence is in vendor/
 cp -r web/vendor dist/vendor
+# per-feature styles, and the 3D models and sounds when present (docs/game-design.md, docs/credits.md)
+cp -r web/css dist/css
+for d in models sounds; do
+  [ -d "web/$d" ] && cp -r "web/$d" "dist/$d"
+done
 echo "dist/ ready: $(find dist -type f | wc -l) files, $(du -sh dist | cut -f1)"
