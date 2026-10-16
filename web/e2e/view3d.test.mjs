@@ -82,6 +82,18 @@ describe("the 3D view", () => {
       assert.ok(colours > 20, `the 3D canvas is blank: ${colours} colours`);
       await shot(page, "view3d-on");
 
+      // the building models load in the background (canvas.modelStats, a read-only test hook of
+      // view3d-models.js): then buildings and trees are drawn as models and no request failed
+      await page.waitForFunction(() => document.getElementById("map3d").modelStats?.().ready, null, { timeout: 60000 });
+      const stats = await page.evaluate(() => document.getElementById("map3d").modelStats());
+      assert.equal(stats.failed, false, "the models loaded");
+      assert.deepEqual(stats.kinds.sort(), ["commercial", "industrial", "residential", "tree"]);
+      assert.ok(stats.instances > 50, `model instances are drawn: ${stats.instances}`);
+      assert.ok(stats.meshes > 5, `model meshes are visible: ${stats.meshes}`);
+      assert.ok(stats.byKind.residential > 0 && stats.byKind.tree > 0, JSON.stringify(stats.byKind));
+      assert.equal(stats.overflow, 0);
+      await shot(page, "view3d-models");
+
       // a residential zone built by a click in the 3D view
       const shadow = await shadowCity({ cty: await readSample("haight") });
       const spot = await pickVisibleTile(page, shadow);
