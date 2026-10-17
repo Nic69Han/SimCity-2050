@@ -2,6 +2,12 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { TOOL_LABELS } from "../tools.js";
+import { extraCatalog } from "../extra-tools.js";
+
+// The labels of the extra tools (relief...) come from their modules, not from TOOL_LABELS.
+const EXTRA_LABELS = Object.fromEntries(
+  extraCatalog({ terraform() {}, terraform_preview() {} }).map((t) => [t.key, t.label]),
+);
 import {
   launchBrowser, openPage, assertNoErrors, readStatus, readPalette, shot, mapDigest, pollUntil,
   baseUrl,
@@ -32,7 +38,7 @@ describe("the page", () => {
       assert.equal(palette.length, 22, "20 building tools and 2 relief tools");
       assert.equal(new Set(palette.map((p) => p.key)).size, 22, "each tool once");
       for (const p of palette) {
-        assert.equal(p.label, TOOL_LABELS[p.key], `French label for ${p.key}`);
+        assert.equal(p.label, TOOL_LABELS[p.key] ?? EXTRA_LABELS[p.key], `French label for ${p.key}`);
         assert.ok(p.cost.endsWith("$") || p.cost === "gratuit" || p.cost === "selon pente", `cost shown for ${p.key}: ${p.cost}`);
         assert.equal(p.pressed, false, "no tool selected at start");
       }
