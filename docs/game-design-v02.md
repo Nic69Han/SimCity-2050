@@ -121,3 +121,57 @@ arithmétique entière, sans tirage aléatoire ni allocation, boucles bornées p
   mise à jour, l'effet sur la demande est donc un décalage d'équilibre et non un pourcentage exact de la
   demande affichée ; un fichier chargé remplace l'ensemble actif (il appartient au fichier), une nouvelle ville
   le garde.
+
+## Métro (chantier livré)
+
+Règle étendue `transit_rules`, désactivée par défaut. Activée, le joueur creuse des tunnels et pose des
+stations ; deux stations reliées par des tunnels forment une **ligne en service**, autour de laquelle le
+trafic baisse et la valeur du terrain monte.
+
+### Modèle de données (simple, réutilisable par les agents de la v0.3)
+* Tout le réseau est la couche souterraine `TransitNetwork::underground`, un octet par tuile : `1` tunnel,
+  `2` station, `0` rien (tout autre octet est ignoré). Une station **n'est pas une tuile de surface** : elle ne
+  modifie jamais la carte des tuiles (pas de bâtiment, rien à raser). Elle se pose sur toute tuile qui n'est pas
+  de l'eau (terrain nu, route, bâtiment : le métro est sous terre) et remplace un tunnel s'il y en a un. La
+  vue 2D (`map-layer-transit.js`) la dessine depuis `transit_layer()` ; la vue 3D pourra faire de même.
+* Une **ligne** est un ensemble connexe (voisinage à 4) de tunnels et de stations ; elle est **en service**
+  avec au moins `MIN_STATIONS_PER_LINE` = 2 stations. `TransitNetwork::refresh()` calcule les composantes par
+  remplissage borné (chaque tuile entre une fois dans la file : au plus `largeur × hauteur` pas) après chaque
+  modification et chaque chargement ; les accroches ne font que lire le résultat.
+* Une tuile est **desservie** si elle est à moins de `STATION_RADIUS` d'une station d'une ligne en service
+  (distance euclidienne, comparaison de carrés entiers).
+
+### Constantes (`micropolis-core/src/transit.rs`, lues par la page via `transit_params()`)
+| Constante | Valeur | Rôle |
+|---|---|---|
+| `TUNNEL_COST` | 50 $ | par tuile de tunnel |
+| `STATION_COST` | 500 $ | par station |
+| `STATION_RADIUS` | 8 tuiles | portée d'une station d'une ligne en service |
+| `TRAFFIC_CUT_PCT` | 40 % | part de la densité de trafic retirée sur une tuile desservie (`ext_traffic`, arrondi vers le bas) |
+| `LAND_BONUS` | +12 | ajouté à la valeur du terrain d'une tuile desservie (`ext_land_value`, borné ensuite à 1..=250) |
+| `MAX_STATIONS` | 64 | stations maximum (un fichier qui en contient plus est refusé) |
+
+Pas de coût d'entretien (`monthly_balance` reste nul). Entiers, déterminisme, aucun tirage aléatoire. Les
+coordonnées des accroches sont celles du bloc de la carte de trafic ou de valeur du terrain (coin monde).
+
+### Interface moteur
+Règle désactivée, tout est refusé (`Failed`, coût 0) et les accroches ne changent rien.
+`Simulation::{set_transit_rules, transit_rules, place_tunnel, tunnel_preview, remove_tunnel, place_station,
+station_preview, remove_station, transit_stats, transit_layer}` ; retirer est gratuit et ne rembourse rien.
+wasm : mêmes noms ; `transit_layer()` → `Uint8Array` (0 rien, 1 tunnel, 2 tunnel d'une ligne en service,
+3 station, 4 station d'une ligne en service, ordre de `tiles()`), `transit_stats()` → `Int32Array`
+`[stations, tunnels, lignes, tuiles desservies]`, `transit_params()` → les constantes ci-dessus. Le réseau est
+enregistré dans le morceau 4 du bloc d'extensions (les octets de la couche).
+
+### Page
+* Outils « Tunnel de métro » (J, un glisser creuse une ligne par les côtés) et « Station de métro » (K) dans le
+  groupe Réseaux ; bloqués avec une raison en français règle désactivée, et en vue 3D (le plan n'y est pas
+  dessiné).
+* Case « Métro » dans `#rules-controls` (aide en infobulle), relue du moteur après chaque rendu (jamais poussée
+  dans une ville neuve), case « Plan du métro » et ligne de statistiques. Le calque 2D est visible règle activée
+  et outil de métro choisi ou plan coché ; les lignes en service sont d'une couleur plus forte, la portée des
+  stations est dessinée en transparence.
+
+### Limites connues
+* Pas de vue 3D du réseau. Pas d'entretien mensuel. Pas de dépôt de voyageurs ni de trains : le réseau ne sert
+  qu'aux deux effets ci-dessus (la v0.3 s'y appuiera).
