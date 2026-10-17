@@ -41,13 +41,13 @@ function start(ctx) {
   return s;
 }
 
-// The checkbox «Cycle jour/nuit»: a label around the box, styled inline (no stylesheet of its own).
+// The checkbox «Cycle jour/nuit»: a label around the box, styled by .view3d-cycle (css/view3d-camera.css).
 function cycleControl(doc) {
   const label = doc.createElement("label");
-  // the container sits on the black frame of the map: its own light text colour
-  label.style.cssText = "display:inline-flex;align-items:center;gap:.3rem;margin:.3rem .5rem;font-size:.85rem;color:#f2f2f2;";
+  label.className = "view3d-cycle";
   const input = doc.createElement("input");
   input.type = "checkbox";
+  input.className = "view3d-cycle-box";
   input.checked = true;
   label.append(input, ` ${CYCLE_LABEL}`);
   return { label, input };

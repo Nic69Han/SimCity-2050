@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
 import {
   MODEL_FILES, CATALOG, KINDS, MODEL_CAPACITY, FOOTPRINT, MAX_UPSCALE, STRETCH_MIN, STRETCH_MAX,
-  TREE_FIT_HEIGHT, levelOf, tileHash, chooseModel, usableCatalog, fitScale, writePlacement, createSlotTable,
+  TREE_FIT_HEIGHT, MODEL_GAIN, TREE_GAIN, gainOf, FACING_REACH, facingQuarter, levelOf, tileHash, chooseModel, usableCatalog, fitScale, writePlacement, createSlotTable,
 } from "../view3d-models-model.js";
 import { chunkGrid, buildChunk, cornerAltitudes, altitudesOf } from "../view3d-model.js";
 
@@ -198,5 +198,81 @@ describe("instance slots", () => {
     }
     assert.equal(t.count, live.size);
     for (const key of live) assert.equal(t.keyAt(t.indexOf(key)), key);
+  });
+});
+
+// Tile words (palette): dirt, road, house (a zone tile), empty residential zone, tree.
+const DIRT = 0, ROAD = 64, HOUSE = 249, RES_EMPTY = 240, TREE = 21;
+
+describe("buildings face the road", () => {
+  const W = 9, H = 9;
+  const city = (edit) => {
+    const t = new Uint16Array(W * H).fill(DIRT);
+    edit((x, y, word) => { t[x * H + y] = word; });
+    return t;
+  };
+
+  test("a road on one side gives the quarter turn that points the front at it", () => {
+    // south is +y (quarter 0), east +x (1), north -y (2), west -x (3)
+    for (const [dx, dy, quarter] of [[0, 1, 0], [1, 0, 1], [0, -1, 2], [-1, 0, 3]]) {
+      const t = city((set) => { set(4, 4, HOUSE); set(4 + dx, 4 + dy, ROAD); });
+      assert.equal(facingQuarter(t, W, H, 4, 4), quarter, `road at (${dx}, ${dy})`);
+    }
+  });
+
+  test("no road within reach: -1 (the hash yaw stays); the map edge is not a road", () => {
+    const t = city((set) => { set(4, 4, HOUSE); set(0, 0, HOUSE); });
+    assert.equal(facingQuarter(t, W, H, 4, 4), -1);
+    assert.equal(facingQuarter(t, W, H, 0, 0), -1);
+  });
+
+  test("the road is seen across the rest of its zone, up to FACING_REACH tiles", () => {
+    assert.equal(FACING_REACH, 2);
+    const t = city((set) => { set(4, 4, HOUSE); set(5, 4, RES_EMPTY); set(6, 4, ROAD); set(2, 4, ROAD); });
+    assert.equal(facingQuarter(t, W, H, 4, 4), 1, "east, through the zone tile");
+    // dirt in between: the road behind it is not the road of this zone
+    const u = city((set) => { set(4, 4, HOUSE); set(5, 4, DIRT); set(6, 4, ROAD); });
+    assert.equal(facingQuarter(u, W, H, 4, 4), -1);
+    // three tiles away: out of reach
+    const f = city((set) => { set(4, 4, HOUSE); set(5, 4, HOUSE); set(6, 4, HOUSE); set(7, 4, ROAD); });
+    assert.equal(facingQuarter(f, W, H, 4, 4), -1);
+  });
+
+  test("the nearest road wins; a tie goes to the tile hash and is deterministic", () => {
+    const near = city((set) => { set(4, 4, HOUSE); set(4, 5, ROAD); set(3, 4, HOUSE); set(2, 4, ROAD); });
+    assert.equal(facingQuarter(near, W, H, 4, 4), 0, "adjacent road beats the road two tiles away");
+    const tie = city((set) => { set(4, 4, HOUSE); set(5, 4, ROAD); set(3, 4, ROAD); });
+    const q = facingQuarter(tie, W, H, 4, 4);
+    assert.ok(q === 1 || q === 3);
+    assert.equal(facingQuarter(tie, W, H, 4, 4), q);
+    const seen = new Set();
+    for (let x = 1; x < 8; x++) {
+      for (let y = 1; y < 8; y++) {
+        const t = city((set) => { set(x, y, HOUSE); set(x + 1, y, ROAD); set(x - 1, y, ROAD); });
+        seen.add(facingQuarter(t, W, H, x, y));
+      }
+    }
+    assert.deepEqual([...seen].sort(), [1, 3], "the tie is spread over both sides");
+  });
+
+  test("chooseModel uses the facing for buildings, and the hash yaw for trees and without a facing", () => {
+    for (let x = 0; x < 6; x++) {
+      for (let q = 0; q < 4; q++) {
+        assert.equal(chooseModel(CATALOG, vol("residential", x, 3), q).quarter, q);
+        assert.equal(chooseModel(CATALOG, vol("tree", x, 3, 1), q).quarter, chooseModel(CATALOG, vol("tree", x, 3, 1)).quarter);
+      }
+      assert.equal(chooseModel(CATALOG, vol("commercial", x, 3), -1).quarter, chooseModel(CATALOG, vol("commercial", x, 3)).quarter);
+    }
+  });
+});
+
+describe("model brightness", () => {
+  test("the gain lifts the slate colour maps to the terrain without clipping them", () => {
+    const MEAN_TEXEL = 0.55; // brightest mean texel of the models (about 140 / 255)
+    assert.ok(MODEL_GAIN > 1 && MODEL_GAIN <= 2, `gain ${MODEL_GAIN}`);
+    assert.ok(MEAN_TEXEL * MODEL_GAIN <= 1, "a mean texel stays below white");
+    assert.ok(0.45 * MODEL_GAIN >= 0.65, "an average building texel reaches terrain brightness");
+    assert.equal(gainOf("com-a"), MODEL_GAIN);
+    assert.equal(gainOf("sub-tree-large"), TREE_GAIN, "trees keep their own green");
   });
 });

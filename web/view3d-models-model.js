@@ -6,6 +6,9 @@
 // `kind` is residential | commercial | industrial | tree, `slot` is unique per tile, (x, y) the tile
 // and `base` the ground height at its centre. Everything here is deterministic (no random).
 
+import { roadMask } from "./tiles.js";
+import { classify } from "./view3d-model.js";
+
 // Models of the Kenney City Kits (CC0, docs/credits.md): id -> file under web/models/.
 export const MODEL_FILES = Object.freeze({
   "sub-h": "suburban/building-type-h.glb",
@@ -48,6 +51,15 @@ export const CATALOG = Object.freeze({
   tree: [["sub-tree-large", "sub-tree-small"]],
 });
 
+// Brightness factor of the model materials. The Kenney colour maps are mid and dark slate tones
+// (the mean texel of the buildings is about 0.45 of white) and the scene draws the sRGB values as
+// they are, so the models came out darker than the terrain; this puts them at its brightness.
+export const MODEL_GAIN = 1.5;
+export const TREE_GAIN = 1.0; // the tree models are already bright green
+
+// Brightness factor of the model `id` (see MODEL_GAIN).
+export const gainOf = (id) => (CATALOG.tree.flat().includes(id) ? TREE_GAIN : MODEL_GAIN);
+
 export const KINDS = Object.freeze(Object.keys(CATALOG));
 
 // Instances one model can hold (per sub-mesh). A 120 x 100 map has 12 000 tiles; the variants of a
@@ -80,15 +92,53 @@ export function tileHash(x, y) {
   return h >>> 0;
 }
 
+export const FACING_REACH = 2; // a road up to this many tiles away (across zone tiles) is "the road" of a building
+
+// Sides to look at, as [dx, dy, quarter]: the quarter turn that points the front of a model (its +Z
+// axis, the Kenney convention) at that side: south (+y) 0, east (+x) 1, north (-y) 2, west (-x) 3.
+const SIDES = Object.freeze([[0, 1, 0], [1, 0, 1], [0, -1, 2], [-1, 0, 3]]);
+
+// Quarter turn (0..3) that makes the building on tile (x, y) face its road, or -1 when no road is
+// within reach. From the tile, each side is followed across zone tiles (the rest of its own zone) up
+// to FACING_REACH tiles; a road found there makes the side a candidate, the nearest side wins and a
+// tie goes to the tile hash (deterministic). `tiles` are the engine's tile words, index x * h + y.
+// Zone tiles change only with the tiles within FACING_REACH, which the chunk diffing of
+// view3d-model.js (REACH) already redraws.
+export function facingQuarter(tiles, w, h, x, y) {
+  let best = FACING_REACH + 1;
+  const near = [];
+  for (const [dx, dy, quarter] of SIDES) {
+    let d = 0;
+    for (let step = 1; step <= FACING_REACH; step++) {
+      const tx = x + dx * step, ty = y + dy * step;
+      if (tx < 0 || ty < 0 || tx >= w || ty >= h) break;
+      const word = tiles[tx * h + ty];
+      if (roadMask(word)) {
+        d = step;
+        break;
+      }
+      if (classify(word).zone === null) break; // not the zone, not a road: nothing on this side
+    }
+    if (d === 0 || d > best) continue;
+    if (d < best) near.length = 0;
+    best = d;
+    near.push(quarter);
+  }
+  return near.length ? near[tileHash(x, y) % near.length] : -1;
+}
+
 // The model of a volume: { id, quarter } where quarter (0..3) is its yaw in quarter turns. The
-// level picks the list, the tile position picks the variant. Null when the catalog has no model.
-export function chooseModel(catalog, v) {
+// level picks the list, the tile position picks the variant. `facing` (a quarter, or -1) is the
+// yaw towards the road (facingQuarter); without it, and for trees, the yaw comes from the hash.
+// Null when the catalog has no model.
+export function chooseModel(catalog, v, facing = -1) {
   const levels = catalog[v.kind];
   if (!levels) return null;
   const list = levels[Math.min(levelOf(v.kind, v.sy), levels.length - 1)];
   if (!list || list.length === 0) return null;
   const h = tileHash(v.x, v.y);
-  return { id: list[h % list.length], quarter: (h >>> 24) & 3 };
+  const quarter = facing >= 0 && v.kind !== "tree" ? facing & 3 : (h >>> 24) & 3;
+  return { id: list[h % list.length], quarter };
 }
 
 // Kinds whose models can be drawn, and the catalog restricted to the ids that loaded: a kind is
