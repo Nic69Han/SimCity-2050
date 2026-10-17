@@ -408,3 +408,14 @@ export function pickTile(origin, dir, grid, tops, maxTop, step = PICK_STEP) {
     if (tt >= t1) return null;
   }
 }
+
+// Longest time step of the animation loop, in seconds: after a pause (hidden tab) the layers move
+// on by this much at most instead of replaying the whole pause.
+export const MAX_FRAME_SECONDS = 0.1;
+
+// Seconds between two animation frames (performance.now() values), within 0..MAX_FRAME_SECONDS.
+export function frameSeconds(lastMs, nowMs) {
+  const dt = (nowMs - lastMs) / 1000;
+  if (!(dt > 0)) return 0;
+  return Math.min(dt, MAX_FRAME_SECONDS);
+}

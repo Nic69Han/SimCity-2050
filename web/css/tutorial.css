@@ -1,0 +1,8 @@
+/* tutorial: styles of web/tutorial.js (docs/game-design.md). */
+#tutorial-panel h2 { margin: .2rem 0 .3rem; font-size: 1.05rem; }
+#tutorial-panel h3.tutorial-title { margin: .2rem 0; font-size: 1rem; }
+#tutorial-panel .tutorial-count { margin: 0 0 .2rem; color: var(--muted); font-size: .9rem; }
+#tutorial-panel .tutorial-hint { margin: .2rem 0 .6rem; }
+#tutorial-panel .tutorial-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+#tutorial-panel .tutorial-open { font: inherit; }
+#tutorial-panel .tutorial-open .tutorial-count { display: inline; margin: 0; }

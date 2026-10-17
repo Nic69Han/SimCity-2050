@@ -6,12 +6,18 @@
 // (only the chunks whose tiles or altitudes changed are rebuilt), dispose() releases everything.
 // surface() is the pointer and outline surface the tools use while the view is shown (tools.js).
 // The pure parts (geometry, classification, picking maths) are in view3d-model.js.
+//
+// Layers (docs/game-design.md): view3d-layers.js lists modules whose createLayer() returns an object
+// with optional mount(ctx), update(ctx, change), frame(ctx, seconds) and dispose(ctx). A layer adds
+// to the scene through ctx; this file does not know what layers draw. A layer with frame() turns on
+// the animation loop, which stops at dispose().
 import * as THREE from "./vendor/three.module.min.js";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import {
   chunkGrid, dirtyChunks, altitudesOf, cornerAltitudes, buildChunk, writeVolumeMatrix, pickTile,
-  footprintTop, tileCentreY, SLOTS, WATER_Y,
+  footprintTop, tileCentreY, frameSeconds, SLOTS, WATER_Y,
 } from "./view3d-model.js";
+import { layersFor } from "./view3d-layers.js";
 
 const KINDS = ["residential", "commercial", "industrial", "tree"];
 const SKY = 0xbcd6ea;
@@ -35,7 +41,8 @@ export function mount(api, canvas) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY);
   const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 4000);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x4a5568, 1.0));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x4a5568, 1.0);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.target.position.set(w / 2, 0, h / 2);
   sun.position.set(w / 2 - 60, 90, h / 2 + 40);
@@ -80,6 +87,8 @@ export function mount(api, canvas) {
     },
     grid: null, snapshot: null, corners: null, tops: null, maxTop: 0,
     chunks: [], instances: {}, water: null, frameId: null, observer: null,
+    lights: { hemi, sun }, chunkVolumes: [], hiddenKinds: new Set(), layers: [], ctx: null, loopId: null,
+    renderWanted: false,
   };
   outlineMesh.material = view.materials.ok;
   // the orbit control takes the left button only while no tool is selected (a tool drag builds)
@@ -98,6 +107,13 @@ export function mount(api, canvas) {
   view.observer = new ResizeObserver(() => resize());
   view.observer.observe(canvas);
   canvas.tileScreen = screenOf; // the page's tests read where a tile is on the screen
+  view.ctx = makeContext();
+  for (const module of layersFor(globalThis.location?.search)) {
+    const layer = module.createLayer();
+    view.layers.push(layer);
+    layer.mount?.(view.ctx);
+  }
+  if (view.layers.some((l) => typeof l.frame === "function")) startLoop();
   resize();
 }
 
@@ -127,6 +143,8 @@ export function update(api) {
       mesh.instanceColor.needsUpdate = true;
     }
   }
+  const change = { fresh, dirty };
+  for (const layer of view.layers) layer.update?.(view.ctx, change);
   requestRender();
 }
 
@@ -135,6 +153,8 @@ export function dispose() {
   if (!view) return;
   const v = view;
   view = null;
+  for (const layer of [...v.layers].reverse()) layer.dispose?.(v.ctx);
+  if (v.loopId !== null) cancelAnimationFrame(v.loopId);
   v.observer?.disconnect();
   v.controls.dispose();
   if (v.frameId !== null) cancelAnimationFrame(v.frameId);
@@ -175,13 +195,73 @@ export function surface() {
 // --- internals ----------------------------------------------------------------------------------
 
 function requestRender() {
-  if (!view || view.frameId !== null) return;
+  if (!view) return;
+  // while the animation loop runs, it renders the wanted frame at its next step
+  if (view.loopId !== null) {
+    view.renderWanted = true;
+    return;
+  }
+  if (view.frameId !== null) return;
   view.frameId = requestAnimationFrame(() => {
     const v = view;
     if (!v) return;
     v.frameId = null;
     v.renderer.render(v.scene, v.camera);
   });
+}
+
+// The animation loop: at most ANIMATION_FPS times a second, the layers' frame(ctx, seconds) then one
+// render; a render asked for by an action (requestRender) is drawn at the next step. Slow ambient
+// motion (day and night, water) does not need more, and it spares weak devices and batteries. The
+// time step is bounded (frameSeconds), so a hidden tab coming back does not replay the time it missed.
+const ANIMATION_FPS = 15;
+function startLoop() {
+  let last = performance.now();
+  const step = (now) => {
+    const v = view;
+    if (!v) return;
+    const due = now - last >= 1000 / ANIMATION_FPS;
+    if (due || v.renderWanted) {
+      const dt = frameSeconds(last, now);
+      last = now;
+      v.renderWanted = false;
+      for (const layer of v.layers) layer.frame?.(v.ctx, dt);
+      v.renderer.render(v.scene, v.camera);
+    }
+    v.loopId = requestAnimationFrame(step);
+  };
+  view.loopId = requestAnimationFrame(step);
+}
+
+// What a layer may use. Getters read the current view, so a layer never keeps a stale terrain.
+function makeContext() {
+  const v = view;
+  return {
+    THREE,
+    scene: v.scene,
+    camera: v.camera,
+    controls: v.controls,
+    renderer: v.renderer,
+    canvas: v.canvas,
+    lights: v.lights,
+    grid: () => view?.grid ?? null,
+    snapshot: () => view?.snapshot ?? null,
+    corners: () => view?.corners ?? null,
+    // the sea-level water plane (replaced when the terrain is rebuilt: read it, do not keep it)
+    water: () => view?.water ?? null,
+    // the volumes (buildings, trees) of chunk c, as view3d-model.js buildChunk returns them
+    chunkVolumes: (c) => view?.chunkVolumes[c] ?? [],
+    // hides or shows the procedural volumes of a kind (a layer that draws models instead)
+    setVolumesVisible(kind, on) {
+      if (!view) return;
+      if (on) view.hiddenKinds.delete(kind);
+      else view.hiddenKinds.add(kind);
+      const inst = view.instances[kind];
+      if (inst) inst.mesh.visible = on;
+      requestRender();
+    },
+    requestRender,
+  };
 }
 
 function resize() {
@@ -222,6 +302,7 @@ function disposeGroup(v) {
     v.group.remove(child);
   }
   v.chunks = [];
+  v.chunkVolumes = [];
   v.instances = {};
   if (v.water) {
     v.water.geometry.dispose();
@@ -255,6 +336,7 @@ function resetTerrain(grid) {
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
     mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
+    mesh.visible = !view.hiddenKinds.has(kind);
     view.group.add(mesh);
     view.instances[kind] = { mesh };
   }
@@ -271,6 +353,7 @@ function rebuildChunk(c) {
   const { geometry, volumes } = buildChunk({
     grid, chunk: c, tiles: snapshot.tiles, alt: snapshot.alt, corners, tops,
   });
+  view.chunkVolumes[c] = volumes;
   const mesh = view.chunks[c];
   mesh.geometry.dispose();
   const g = new THREE.BufferGeometry();

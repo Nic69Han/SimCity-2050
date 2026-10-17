@@ -36,11 +36,17 @@ Files:
 - `view3d-model.test.mjs`: the 3D view's pure part (`web/view3d-model.js`): altitudes and their
   column-major layout (`heights[i]` matches `tiles[i]`), height to world units, chunk diffing, tile
   classification, chunk geometry and volumes, picking by ray, and the mock's relief.
+- `view3d-camera.test.mjs`: the camera's pure part (`web/view3d-camera-model.js`): quarter turns,
+  zoom levels and steps, the orbit's maths, the camera keys (no collision with the tool shortcuts).
 - `pointer-seam.test.mjs`: `attachPointer` with a view's own `tileOf` and the abort signal.
 - `wasm-contract.test.mjs` (when present) is written by another agent against the real wasm.
 - `relief.test.mjs`: relief rules (`web/relief.js`: the checkbox reads and sets the engine's flag, the
   reason the terraforming buttons are off), the terraforming catalog entries (keys U and D, the Terrain
   group, the engine calls and the drag line), and the mock's terraform rules (cost, cascade, refusals).
+- `tutorial.test.mjs`: the guided first steps (`web/tutorial-model.js`): each step's check on hand-made tile
+  arrays (zone, road touching a zone, power plant, powered zone with a power line, commercial and industrial
+  zones, time advanced, population), the order and no regression of `progress`, the tile digest, the record
+  kept per browser and a storage that throws.
 
 ## End-to-end tests (web/e2e)
 
@@ -76,6 +82,10 @@ Files:
 - `relief.test.mjs` (e2e, `?mock=1`): the Règles de relief checkbox, the disabled buttons and their reasons,
   raise/lower/refusal in the 3D view against the mock's costs, a new city and a loaded file showing the
   engine's flag. The real-engine part is skipped while the wasm build has no `terraform()`.
+- `tutorial.test.mjs` (e2e, real wasm): a new city shows step 1, a residential zone placed with the tool
+  moves the guide to step 2; «Passer» and «Recommencer» with the choice kept over a reload; a sample or an
+  opened file starts folded; on the built Haight-Ashbury city steps 1 to 5 are read as done and playing
+  completes the guide.
 - `play.test.mjs`: the speed slider and the Catastrophes checkbox reach the engine: after N
   frames the status and stats lines equal those of the shadow engine run for the same ticks.
 

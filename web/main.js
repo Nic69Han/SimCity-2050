@@ -13,6 +13,9 @@ import { ticksPerFrame, createPlayback } from "./playback.js";
 import { createLatest } from "./latest.js";
 import { formatStatus, formatStats, formatLoadError, LOADING_TEXT, NO_CITY_TEXT } from "./status.js";
 import { supportsRelief, readRelief, setRelief } from "./relief.js";
+import * as advisors from "./advisors.js";
+import * as tutorial from "./tutorial.js";
+import * as sound from "./sound.js";
 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
@@ -29,6 +32,7 @@ let ready = false; // true once a city is in the engine (sample, file or new cit
 let seedNote = null; // seed of the city made by "Nouvelle ville", shown in the status line
 let shown = "haight"; // the selector value of the city on the map
 let sizeLimits = null; // map size limits of the engine (City.size_limits), read at start
+let game = { id: 0, kind: "none" }; // games begun: id changes on each; kind is "new", "sample", "file" or "save"
 const latest = createLatest(); // the newest load wins (a late sample never replaces a file)
 
 const playback = createPlayback({
@@ -127,7 +131,7 @@ function unlock() {
 
 // Puts the engine's city in place from the bytes of a .cty file. Returns null on success, or
 // the error the engine gave: the city, the status line and the playback are then left as they were.
-function load(bytes) {
+function load(bytes, kind = "sample") {
   try {
     saves.loadBytes(city, bytes); // load_city when the engine has it (any size), else load_cty
   } catch (e) {
@@ -141,6 +145,7 @@ function load(bytes) {
   syncRelief();
   setLoadMessage("");
   unlock();
+  game = { id: game.id + 1, kind };
   draw();
   return null;
 }
@@ -241,6 +246,7 @@ function newCity() {
   seedInput.value = String(parsed.seed);
   setLoadMessage("");
   showCity("random");
+  game = { id: game.id + 1, kind: "new" };
   $("query-panel").hidden = true;
   draw();
   saves.cityLoaded({ user: true });
@@ -262,18 +268,19 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi, overlays, saves];
+const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound];
 const featureApi = {
   city: () => city,
   $,
   redraw: () => draw(),
   isReady: () => ready,
+  game: () => game,
   limits: () => sizeLimits,
   // the page's name for the city now: the selector's entry and the seed of a random city
   describe: () => ({ label: $("city").selectedOptions[0]?.textContent ?? "", seed: seedNote }),
   // loads a save's bytes like an opened file; returns the engine's error, or null
   replaceCity(bytes) {
-    const error = load(bytes);
+    const error = load(bytes, "save");
     if (!error) showCity("saved");
     return error;
   },
@@ -314,7 +321,7 @@ $("file").onchange = async (ev) => {
   const ticket = latest.start();
   const bytes = new Uint8Array(await f.arrayBuffer());
   if (!latest.isCurrent(ticket)) return;
-  const error = load(bytes);
+  const error = load(bytes, "file");
   if (error) reportFailure(error);
   else {
     showCity("local");
