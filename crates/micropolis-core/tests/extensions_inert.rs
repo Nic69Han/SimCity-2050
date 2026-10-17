@@ -1,6 +1,7 @@
-//! The extension hooks are inert (docs/game-design-v02.md, phase A): with every switch on but
-//! the feature modules empty, a city plays out exactly like the same city with every switch off.
-//! This is the Rust-side counterpart of the `compare-*.sh` scripts, which prove the switches off.
+//! The extension hooks themselves are inert (docs/game-design-v02.md, phase A): with the
+//! extensions active but no rule that acts (only an ordinance bit beyond the table, which the
+//! engine ignores), a city plays out exactly like the same city with every switch off. Each rule
+//! proves its own effect in its own tests; the `compare-*.sh` scripts prove the switches off.
 
 #[path = "save_support/mod.rs"]
 mod support;
@@ -16,14 +17,12 @@ fn city(seed: i32) -> Simulation {
 }
 
 #[test]
-fn all_switches_on_change_nothing_while_the_modules_are_empty() {
+fn active_extensions_without_an_acting_rule_change_nothing() {
     for seed in [1, 2, 3] {
         let mut off = city(seed);
         let mut on = city(seed);
         let e = on.extensions_mut();
-        e.ordinances = u32::MAX;
-        e.water_rules = true;
-        e.transit_rules = true;
+        e.ordinances = 1 << 31; // beyond the ordinance table: active, but no rule acts
         assert!(on.extensions_active() && !off.extensions_active());
         // 2000 ticks cross several tax collections, scans and census.
         run(&mut off, 2000);

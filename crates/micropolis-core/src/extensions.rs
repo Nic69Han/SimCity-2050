@@ -345,14 +345,12 @@ mod tests {
     }
 
     #[test]
-    fn hooks_are_inert_whatever_is_switched_on() {
+    fn hooks_are_inert_when_no_rule_acts() {
         for on in [false, true] {
             let mut s = sim();
             if on {
-                let e = s.extensions_mut();
-                e.ordinances = u32::MAX;
-                e.water_rules = true;
-                e.transit_rules = true;
+                // active, but only an ordinance bit beyond the table: no rule acts
+                s.extensions_mut().ordinances = 1 << 31;
             }
             let funds = s.total_funds;
             let valves = (s.res_valve, s.com_valve, s.ind_valve);
