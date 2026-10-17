@@ -11,11 +11,14 @@
 //! (`setGameLevelFunds`).
 
 use crate::events::Event;
+use crate::extensions::Extensions;
 use crate::map::Map;
 use crate::position::Position;
 use crate::relief::Relief;
 use crate::rng::Rng;
 use crate::tile::Tile;
+use crate::transit::TransitNetwork;
+use crate::water::WaterNetwork;
 use std::cell::OnceCell;
 
 /// Seed of the relief of a city that did not come from a seeded generator (a loaded file).
@@ -115,6 +118,12 @@ pub struct Simulation {
     relief_rules: bool,
     /// Whether the relief was changed by the player (terraforming); such a relief is saved.
     relief_edited: bool,
+    /// Switches of the extended rules (docs/game-design-v02.md), all off by default.
+    pub(crate) extensions: Extensions,
+    /// Water network of the extended rules: empty until the player builds one.
+    pub(crate) water: WaterNetwork,
+    /// Metro network of the extended rules: empty until the player builds one.
+    pub(crate) transit: TransitNetwork,
 
     // ---- density / effect maps (block size in the name of the field's doc) ----
     pub population_density_map: Map<u8>, // 2
@@ -367,6 +376,9 @@ impl Simulation {
             relief_seed: LOADED_CITY_RELIEF_SEED,
             relief_rules: false,
             relief_edited: false,
+            extensions: Extensions::default(),
+            water: WaterNetwork::new(world_w, world_h),
+            transit: TransitNetwork::new(world_w, world_h),
 
             population_density_map: m(2),
             traffic_density_map: m(2),
@@ -637,6 +649,7 @@ impl Simulation {
         self.relief_seed = seed;
         self.relief = OnceCell::new();
         self.relief_edited = false;
+        self.clear_networks();
     }
 
     /// Drops the relief computed for the old map (a loaded file, a regenerated map), keeping the
@@ -644,6 +657,7 @@ impl Simulation {
     pub(crate) fn clear_relief(&mut self) {
         self.relief = OnceCell::new();
         self.relief_edited = false;
+        self.clear_networks();
     }
 
     /// Simulator for the original 120x100 world.
