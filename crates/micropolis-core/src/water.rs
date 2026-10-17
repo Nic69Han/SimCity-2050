@@ -191,13 +191,12 @@ impl WaterNetwork {
                 queue.push((x, y, 0));
             }
         }
-        let mut head = 0;
-        for _ in 0..n {
+        // `head` walks the queue; each tile is queued once, so the queue never exceeds `n`.
+        for head in 0..n {
             if head == queue.len() {
                 break;
             }
             let (x, y, d) = queue[head];
-            head += 1;
             if d >= depth {
                 continue;
             }
@@ -328,6 +327,27 @@ impl Simulation {
             }
         }
         stats
+    }
+
+    /// What to draw on each tile, in tile order: 0 nothing, 1 a pipe nothing feeds, 2 a pipe fed
+    /// by a pump, 3 a pump. All zero with the rules off.
+    pub fn water_layer(&self) -> Vec<u8> {
+        let (w, h) = self.world_size();
+        let mut out = vec![0; (w as usize) * (h as usize)];
+        if !self.water_rules() {
+            return out;
+        }
+        for x in 0..w {
+            for y in 0..h {
+                out[(x as usize) * (h as usize) + (y as usize)] = match self.water.pipes.get(x, y) {
+                    0 => 0,
+                    PUMP => 3,
+                    _ if self.water.is_fed(x, y) => 2,
+                    _ => 1,
+                };
+            }
+        }
+        out
     }
 
     /// Centres of the zones that are not watered, in tile order. Empty with the rules off.
@@ -613,6 +633,28 @@ mod tests {
         assert!(s.dry_zones().is_empty());
         assert_eq!(s.total_funds, funds);
         assert!(s.water().has_pipe(12, 20), "the network is kept");
+    }
+
+    #[test]
+    fn the_layer_tells_pumps_fed_pipes_and_dry_pipes() {
+        let mut s = city();
+        s.place_pump(11, 5);
+        s.place_pipe(12, 5);
+        s.place_pipe(40, 40);
+        let at = |layer: &[u8], x: i32, y: i32| layer[(x * 70 + y) as usize];
+        let layer = s.water_layer();
+        assert_eq!(layer.len(), 90 * 70);
+        assert_eq!(
+            (
+                at(&layer, 11, 5),
+                at(&layer, 12, 5),
+                at(&layer, 40, 40),
+                at(&layer, 1, 1)
+            ),
+            (3, 2, 1, 0)
+        );
+        s.set_water_rules(false);
+        assert!(s.water_layer().iter().all(|&v| v == 0));
     }
 
     #[test]
