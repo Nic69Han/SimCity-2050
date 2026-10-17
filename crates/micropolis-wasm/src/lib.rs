@@ -9,11 +9,14 @@ use wasm_bindgen::prelude::*;
 // Feature modules: each adds its own `#[wasm_bindgen] impl City` block (one owner per file).
 mod budget;
 mod messages;
+mod ordinances;
 mod overlays;
 mod relief;
 mod saves;
 mod sizes;
 mod sprites;
+mod transit;
+mod water;
 
 /// Seed of the random generator when a city file is loaded: the same file always gives the
 /// same city (the original seeds from the clock, which cannot be reproduced).
@@ -63,7 +66,8 @@ impl City {
     /// The plain `.cty` bytes of the city. Only the original 120x100 size can be written in
     /// that format: any other size is refused with `size_not_saveable` (use `save_city`). A
     /// `.cty` has no relief block, so a city with an edited relief or with the relief rules on
-    /// is refused with `relief_not_saveable` (use `save_city`).
+    /// is refused with `relief_not_saveable`, and one with an extended rule on or a network that holds
+    /// something with `extensions_not_saveable` (use `save_city`).
     pub fn save_cty(&self) -> Result<Vec<u8>, JsError> {
         saves::save_cty_bytes(self).map_err(JsError::new)
     }

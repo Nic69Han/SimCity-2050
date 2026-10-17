@@ -16,6 +16,9 @@ import { supportsRelief, readRelief, setRelief } from "./relief.js";
 import * as advisors from "./advisors.js";
 import * as tutorial from "./tutorial.js";
 import * as sound from "./sound.js";
+import * as ordinancesUi from "./ordinances-ui.js";
+import * as waterUi from "./water-ui.js";
+import * as transitUi from "./transit-ui.js";
 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
@@ -156,7 +159,7 @@ function syncRelief() {
   $("relief-label").hidden = !supportsRelief(city);
   const on = readRelief(city);
   $("relief").checked = on;
-  tools?.setRelief(on);
+  tools?.setFlag("relief", on);
 }
 
 // Shows `value` in the city selector: a sample name, or "random" / "local" (an extra entry).
@@ -268,7 +271,7 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound];
+const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound, ordinancesUi, waterUi, transitUi];
 const featureApi = {
   city: () => city,
   $,
@@ -333,7 +336,7 @@ $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
 $("relief").onchange = (e) => {
   $("relief").checked = setRelief(city, e.target.checked); // the engine's answer
-  tools?.setRelief(readRelief(city));
+  tools?.setFlag("relief", readRelief(city));
   draw();
 };
 $("save").onclick = () => {

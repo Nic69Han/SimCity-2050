@@ -1,0 +1,8 @@
+/* water: styles of web/water-ui.js (docs/game-design-v02.md). */
+#rules-controls .water-stats {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+#rules-controls .water-stats:empty {
+  display: none;
+}

@@ -24,8 +24,12 @@ after(async () => {
 async function colourCount(page) {
   // a page screenshot clipped to the canvas: an element screenshot waits for the element to be
   // "stable", which never happens while the day/night animation draws (and is slow without a GPU)
-  const box = await page.locator("#map3d").boundingBox();
-  const png = await page.screenshot({ clip: box });
+  // (the box is read in the page: locator.boundingBox waits for the busy page's main thread and times out)
+  const box = await page.evaluate(() => {
+    const r = document.getElementById("map3d").getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  });
+  const png = await page.screenshot({ clip: box, timeout: 100000 }); // software WebGL: a frame of the scenery takes seconds
   return page.evaluate(async (b64) => {
     const img = new Image();
     img.src = `data:image/png;base64,${b64}`;

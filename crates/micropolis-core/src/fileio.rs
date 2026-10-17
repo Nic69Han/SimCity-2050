@@ -19,7 +19,13 @@
 //! the altitudes). Version 1 has no relief block. A city whose relief is not edited and
 //! whose rules are off is written without it: a plain `.cty` at 120x100, else version 1,
 //! so the files written before the relief block stay byte for byte the same.
+//!
+//! Version 3 (docs/game-design-v02.md, phase A) is version 2 (the relief block is always
+//! there) followed by the extensions block of [`crate::extensions`]: a byte count (u32) and
+//! tagged chunks. It is written only when an extended rule is on or a network holds something
+//! (`Simulation::needs_extension_block`), so every other file stays byte for byte what it was.
 
+use crate::extensions::{self, LoadedExtensions, BLOCK_LENGTH_SIZE};
 use crate::relief::Relief;
 use crate::simulation::{Scenario, Simulation, HISTORY_LEN, MISC_HISTORY_LEN};
 use crate::{DEFAULT_WORLD_H, DEFAULT_WORLD_W};
@@ -31,9 +37,12 @@ pub const CTY_SIZE: usize = 27_120;
 pub const CITY_FILE_MAGIC: [u8; 4] = *b"MCTY";
 /// Version of an extended file without a relief block.
 pub const CITY_FILE_VERSION_1: u16 = 1;
-/// Version of an extended file with a relief block: the newest one, written when the relief
-/// is edited or the rules are on.
-pub const CITY_FILE_VERSION: u16 = 2;
+/// Version of an extended file with a relief block, written when the relief is edited or the
+/// relief rules are on.
+pub const CITY_FILE_VERSION_2: u16 = 2;
+/// Version of an extended file with a relief block and an extensions block: the newest one,
+/// written when an extended rule is on or a network holds something.
+pub const CITY_FILE_VERSION: u16 = 3;
 /// Bit0 of the relief block's flags: the relief rules are on.
 pub const RELIEF_FLAG_RULES: u8 = 0b01;
 /// Bit1 of the relief block's flags: the relief was changed by the player.
@@ -79,6 +88,9 @@ pub enum CityFileError {
     /// The relief block of a version-2 file is corrupt: an unknown flag, a count that is not the
     /// map's size, a checksum that does not match, or an altitude above `MAX_HEIGHT`.
     BadRelief { reason: &'static str },
+    /// The extensions block of a version-3 file is corrupt: an unknown, repeated or misordered
+    /// chunk, a chunk cut short, or a chunk its feature refuses.
+    BadExtension { reason: &'static str },
 }
 
 /// Former name of [`CityFileError`], kept for the `.cty` functions.
@@ -95,6 +107,7 @@ impl CityFileError {
             CityFileError::Truncated { .. } => "cty_truncated",
             CityFileError::WorldSizeMismatch { .. } => "cty_world_size_mismatch",
             CityFileError::BadRelief { .. } => "cty_bad_relief",
+            CityFileError::BadExtension { .. } => "cty_bad_extension",
         }
     }
 }
@@ -112,7 +125,7 @@ impl std::fmt::Display for CityFileError {
             ),
             CityFileError::BadVersion(v) => write!(
                 f,
-                "{code}: city file version {v}, this reader reads versions {CITY_FILE_VERSION_1} and {CITY_FILE_VERSION}"
+                "{code}: city file version {v}, this reader reads versions {CITY_FILE_VERSION_1} to {CITY_FILE_VERSION}"
             ),
             CityFileError::SizeOutOfRange { width, height } => write!(
                 f,
@@ -125,7 +138,9 @@ impl std::fmt::Display for CityFileError {
                 f,
                 "{code}: world {actual:?} does not match the .cty size {expected:?}"
             ),
-            CityFileError::BadRelief { reason } => write!(f, "{code}: {reason}"),
+            CityFileError::BadRelief { reason } | CityFileError::BadExtension { reason } => {
+                write!(f, "{code}: {reason}")
+            }
         }
     }
 }
@@ -177,8 +192,10 @@ struct CityFile<'a> {
     payload: &'a [u8],
     /// A plain `.cty` file (no header, 120x100).
     plain_cty: bool,
-    /// The relief block of a version-2 file.
+    /// The relief block of a version-2 or version-3 file.
     relief: Option<ReliefBlock>,
+    /// The extensions block of a version-3 file.
+    extensions: Option<LoadedExtensions>,
 }
 
 /// FNV-1a over bytes, 32 bits: the checksum of the relief block.
@@ -228,6 +245,7 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
             payload: bytes,
             plain_cty: true,
             relief: None,
+            extensions: None,
         });
     }
     if len < 4 || bytes[..4] != CITY_FILE_MAGIC {
@@ -248,7 +266,7 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
         });
     }
     let version = u16::from_be_bytes([bytes[4], bytes[5]]);
-    if version != CITY_FILE_VERSION_1 && version != CITY_FILE_VERSION {
+    if !(CITY_FILE_VERSION_1..=CITY_FILE_VERSION).contains(&version) {
         return Err(CityFileError::BadVersion(version));
     }
     let width = i32::from(u16::from_be_bytes([bytes[6], bytes[7]]));
@@ -259,18 +277,50 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
         return Err(CityFileError::SizeOutOfRange { width, height });
     }
     let data_end = CITY_FILE_HEADER_SIZE + payload_size(width, height);
-    let has_relief = version == CITY_FILE_VERSION;
-    let expected = if has_relief {
+    let has_relief = version >= CITY_FILE_VERSION_2;
+    let relief_end = if has_relief {
         data_end + RELIEF_BLOCK_OVERHEAD + (width as usize) * (height as usize)
     } else {
         data_end
+    };
+    // A version-3 file has its extensions block after the relief block; its length is in the file.
+    let block_len = if version == CITY_FILE_VERSION {
+        if len < relief_end + BLOCK_LENGTH_SIZE {
+            return Err(CityFileError::Truncated {
+                len,
+                expected: relief_end + BLOCK_LENGTH_SIZE,
+            });
+        }
+        let b = &bytes[relief_end..relief_end + BLOCK_LENGTH_SIZE];
+        Some(u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize)
+    } else {
+        None
+    };
+    let expected = match block_len {
+        Some(n) => relief_end
+            .saturating_add(BLOCK_LENGTH_SIZE)
+            .saturating_add(n),
+        None => relief_end,
     };
     match len.cmp(&expected) {
         std::cmp::Ordering::Less => Err(CityFileError::Truncated { len, expected }),
         std::cmp::Ordering::Greater => Err(CityFileError::BadSize { len, expected }),
         std::cmp::Ordering::Equal => {
             let relief = if has_relief {
-                Some(parse_relief_block(&bytes[data_end..], width, height)?)
+                Some(parse_relief_block(
+                    &bytes[data_end..relief_end],
+                    width,
+                    height,
+                )?)
+            } else {
+                None
+            };
+            let extensions = if block_len.is_some() {
+                let chunks = &bytes[relief_end + BLOCK_LENGTH_SIZE..];
+                Some(
+                    extensions::decode_chunks(chunks, width, height)
+                        .map_err(|reason| CityFileError::BadExtension { reason })?,
+                )
             } else {
                 None
             };
@@ -280,6 +330,7 @@ fn parse_city_file(bytes: &[u8]) -> Result<CityFile<'_>, CityFileError> {
                 payload: &bytes[CITY_FILE_HEADER_SIZE..data_end],
                 plain_cty: false,
                 relief,
+                extensions,
             })
         }
     }
@@ -358,9 +409,11 @@ impl Simulation {
     /// file's size; the result depends on `bytes` and `seed` only. The whole file is checked
     /// before anything changes: a refused file leaves the engine untouched.
     ///
-    /// A version-2 file then restores its relief (the altitudes, the rules flag and the edited
-    /// flag) after the rebuild. A file without a relief block gives the relief regenerated from
-    /// the map, as a plain `.cty` does, with the rules off.
+    /// A version-2 or version-3 file then restores its relief (the altitudes, the rules flag and
+    /// the edited flag) after the rebuild; a version-3 file also restores its extensions block
+    /// (rule switches, ordinances, networks). A file without a relief block gives the relief
+    /// regenerated from the map, as a plain `.cty` does, with the rules off; one without an
+    /// extensions block has every extended rule off.
     ///
     /// [`load_cty_seeded`]: Self::load_cty_seeded
     pub fn load_city(&mut self, bytes: &[u8], seed: i32) -> Result<(), CityFileError> {
@@ -375,6 +428,9 @@ impl Simulation {
             let applied = self.set_relief(block.relief);
             debug_assert!(applied, "the relief block has the size of the map");
             self.set_relief_edited(block.edited);
+        }
+        if let Some(loaded) = file.extensions {
+            self.apply_extensions(loaded);
         }
         Ok(())
     }
@@ -440,19 +496,24 @@ impl Simulation {
 
     /// Serialise the city in the format its state needs. A 120x100 city whose relief is not
     /// edited and whose rules are off is a plain `.cty` (the bytes of
-    /// [`save_cty`](Self::save_cty)). Otherwise it is an extended `MCTY` file: version 2 with the
-    /// relief block when the relief is edited or the rules are on, version 1 (no relief block)
-    /// for another size. [`load_city`](Self::load_city) reads all of them back.
+    /// [`save_cty`](Self::save_cty)). Otherwise it is an extended `MCTY` file: version 3 with the
+    /// extensions block when an extended rule is on or a network holds something, else version 2
+    /// with the relief block when the relief is edited or the rules are on, else version 1 (no
+    /// relief block) for another size. [`load_city`](Self::load_city) reads all of them back.
     pub fn save_city(&self) -> Vec<u8> {
         let payload = self.save_payload();
         let (width, height) = self.world_size();
         let rules = self.relief_rules();
-        let with_relief = rules || self.relief_edited();
+        let with_extensions = self.needs_extension_block();
+        // The relief block is part of every version-3 file, edited relief or not.
+        let with_relief = rules || self.relief_edited() || with_extensions;
         if !with_relief && (width, height) == (DEFAULT_WORLD_W, DEFAULT_WORLD_H) {
             return payload;
         }
-        let version = if with_relief {
+        let version = if with_extensions {
             CITY_FILE_VERSION
+        } else if with_relief {
+            CITY_FILE_VERSION_2
         } else {
             CITY_FILE_VERSION_1
         };
@@ -479,6 +540,9 @@ impl Simulation {
             out.extend_from_slice(relief);
             let sum = relief_checksum(&out[block_start..]);
             out.extend_from_slice(&sum.to_be_bytes());
+        }
+        if with_extensions {
+            out.extend_from_slice(&extensions::encode_block(self));
         }
         out
     }

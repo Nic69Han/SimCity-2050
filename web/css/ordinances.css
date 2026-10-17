@@ -1,0 +1,18 @@
+/* ordinances: styles of web/ordinances-ui.js (docs/game-design-v02.md). */
+#ordinances-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#ordinances-panel .ord-note { margin: .2rem 0 .5rem; color: var(--muted); font-size: .9rem; }
+#ordinances-panel .ord-list { list-style: none; margin: 0; padding: 0; }
+#ordinances-panel .ord-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "box name cost" ". effect effect";
+  gap: .05rem .5rem;
+  align-items: center;
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+#ordinances-panel .ord-row input { grid-area: box; margin: 0; width: 1.1rem; height: 1.1rem; }
+#ordinances-panel .ord-name { grid-area: name; font-weight: 600; cursor: pointer; }
+#ordinances-panel .ord-cost { grid-area: cost; text-align: right; font-variant-numeric: tabular-nums; }
+#ordinances-panel .ord-effect { grid-area: effect; color: var(--muted); font-size: .9rem; }
+#ordinances-panel .ord-total { margin: .5rem 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }

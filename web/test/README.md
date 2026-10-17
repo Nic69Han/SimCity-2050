@@ -108,3 +108,9 @@ There are no `todo` tests: a known page bug is fixed, or it is a failing test (t
 Dev hook (end-to-end tests only): `window.__saves.flush()` writes the autosave now, when the city
 changed since the last write, and resolves to "saved", "same", "skipped", "idle" or "error". The
 timer is a minute; the tests do not wait for it. It holds no game state.
+- `extra-tools.test.mjs`: the registry of extra tool modules (`web/extra-tools.js`): the module
+  contract, the empty water and transit modules, routing of entries to their module.
+- `map-layers.test.mjs`: the 2D map layers (`web/map-layers.js`): empty list, drawing order,
+  full repaint of the tiles around a visible layer.
+- `wasm-extensions-save.test.mjs` (wasm package): the extensions block of MCTY version 3,
+  `cty_bad_extension`, city untouched on error.

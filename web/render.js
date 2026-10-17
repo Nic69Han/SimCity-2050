@@ -4,15 +4,18 @@
 import { TILE_PX } from "./tools.js";
 import { artKey, createAtlas, shimmerPhase } from "./tiles.js";
 import { createSpriteLayer } from "./sprites-art.js";
+import { MAP_LAYERS, createMapLayers } from "./map-layers.js";
 
-// `createRenderer({ canvas, frame, doc, now })` -> { draw(city), sprites, atlas }:
-//   draw(city) paints every tile of `city` on `canvas` at TILE_PX pixels per tile and the city's
-//   moving objects on a transparent layer above it. `frame` gets the CSS aspect ratio so the page
+// `createRenderer({ canvas, frame, doc, now, layers })` -> { draw(city), sprites, atlas }:
+//   draw(city) paints every tile of `city` on `canvas` at TILE_PX pixels per tile, then the
+//   visible map layers (map-layers.js), and the city's moving objects on a transparent layer
+//   above it. `frame` gets the CSS aspect ratio so the page
 //   scales it exactly. `now()` is the clock (milliseconds) of the shimmer.
-export function createRenderer({ canvas, frame, doc = globalThis.document, now = () => performance.now() }) {
+export function createRenderer({ canvas, frame, doc = globalThis.document, now = () => performance.now(), layers = MAP_LAYERS }) {
   const ctx = canvas.getContext("2d");
   const atlas = createAtlas({ doc, px: TILE_PX });
   const sprites = createSpriteLayer({ doc, map: canvas, tilePx: TILE_PX });
+  const mapLayers = createMapLayers(layers);
   let image = null; // ImageData of the whole map
   let pixels = null; // the same pixels as ABGR words
   let keys = null; // artKey of the picture currently on each tile (column-major)
@@ -36,6 +39,7 @@ export function createRenderer({ canvas, frame, doc = globalThis.document, now =
     const S = TILE_PX;
     const stride = w * S;
     const phase = shimmerPhase(now());
+    const plan = mapLayers.plan(city);
     let x0 = w, y0 = h, x1 = -1, y1 = -1;
     for (let x = 0; x < w; x++) {
       for (let y = 0; y < h; y++) {
@@ -54,9 +58,12 @@ export function createRenderer({ canvas, frame, doc = globalThis.document, now =
         if (y > y1) y1 = y;
       }
     }
-    if (x1 >= 0) {
+    if (plan.full) {
+      ctx.putImageData(image, 0, 0); // a layer draws over the tiles: start from clean tiles
+    } else if (x1 >= 0) {
       ctx.putImageData(image, 0, 0, x0 * S, y0 * S, (x1 - x0 + 1) * S, (y1 - y0 + 1) * S);
     }
+    mapLayers.draw(ctx, city, S, plan.active);
     // Tests read the engine tiles the page last drew (the canvas pixels are art, not tiles).
     canvas.mapTiles = { w, h, tiles };
     sprites.paint(city, now());

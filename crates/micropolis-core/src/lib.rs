@@ -26,8 +26,10 @@ pub mod utilities;
 pub mod zone;
 
 pub mod events;
+pub mod extensions;
 pub mod fileio;
 pub mod map;
+pub mod ordinances;
 pub mod position;
 pub mod relief;
 pub mod relief_rules;
@@ -35,6 +37,9 @@ pub mod rng;
 pub mod simulation;
 pub mod tile;
 pub mod tile_chars;
+pub mod transit;
+pub mod underground;
+pub mod water;
 
 /// World size of the original game, kept as the default.
 pub const DEFAULT_WORLD_W: i32 = 120;

@@ -233,6 +233,8 @@ impl Simulation {
                         dis -= 20;
                     }
                     dis = dis.clamp(1, 250);
+                    // Extended rules (inert unless active); the clamp keeps the map's range.
+                    dis = self.ext_land_value(world_x, world_y, dis).clamp(1, 250);
                     self.land_value_map.set(x, y, dis as u8);
                     lv_tot += i64::from(dis);
                     lv_num += 1;
@@ -262,6 +264,8 @@ impl Simulation {
             let mut y = 0;
             while y < world_h {
                 let z = i32::from(self.temp_map1.world_get(x, y));
+                // Extended rules (inert unless active); the clamp keeps the map's range.
+                let z = self.ext_pollution(x, y, z).clamp(0, 255);
                 self.pollution_density_map.world_set(x, y, z as u8);
 
                 if z != 0 {
@@ -357,6 +361,8 @@ impl Simulation {
                     z = z.min(300);
                     z -= i32::from(self.police_station_map.world_get(x, y));
                     z = z.clamp(0, 250);
+                    // Extended rules (inert unless active); the clamp keeps the map's range.
+                    z = self.ext_crime(x, y, z).clamp(0, 250);
                     self.crime_rate_map.world_set(x, y, z as u8);
                     totz += i64::from(z);
 

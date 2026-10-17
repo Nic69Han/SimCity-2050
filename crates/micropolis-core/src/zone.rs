@@ -442,6 +442,9 @@ impl Simulation {
 
     /// Residential immigration into the current residential tile (`doResIn`).
     pub fn do_res_in(&mut self, pos: Position, pop: i32, value: i32) {
+        if !self.ext_zone_can_grow(pos, ZoneType::Residential) {
+            return;
+        }
         let pollution = i32::from(self.pollution_density_map.world_get(pos.x, pos.y));
 
         if pollution > 128 {
@@ -597,6 +600,9 @@ impl Simulation {
 
     /// Commercial immigration (`doComIn`).
     pub fn do_com_in(&mut self, pos: Position, pop: i32, value: i32) {
+        if !self.ext_zone_can_grow(pos, ZoneType::Commercial) {
+            return;
+        }
         let z = i32::from(self.land_value_map.world_get(pos.x, pos.y)) >> 5;
 
         if pop > z {
@@ -698,6 +704,9 @@ impl Simulation {
 
     /// Industrial immigration (`doIndIn`).
     pub fn do_ind_in(&mut self, pos: Position, pop: i32, value: i32) {
+        if !self.ext_zone_can_grow(pos, ZoneType::Industrial) {
+            return;
+        }
         if pop < 4 {
             self.ind_plop(pos, pop, value);
             self.inc_rate_of_growth(pos, 8);

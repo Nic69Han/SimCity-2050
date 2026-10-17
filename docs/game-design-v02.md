@@ -1,0 +1,213 @@
+# Conception du jeu : jalon v0.2 « profond »
+
+But : donner au joueur de vraies décisions de gestion à la SimCity 3000, sans casser le mode classique.
+Toutes les règles de ce jalon sont des **règles étendues**, désactivées par défaut : désactivées, le moteur
+reste identique au moteur C++ (les scripts `compare-*.sh` restent identiques). Règles de code :
+docs/regles-de-code.md.
+
+## Contenu
+
+| Chantier | Ce que fait le joueur | Effet dans le moteur (règle activée) |
+|---|---|---|
+| **Ordonnances** | Active ou retire des ordonnances (coût mensuel) | Modulent criminalité, pollution, valeur du terrain, demande |
+| **Réseau d'eau** | Pose des pompes et des canalisations souterraines | Une zone sans eau ne se développe pas au-delà d'une densité plafond |
+| **Métro** | Pose des stations et des tunnels | Le trafic baisse autour des stations reliées ; la valeur du terrain monte |
+| **Finition visuelle** | — | Bâtiments orientés vers la route, couleurs et lumière réglées, son de construction |
+
+Hors jalon : accords avec les voisins (jalon suivant, s'appuiera sur l'eau et l'électricité), agents
+individuels (v0.3, docs/ia-simulation.md).
+
+## Phase A : la plateforme (un agent, avant les chantiers) : livrée
+
+### Moteur (`micropolis-core`)
+* `extensions.rs` : `Extensions { ordinances: u32, water_rules: bool, transit_rules: bool }`, tout à faux
+  par défaut ; `Simulation::extensions()`, `extensions_mut()`, `extensions_active()`. Les réseaux sont
+  `Simulation::water()` / `water_mut()` (`WaterNetwork`) et `transit()` / `transit_mut()`
+  (`TransitNetwork`) ; un nouveau plan de ville les vide, les interrupteurs restent.
+* **Points d'accroche** (méthodes publiques de `Simulation` dans `extensions.rs`). Chacun rend son entrée
+  inchangée, répond `true` ou ne fait rien quand `extensions_active()` est faux ; sans tirage aléatoire, sans
+  allocation. Un seul appel chacun :
+
+  | Accroche | Appelée par |
+  |---|---|
+  | `ext_monthly_balance(&mut self)` : coûts et recettes, payés par `spend` (net négatif = recette) | `collect_tax`, `simulate.rs`, juste après `do_budget()` d'une ville peuplée (une fois par collecte, `TAX_FREQUENCY`) |
+  | `ext_crime(x, y, z) -> i32` (0..=250) | `crime_scan`, `scan.rs`, après le calcul d'origine ; coordonnées monde |
+  | `ext_pollution(x, y, p) -> i32` (0..=255) | `pollution_terrain_land_value_scan`, `scan.rs`, où la pollution lissée est rangée |
+  | `ext_land_value(x, y, v) -> i32` (1..=250) | même scan, après le calcul d'origine de la valeur du terrain |
+  | `ext_traffic(x, y, t) -> i32` (0..=255) | `dec_traffic_map`, `simulate.rs` : l'érosion du trafic, une fois par cycle et par bloc, après l'érosion |
+  | `ext_valves(&mut self)` | fin de `set_valves`, `simulate.rs` |
+  | `ext_zone_can_grow(pos, ZoneType) -> bool` | début de `do_res_in`, `do_com_in`, `do_ind_in`, `zone.rs` (les trois entrées de croissance) |
+
+  Chaque accroche délègue, quand les extensions sont actives, à `ordinances.rs`, `water.rs`, `transit.rs`
+  (fonctions `pub(crate)` à la signature de l'accroche, prenant `&Simulation`, livrées vides). Le résultat
+  des valeurs est borné à nouveau par le site d'appel (`clamp`) : une règle ne peut pas sortir des cartes.
+* **Couches souterraines** : `underground.rs`, `UndergroundLayer` (un octet par tuile, ordre des tuiles, 0 =
+  rien ; allouée à la première écriture non nulle). `WaterNetwork::pipes` et
+  `TransitNetwork::underground` en sont. `encode()` / `decode()` de chaque module de chantier.
+* **Sauvegarde** : `MCTY` version 3 = version 2 (bloc de relief toujours présent) + bloc « extensions » :
+  longueur (u32 BE) puis morceaux `étiquette u8, longueur u32 BE, octets`, étiquettes strictement croissantes
+  (1 règles d'eau et de métro, 2 ordonnances, 3 eau, 4 métro ; un morceau vide n'est pas écrit). Écrit
+  seulement si une règle est active ou si un réseau n'est pas vide (`needs_extension_block()`) : tous les
+  autres fichiers restent identiques octet pour octet. `.cty` et `MCTY` v1/v2 se chargent comme avant. Bloc
+  invalide (étiquette inconnue, répétée, hors ordre, morceau tronqué ou refusé par son module) :
+  `cty_bad_extension`, moteur intact. Taille du fichier incohérente : `cty_truncated` / `cty_bad_size`.
+* **wasm** : `ordinances.rs`, `water.rs`, `transit.rs`, un bloc `#[wasm_bindgen] impl City {}` vide chacun ;
+  `save_cty` refuse (`extensions_not_saveable`) une ville qui a besoin du bloc, comme pour le relief.
+
+### Page (`web/`)
+* **Outils supplémentaires** : `web/extra-tools.js` liste `tools-relief.js`, `tools-water.js`,
+  `tools-transit.js`. Chaque module exporte `KIND`, `catalog(city)`, `calls(city, entry)` (null pour l'entrée
+  d'un autre module), `label(preview)` (undefined : libellé par défaut) et
+  `blockedReason(city, { in3d, flags })` (`flags` : drapeaux du moteur lus par la page, p. ex.
+  `flags.relief` ; `""` si l'outil est utilisable). Une entrée porte `kind`, et au besoin `costText` et
+  `idleHint`. `tools.js` n'utilise que ce registre ; `setupTools` renvoie `{ render, useSurface,
+  setFlag(nom, actif) }`. Le relief est le premier module, comportement inchangé (U / D, « selon pente »).
+* **Calques de la carte 2D** : `render.js` dessine, après les tuiles, les calques de `web/map-layers.js`
+  (`MAP_LAYERS`, vide ; chacun `{ name, visible(city), draw(ctx2d, city, scale) }`). Tant qu'un calque est
+  visible, les tuiles sont repeintes en entier avant lui.
+* **Règles** : conteneur `#rules-controls` (la case « Règles de relief » y est) où chaque chantier ajoute
+  sa case à cocher.
+
+## Phase B : les chantiers (en parallèle, un agent chacun)
+Chaque chantier ne modifie que ses propres fichiers : module moteur, module wasm, module d'outils,
+calque 2D, fonctionnalité de page, tests. Il documente ses constantes (coûts, rayons, plafonds) et
+ajoute des tests : règle désactivée = moteur identique ; règle activée = effet mesuré ; déterminisme ;
+sauvegarde et rechargement ; boucles bornées (propagation de l'eau, recherche de lignes de métro).
+
+## Critères d'acceptation
+* Comparaisons C++ identiques, tous les tests verts (Rust, page, wasm, e2e).
+* Chaque règle s'active et se désactive en jeu, se sauvegarde, et son effet est visible (conseillers,
+  calques, coûts).
+* Relecture Opus de chaque livraison (diff lu, vérifications relancées) avant intégration.
+
+## Ordonnances (chantier livré)
+
+Huit ordonnances, table constante `ORDINANCES` de `micropolis-core/src/ordinances.rs`. L'index est le bit de
+`Extensions::ordinances` et ne change jamais (il est sauvegardé, morceau 2) ; on ajoute à la fin. Tout est en
+arithmétique entière, sans tirage aléatoire ni allocation, boucles bornées par `ORDINANCE_COUNT`.
+
+| # | Clé (moteur) | Nom (page) | Coût de base + par 1000 hab. | Effet |
+|---|---|---|---|---|
+| 0 | `community_policing` | Police de proximité | 200 + 30 | criminalité −15 % |
+| 1 | `pollution_control` | Programme anti-pollution | 300 + 40 | pollution −15 % |
+| 2 | `recycling` | Recyclage | 150 + 25 | pollution −8 % |
+| 3 | `tourism` | Promotion touristique | 150 + 20 | demande commerciale +8 % |
+| 4 | `industry_incentives` | Incitations industrielles | 200 + 25 | demande industrielle +8 % |
+| 5 | `beautification` | Embellissement urbain | 250 + 35 | valeur du terrain +10 % |
+| 6 | `curfew` | Couvre-feu des jeunes | 100 + 15 | criminalité −8 %, demande résidentielle −3 % |
+| 7 | `city_promotion` | Promotion de la ville | 200 + 30 | demande résidentielle +8 % |
+
+* **Coût** : `base + par_1000 × (population / 1000)` dollars par ordonnance active, population de
+  `get_population()` (celle de l'évaluation). Payé par `ext_monthly_balance`, donc **à chaque collecte des
+  impôts** (`collect_tax`, tous les 48 pas de `city_time`, soit une fois par année de jeu : la page écrit « par
+  an ») ; rien n'est payé dans une ville sans habitants.
+* **Criminalité, pollution, valeur du terrain** : les pourcentages des ordonnances actives s'additionnent ; la
+  valeur devient `v × (100 + somme) / 100` (division entière), puis le site d'appel borne à la plage de la
+  carte. Effet sur toute la ville (la position n'est pas utilisée).
+* **Demande** : à chaque mise à jour des valves, la somme `s` des pourcentages de chaque type pousse la valve de
+  `plage × s / 1000` (plages 2000, 1500, 1500 ; +8 % résidentiel = +16), dans la plage ; une valve qui attend
+  son stade, aéroport ou port reste plafonnée à 0.
+* **API `Simulation`** : `ordinance_count()`, `ordinance_key(i)`, `ordinance_info(i)` (`OrdinanceInfo` : coût
+  maintenant et pourcentages), `ordinance_active(i)`, `set_ordinance(i, on) -> bool` (`false` hors table, rien
+  ne change), `ordinances_monthly_cost()`. Les bits au-delà de la table sont ignorés.
+* **wasm** : `ordinance_count()`, `ordinance_key(i)` (vide si `i` invalide), `ordinance_info(i)` →
+  `Int32Array [coût, criminalité, pollution, terrain, résidentiel, commercial, industriel]` (vide si invalide),
+  `ordinance_active(i)`, `set_ordinance(i, on) -> bool`.
+* **Page** : `#ordinances-panel` (`ordinances-ui.js`, textes français et calculs dans `ordinances-model.js`) :
+  une case par ordonnance avec nom, coût « par an » et effet en une ligne, puis le coût total. La page ne garde
+  aucune copie de l'état : elle relit le moteur à chaque mise à jour (après un chargement ou une nouvelle ville
+  aussi) et ne réécrit le DOM que si un nombre affiché change. Masquée si le moteur n'a pas l'API.
+* **Limites** : effets uniformes sur toute la carte (pas de zone d'influence) ; la valve est poussée à chaque
+  mise à jour, l'effet sur la demande est donc un décalage d'équilibre et non un pourcentage exact de la
+  demande affichée ; un fichier chargé remplace l'ensemble actif (il appartient au fichier), une nouvelle ville
+  le garde.
+
+## Métro (chantier livré)
+
+Règle étendue `transit_rules`, désactivée par défaut. Activée, le joueur creuse des tunnels et pose des
+stations ; deux stations reliées par des tunnels forment une **ligne en service**, autour de laquelle le
+trafic baisse et la valeur du terrain monte.
+
+### Modèle de données (simple, réutilisable par les agents de la v0.3)
+* Tout le réseau est la couche souterraine `TransitNetwork::underground`, un octet par tuile : `1` tunnel,
+  `2` station, `0` rien (tout autre octet est ignoré). Une station **n'est pas une tuile de surface** : elle ne
+  modifie jamais la carte des tuiles (pas de bâtiment, rien à raser). Elle se pose sur toute tuile qui n'est pas
+  de l'eau (terrain nu, route, bâtiment : le métro est sous terre) et remplace un tunnel s'il y en a un. La
+  vue 2D (`map-layer-transit.js`) la dessine depuis `transit_layer()` ; la vue 3D pourra faire de même.
+* Une **ligne** est un ensemble connexe (voisinage à 4) de tunnels et de stations ; elle est **en service**
+  avec au moins `MIN_STATIONS_PER_LINE` = 2 stations. `TransitNetwork::refresh()` calcule les composantes par
+  remplissage borné (chaque tuile entre une fois dans la file : au plus `largeur × hauteur` pas) après chaque
+  modification et chaque chargement ; les accroches ne font que lire le résultat.
+* Une tuile est **desservie** si elle est à moins de `STATION_RADIUS` d'une station d'une ligne en service
+  (distance euclidienne, comparaison de carrés entiers).
+
+### Constantes (`micropolis-core/src/transit.rs`, lues par la page via `transit_params()`)
+| Constante | Valeur | Rôle |
+|---|---|---|
+| `TUNNEL_COST` | 50 $ | par tuile de tunnel |
+| `STATION_COST` | 500 $ | par station |
+| `STATION_RADIUS` | 8 tuiles | portée d'une station d'une ligne en service |
+| `TRAFFIC_CUT_PCT` | 40 % | part de la densité de trafic retirée sur une tuile desservie (`ext_traffic`, arrondi vers le bas) |
+| `LAND_BONUS` | +12 | ajouté à la valeur du terrain d'une tuile desservie (`ext_land_value`, borné ensuite à 1..=250) |
+| `MAX_STATIONS` | 64 | stations maximum (un fichier qui en contient plus est refusé) |
+
+Pas de coût d'entretien (`monthly_balance` reste nul). Entiers, déterminisme, aucun tirage aléatoire. Les
+coordonnées des accroches sont celles du bloc de la carte de trafic ou de valeur du terrain (coin monde).
+
+### Interface moteur
+Règle désactivée, tout est refusé (`Failed`, coût 0) et les accroches ne changent rien.
+`Simulation::{set_transit_rules, transit_rules, place_tunnel, tunnel_preview, remove_tunnel, place_station,
+station_preview, remove_station, transit_stats, transit_layer}` ; retirer est gratuit et ne rembourse rien.
+wasm : mêmes noms ; `transit_layer()` → `Uint8Array` (0 rien, 1 tunnel, 2 tunnel d'une ligne en service,
+3 station, 4 station d'une ligne en service, ordre de `tiles()`), `transit_stats()` → `Int32Array`
+`[stations, tunnels, lignes, tuiles desservies]`, `transit_params()` → les constantes ci-dessus. Le réseau est
+enregistré dans le morceau 4 du bloc d'extensions (les octets de la couche).
+
+### Page
+* Outils « Tunnel de métro » (J, un glisser creuse une ligne par les côtés) et « Station de métro » (K) dans le
+  groupe Réseaux ; bloqués avec une raison en français règle désactivée, et en vue 3D (le plan n'y est pas
+  dessiné).
+* Case « Métro » dans `#rules-controls` (aide en infobulle), relue du moteur après chaque rendu (jamais poussée
+  dans une ville neuve), case « Plan du métro » et ligne de statistiques. Le calque 2D est visible règle activée
+  et outil de métro choisi ou plan coché ; les lignes en service sont d'une couleur plus forte, la portée des
+  stations est dessinée en transparence.
+
+### Limites connues
+* Pas de vue 3D du réseau. Pas d'entretien mensuel. Pas de dépôt de voyageurs ni de trains : le réseau ne sert
+  qu'aux deux effets ci-dessus (la v0.3 s'y appuiera).
+
+## Réseau d'eau (chantier livré)
+
+Règle `water_rules` (case « Réseau d'eau » dans `#rules-controls`, désactivée par défaut). Module moteur
+`water.rs`, adaptateur `micropolis-wasm/src/water.rs`, page `tools-water.js`, `map-layer-water.js`,
+`water-ui.js`, `water-model.js` (partie pure).
+
+* **Constantes** (`water.rs`) : `PIPE_COST` 5 $, `PUMP_COST` 300 $, `MAX_PUMPS` 64, `PUMP_RANGE` 64 pas de
+  canalisation depuis une pompe, `WATER_REACH` 3 (distance de Manhattan entre une tuile et la canalisation
+  alimentée la plus proche), `WATER_FREE_DENSITY` 2.
+* **Canalisations** : sous n'importe quelle tuile (y compris bâtie ou sous l'eau), octet `PIPE` (1) de
+  `WaterNetwork::pipes`. Poser coûte `PIPE_COST`, retirer est gratuit. **Pompes** : octet `PUMP` (3) dans la
+  même couche (une pompe conduit comme une canalisation) ; sur une tuile de terre qui touche l'eau (8 voisines),
+  sans condition d'électricité (simplification documentée) ; une canalisation déjà posée est remplacée. Le
+  fichier est la couche telle quelle (morceau 3), la liste des pompes en est déduite au chargement (refusé
+  au-delà de `MAX_PUMPS`).
+* **Couverture** : recalculée à chaque changement du réseau (jamais pendant un tick, donc sans allocation dans
+  l'accroche). Parcours en largeur depuis les pompes à travers les tuiles de canalisation (chaque tuile une seule
+  fois, au plus `PUMP_RANGE` pas), puis second parcours depuis les canalisations alimentées sur `WATER_REACH` pas.
+  Une zone est alimentée quand sa tuile centrale est couverte.
+* **Croissance** (`ext_zone_can_grow`) : refusée pour une zone à sec dont le niveau de densité vaut
+  `WATER_FREE_DENSITY` ou plus. Niveau 0 = zone vide (résidentiel : maisons comprises), n = n-ième palier de
+  bâtiment (résidentiel 1 à 4, commercial 1 à 5, industriel 1 à 4). Les petites villes grandissent donc sans eau
+  jusqu'au deuxième palier, puis stagnent. Pas de bonus de valeur du terrain ni de coût d'entretien.
+* **API** (règle désactivée : tout est refusé, `Failed`, coût 0) : `set_water_rules`, `water_rules`,
+  `place_pipe` / `pipe_preview`, `remove_pipe`, `place_pump` / `pump_preview`, `remove_pump`, `watered(x, y)`,
+  `water_stats()` (pompes, canalisations, zones alimentées, zones à sec), `dry_zones()`, `water_layer()`
+  (0 rien, 1 canalisation à sec, 2 canalisation alimentée, 3 pompe), `water_piece(x, y)`. Les coûts passent par
+  `spend` : `NoMoney` si les fonds ne suffisent pas.
+* **Page** : outils « Canalisation » (glisser pose une ligne), « Pompe à eau » et « Retirer canalisation ou
+  pompe » dans le groupe « Réseaux », bloqués avec une raison en français règle désactivée ou en vue 3D. Le
+  calque 2D (canalisations bleues, pompes, voile rouge sur les zones à sec) s'affiche quand la règle est active et
+  qu'un outil d'eau est choisi ou que « Voir le réseau » est coché. La case se relit du moteur après chaque
+  chargement ou nouvelle ville (jamais poussée dans une ville neuve), avec la ligne de statistiques.
+* **Limites** : l'eau ne dépend pas de l'électricité ; une pompe posée sur un bâtiment ou une route est
+  permise (le réseau est souterrain) ; le calque et les outils n'existent qu'en vue 2D.

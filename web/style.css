@@ -50,6 +50,7 @@ select, input[type=range] { font: inherit; }
 input[type=text] { font: inherit; padding: .3rem .4rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; max-width: 9rem; }
 input[aria-invalid="true"] { border-color: var(--bad); }
 header label { display: inline-flex; gap: .4rem; align-items: center; }
+#rules-controls { display: contents; } /* the rule checkboxes (relief, water, metro...) sit in the header row */
 #stats { font-variant-numeric: tabular-nums; margin: .75rem 0 0; }
 button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
   outline: 3px solid var(--accent); outline-offset: 2px;

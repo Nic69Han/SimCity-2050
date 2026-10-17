@@ -322,10 +322,11 @@ impl Simulation {
                 if z != 0 {
                     if z <= 24 {
                         self.traffic_density_map.world_set(x, y, 0);
-                    } else if z > 200 {
-                        self.traffic_density_map.world_set(x, y, (z - 34) as u8);
                     } else {
-                        self.traffic_density_map.world_set(x, y, (z - 24) as u8);
+                        let decayed = if z > 200 { z - 34 } else { z - 24 };
+                        // Extended rules (inert unless active); the clamp keeps the map's range.
+                        let t = self.ext_traffic(x, y, i32::from(decayed)).clamp(0, 255);
+                        self.traffic_density_map.world_set(x, y, t as u8);
                     }
                 }
                 y += bs;
@@ -634,6 +635,8 @@ impl Simulation {
         }
 
         self.valve_flag = true;
+        // Extended rules (inert unless active).
+        self.ext_valves();
     }
 
     /// Port of `Micropolis::clearCensus`: reset the per-census counters before
@@ -831,6 +834,8 @@ impl Simulation {
                 // There are people to tax.
                 self.cash_flow = (tax_fund - (police_fund + fire_fund + road_fund)) as i16;
                 self.do_budget();
+                // Extended rules (inert unless active): their costs, once per collection.
+                self.ext_monthly_balance();
             } else {
                 // Nobody lives here.
                 self.road_effect = MAX_ROAD_EFFECT;
