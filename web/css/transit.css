@@ -1,1 +1,7 @@
 /* transit: styles of web/transit-ui.js (docs/game-design-v02.md). */
+#transit-stats {
+  font-variant-numeric: tabular-nums;
+  font-size: .9em;
+  opacity: .85;
+}
+#transit-stats[hidden], #transit-plan-label[hidden] { display: none; }
