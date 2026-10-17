@@ -16,6 +16,9 @@ import { supportsRelief, readRelief, setRelief } from "./relief.js";
 import * as advisors from "./advisors.js";
 import * as tutorial from "./tutorial.js";
 import * as sound from "./sound.js";
+import * as ordinancesUi from "./ordinances-ui.js";
+import * as waterUi from "./water-ui.js";
+import * as transitUi from "./transit-ui.js";
 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
@@ -268,7 +271,7 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound];
+const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound, ordinancesUi, waterUi, transitUi];
 const featureApi = {
   city: () => city,
   $,

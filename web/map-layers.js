@@ -5,8 +5,11 @@
 // being canvas pixels per tile. A layer draws only what it owns: it never changes the tiles.
 // Pure: no DOM, so node:test can check it with a fake context.
 
-// The layers of the page, in drawing order. Empty: the workstreams add theirs here.
-export const MAP_LAYERS = Object.freeze([]);
+import { WATER_LAYER } from "./map-layer-water.js";
+import { TRANSIT_LAYER } from "./map-layer-transit.js";
+
+// The layers of the page, in drawing order (a workstream fills its own module).
+export const MAP_LAYERS = Object.freeze([WATER_LAYER, TRANSIT_LAYER]);
 
 // The layer painter of a renderer: `plan(city)` says which layers draw now and whether the tiles
 // must be repainted in full first (a layer draws over them, so a dirty-rectangle repaint would
