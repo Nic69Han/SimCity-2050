@@ -11,7 +11,7 @@
 // Test hook: while mounted, canvas.modelStats() returns a read-only snapshot
 // { ready, failed, kinds, models, meshes, instances, byKind, overflow } (like canvas.tileScreen).
 import {
-  MODEL_FILES, CATALOG, MODEL_CAPACITY, KINDS, chooseModel, usableCatalog, fitScale, writePlacement,
+  MODEL_FILES, CATALOG, MODEL_CAPACITY, KINDS, gainOf, chooseModel, facingQuarter, usableCatalog, fitScale, writePlacement,
   createSlotTable,
 } from "./view3d-models-model.js";
 
@@ -28,29 +28,36 @@ async function loadScenes() {
   );
   const scenes = {}, failed = [];
   settled.forEach((r, i) => {
-    if (r.status === "fulfilled") scenes[ids[i]] = r.value.scene;
+    if (r.status === "fulfilled") {
+      r.value.scene.userData.kit = MODEL_FILES[ids[i]].split("/")[0]; // its folder: the files of a kit share one colour map
+      r.value.scene.userData.gain = gainOf(ids[i]);
+      scenes[ids[i]] = r.value.scene;
+    }
     else failed.push(ids[i]);
   });
   return { scenes, failed };
 }
 
 // What a model owns on the GPU side: the geometries (centred on X and Z, feet at Y = 0) and the
-// materials, shared when two sub-meshes use the same texture. disposeAll() frees them all.
+// materials, shared when two sub-meshes use the same colour map (the same kit and texture transform). disposeAll() frees them all.
 function createBank(THREE) {
   const materials = new Map(); // key -> material (its texture is owned by it)
   const geometries = [];
 
-  const materialOf = (source) => {
+  const materialOf = (source, kit, gain) => {
     const m = source.map;
     const key = m
-      ? [m.image?.currentSrc || m.image?.src || m.uuid, m.offset.x, m.offset.y, m.repeat.x, m.repeat.y, m.rotation].join("|")
-      : "plain|" + source.color.getHexString();
+      ? [kit, gain, m.offset.x, m.offset.y, m.repeat.x, m.repeat.y, m.rotation].join("|")
+      : "plain|" + gain + "|" + source.color.getHexString();
     let own = materials.get(key);
     if (!own) {
       // the scene draws sRGB values as they are (ColorManagement off in view3d.js): the texture must
       // not be decoded from sRGB either, or the buildings come out darker than the terrain
       if (m) m.colorSpace = THREE.NoColorSpace;
-      own = new THREE.MeshLambertMaterial({ map: m ?? null, color: m ? 0xffffff : source.color });
+      // the gain lifts the dark slate of the colour maps to the brightness of the terrain
+      const color = m ? new THREE.Color(1, 1, 1) : source.color.clone();
+      color.multiplyScalar(gain);
+      own = new THREE.MeshLambertMaterial({ map: m ?? null, color });
       materials.set(key, own);
     } else if (m) {
       m.dispose(); // a copy of a texture already held
@@ -61,6 +68,7 @@ function createBank(THREE) {
   return {
     // A model from a loaded scene: { dims: { w, h, d }, parts: [{ geometry, material }] }.
     prepare(scene) {
+      const kit = scene.userData.kit ?? "", gain = scene.userData.gain ?? 1;
       scene.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(scene);
       const centre = box.getCenter(new THREE.Vector3());
@@ -69,9 +77,10 @@ function createBank(THREE) {
       scene.traverse((o) => {
         if (!o.isMesh) return;
         const geometry = o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(toOrigin, o.matrixWorld));
+        geometry.deleteAttribute("tangent"); // not used by a Lambert material
         geometries.push(geometry);
         const sources = Array.isArray(o.material) ? o.material : [o.material];
-        parts.push({ geometry, material: materialOf(sources[0]) });
+        parts.push({ geometry, material: materialOf(sources[0], kit, gain) });
         o.geometry.dispose();
         for (const s of sources) s.dispose();
       });
@@ -114,9 +123,12 @@ export function createLayer() {
       touched.add(entry);
     }
     const records = [];
+    const snap = ctx.snapshot();
     for (const v of ctx.chunkVolumes(c)) {
       if (!catalog[v.kind]) continue; // this kind keeps its boxes
-      const m = chooseModel(catalog, v);
+      // buildings turn their front to the road next to their zone
+      const facing = snap && v.kind !== "tree" ? facingQuarter(snap.tiles, snap.w, snap.h, v.x, v.y) : -1;
+      const m = chooseModel(catalog, v, facing);
       const entry = m && entries.get(m.id);
       if (!entry) continue;
       const i = entry.table.add(v.slot);
