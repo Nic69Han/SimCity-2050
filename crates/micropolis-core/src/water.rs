@@ -329,6 +329,18 @@ impl Simulation {
         stats
     }
 
+    /// What lies under tile `(x, y)`: 0 nothing, [`PIPE`], [`PUMP`]. 0 with the rules off.
+    pub fn water_piece(&self, x: i32, y: i32) -> u8 {
+        if !self.water_rules() {
+            return 0;
+        }
+        match self.water.pipes.get(x, y) {
+            0 => 0,
+            PUMP => PUMP,
+            _ => PIPE,
+        }
+    }
+
     /// What to draw on each tile, in tile order: 0 nothing, 1 a pipe nothing feeds, 2 a pipe fed
     /// by a pump, 3 a pump. All zero with the rules off.
     pub fn water_layer(&self) -> Vec<u8> {
@@ -653,8 +665,17 @@ mod tests {
             ),
             (3, 2, 1, 0)
         );
+        assert_eq!(
+            (
+                s.water_piece(11, 5),
+                s.water_piece(12, 5),
+                s.water_piece(1, 1)
+            ),
+            (3, 1, 0)
+        );
         s.set_water_rules(false);
         assert!(s.water_layer().iter().all(|&v| v == 0));
+        assert_eq!(s.water_piece(11, 5), 0);
     }
 
     #[test]

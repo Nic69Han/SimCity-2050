@@ -54,6 +54,17 @@ impl City {
         self.sim.remove_pump(x, y) as i32
     }
 
+    /// `[pipe cost, pump cost, most pumps]`, the constants of the water rules.
+    pub fn water_costs(&self) -> Vec<i32> {
+        use micropolis_core::water::{MAX_PUMPS, PIPE_COST, PUMP_COST};
+        vec![PIPE_COST, PUMP_COST, MAX_PUMPS as i32]
+    }
+
+    /// What lies under tile `(x, y)`: 0 nothing, 1 a pipe, 3 a pump (0 with the rules off).
+    pub fn water_piece(&self, x: i32, y: i32) -> u8 {
+        self.sim.water_piece(x, y)
+    }
+
     /// Whether tile `(x, y)` is watered.
     pub fn watered(&self, x: i32, y: i32) -> bool {
         self.sim.watered(x, y)

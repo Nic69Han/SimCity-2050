@@ -79,3 +79,39 @@ sauvegarde et rechargement ; boucles bornées (propagation de l'eau, recherche d
 * Chaque règle s'active et se désactive en jeu, se sauvegarde, et son effet est visible (conseillers,
   calques, coûts).
 * Relecture Opus de chaque livraison (diff lu, vérifications relancées) avant intégration.
+
+## Réseau d'eau (chantier livré)
+
+Règle `water_rules` (case « Réseau d'eau » dans `#rules-controls`, désactivée par défaut). Module moteur
+`water.rs`, adaptateur `micropolis-wasm/src/water.rs`, page `tools-water.js`, `map-layer-water.js`,
+`water-ui.js`, `water-model.js` (partie pure).
+
+* **Constantes** (`water.rs`) : `PIPE_COST` 5 $, `PUMP_COST` 300 $, `MAX_PUMPS` 64, `PUMP_RANGE` 64 pas de
+  canalisation depuis une pompe, `WATER_REACH` 3 (distance de Manhattan entre une tuile et la canalisation
+  alimentée la plus proche), `WATER_FREE_DENSITY` 2.
+* **Canalisations** : sous n'importe quelle tuile (y compris bâtie ou sous l'eau), octet `PIPE` (1) de
+  `WaterNetwork::pipes`. Poser coûte `PIPE_COST`, retirer est gratuit. **Pompes** : octet `PUMP` (3) dans la
+  même couche (une pompe conduit comme une canalisation) ; sur une tuile de terre qui touche l'eau (8 voisines),
+  sans condition d'électricité (simplification documentée) ; une canalisation déjà posée est remplacée. Le
+  fichier est la couche telle quelle (morceau 3), la liste des pompes en est déduite au chargement (refusé
+  au-delà de `MAX_PUMPS`).
+* **Couverture** : recalculée à chaque changement du réseau (jamais pendant un tick, donc sans allocation dans
+  l'accroche). Parcours en largeur depuis les pompes à travers les tuiles de canalisation (chaque tuile une seule
+  fois, au plus `PUMP_RANGE` pas), puis second parcours depuis les canalisations alimentées sur `WATER_REACH` pas.
+  Une zone est alimentée quand sa tuile centrale est couverte.
+* **Croissance** (`ext_zone_can_grow`) : refusée pour une zone à sec dont le niveau de densité vaut
+  `WATER_FREE_DENSITY` ou plus. Niveau 0 = zone vide (résidentiel : maisons comprises), n = n-ième palier de
+  bâtiment (résidentiel 1 à 4, commercial 1 à 5, industriel 1 à 4). Les petites villes grandissent donc sans eau
+  jusqu'au deuxième palier, puis stagnent. Pas de bonus de valeur du terrain ni de coût d'entretien.
+* **API** (règle désactivée : tout est refusé, `Failed`, coût 0) : `set_water_rules`, `water_rules`,
+  `place_pipe` / `pipe_preview`, `remove_pipe`, `place_pump` / `pump_preview`, `remove_pump`, `watered(x, y)`,
+  `water_stats()` (pompes, canalisations, zones alimentées, zones à sec), `dry_zones()`, `water_layer()`
+  (0 rien, 1 canalisation à sec, 2 canalisation alimentée, 3 pompe), `water_piece(x, y)`. Les coûts passent par
+  `spend` : `NoMoney` si les fonds ne suffisent pas.
+* **Page** : outils « Canalisation » (glisser pose une ligne), « Pompe à eau » et « Retirer canalisation ou
+  pompe » dans le groupe « Réseaux », bloqués avec une raison en français règle désactivée ou en vue 3D. Le
+  calque 2D (canalisations bleues, pompes, voile rouge sur les zones à sec) s'affiche quand la règle est active et
+  qu'un outil d'eau est choisi ou que « Voir le réseau » est coché. La case se relit du moteur après chaque
+  chargement ou nouvelle ville (jamais poussée dans une ville neuve), avec la ligne de statistiques.
+* **Limites** : l'eau ne dépend pas de l'électricité ; une pompe posée sur un bâtiment ou une route est
+  permise (le réseau est souterrain) ; le calque et les outils n'existent qu'en vue 2D.
