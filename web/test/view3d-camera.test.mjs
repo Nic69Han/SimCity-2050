@@ -7,6 +7,8 @@ import {
   homeDistance, centreTarget, cameraPosition, orbitOf,
 } from "../view3d-camera-model.js";
 import { SHORTCUTS } from "../tools.js";
+import { extraCatalog } from "../extra-tools.js";
+import { MockCity } from "./mock-engine.mjs";
 
 const TWO_PI = Math.PI * 2;
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-9, `${msg}: ${a} vs ${b}`);
@@ -131,7 +133,8 @@ describe("orbit maths", () => {
 
 describe("camera keys", () => {
   test("every key is one the tools do not use, so both keyboard systems can run side by side", () => {
-    const toolKeys = new Set(Object.values(SHORTCUTS));
+    const extra = extraCatalog(new MockCity(1)).map((t) => t.shortcut);
+    const toolKeys = new Set([...Object.values(SHORTCUTS), ...extra]);
     for (const key of Object.keys(CAMERA_KEYS)) {
       assert.ok(!toolKeys.has(key), `camera key ${key} collides with a tool shortcut`);
     }

@@ -156,7 +156,7 @@ function syncRelief() {
   $("relief-label").hidden = !supportsRelief(city);
   const on = readRelief(city);
   $("relief").checked = on;
-  tools?.setRelief(on);
+  tools?.setFlag("relief", on);
 }
 
 // Shows `value` in the city selector: a sample name, or "random" / "local" (an extra entry).
@@ -333,7 +333,7 @@ $("speed").oninput = (e) => city.set_speed(Number(e.target.value));
 $("disasters").onchange = (e) => city.enable_disasters(e.target.checked);
 $("relief").onchange = (e) => {
   $("relief").checked = setRelief(city, e.target.checked); // the engine's answer
-  tools?.setRelief(readRelief(city));
+  tools?.setFlag("relief", readRelief(city));
   draw();
 };
 $("save").onclick = () => {

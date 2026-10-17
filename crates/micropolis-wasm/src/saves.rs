@@ -1,12 +1,13 @@
 //! wasm adapter: saving and loading city files (translation only, ARCHITECTURE.md rule 4).
 //!
 //! `save_city` writes the city of any map size: a plain `.cty` for 120x100 (byte for byte the
-//! original format) while its relief is not edited and its relief rules are off, and an extended
-//! `MCTY` file otherwise (version 2 carries the relief block; see `micropolis_core::fileio`).
-//! `load_city` reads all of them, detecting the format from the bytes, and restores the relief
-//! and the rules of an `MCTY` version 2 file. Every error is the core's `CityFileError`, shown as
+//! original format) while its relief is not edited, its relief rules are off and no extended rule
+//! is on, and an extended `MCTY` file otherwise (version 2 carries the relief block, version 3
+//! also the extensions block; see `micropolis_core::fileio`). `load_city` reads all of them,
+//! detecting the format from the bytes, and restores the relief, the rules and the extended
+//! rules of an `MCTY` version 2 or 3 file. Every error is the core's `CityFileError`, shown as
 //! `<code>: <detail>` (`cty_bad_size`, `cty_bad_magic`, `cty_bad_version`,
-//! `cty_size_out_of_range`, `cty_truncated`, `cty_bad_relief`). A refused file leaves the city
+//! `cty_size_out_of_range`, `cty_truncated`, `cty_bad_relief`, `cty_bad_extension`). A refused file leaves the city
 //! untouched. The generator is seeded with the same seed as `load_cty`, so the same file always
 //! gives the same city.
 //!
@@ -20,6 +21,10 @@ use wasm_bindgen::prelude::*;
 /// Code of `save_cty` on a city whose relief was edited or whose relief rules are on: a plain
 /// `.cty` has no relief block, so the city can only be saved with `save_city`.
 pub const ERR_RELIEF_NOT_SAVEABLE: &str = "relief_not_saveable";
+
+/// Code of `save_cty` on a city with an extended rule on or a network that holds something: a plain
+/// `.cty` has no extensions block, so the city can only be saved with `save_city`.
+pub const ERR_EXTENSIONS_NOT_SAVEABLE: &str = "extensions_not_saveable";
 
 /// The city file of `city`, any size.
 pub fn save_bytes(city: &City) -> Vec<u8> {
@@ -35,6 +40,9 @@ pub fn save_cty_bytes(city: &City) -> Result<Vec<u8>, &'static str> {
     }
     if city.sim.relief_edited() || city.sim.relief_rules() {
         return Err(ERR_RELIEF_NOT_SAVEABLE);
+    }
+    if city.sim.needs_extension_block() {
+        return Err(ERR_EXTENSIONS_NOT_SAVEABLE);
     }
     Ok(city.sim.save_cty())
 }
@@ -53,8 +61,8 @@ impl City {
     }
 
     /// Replaces this city by the city of a city file (a `.cty` or an `MCTY` file of any size
-    /// from 80x67 to 512x512, version 1 or 2). An `MCTY` file with a relief block restores the
-    /// relief and the relief rules. On error, the message is `<code>: <detail>` and the city is
+    /// from 80x67 to 512x512, version 1 to 3). An `MCTY` file with a relief block restores the
+    /// relief and the relief rules, one with an extensions block the extended rules. On error, the message is `<code>: <detail>` and the city is
     /// unchanged.
     pub fn load_city(&mut self, bytes: &[u8]) -> Result<(), JsError> {
         load_bytes(self, bytes).map_err(|e| JsError::new(&e.to_string()))
@@ -140,6 +148,33 @@ mod tests {
             save_cty_bytes(&big),
             Err(crate::sizes::ERR_SIZE_NOT_SAVEABLE)
         );
+    }
+
+    #[test]
+    fn extended_rules_survive_save_and_load_and_a_cty_cannot_hold_them() {
+        let mut city = new_sized_city(120, 100, 6).expect("valid size");
+        city.sim.extensions_mut().water_rules = true;
+        city.sim.water_mut().pipes.set(5, 5, 1);
+        assert_eq!(save_cty_bytes(&city), Err(ERR_EXTENSIONS_NOT_SAVEABLE));
+        let bytes = save_bytes(&city);
+        assert_eq!(&bytes[..4], b"MCTY");
+        let mut back = new_sized_city(80, 67, 1).expect("valid size");
+        load_bytes(&mut back, &bytes).expect("a file this crate wrote");
+        assert!(back.sim.extensions().water_rules);
+        assert_eq!(back.sim.water(), city.sim.water());
+    }
+
+    #[test]
+    fn a_corrupt_extensions_block_is_cty_bad_extension_and_changes_nothing() {
+        let mut city = new_sized_city(97, 83, 1).expect("valid size");
+        city.sim.extensions_mut().transit_rules = true;
+        let mut bytes = save_bytes(&city);
+        let len = bytes.len();
+        bytes[len - 6] = 9; // the tag of the only chunk
+        let before = save_bytes(&city);
+        let err = load_bytes(&mut city, &bytes).expect_err("refused");
+        assert_eq!(err.code(), "cty_bad_extension");
+        assert_eq!(save_bytes(&city), before);
     }
 
     #[test]

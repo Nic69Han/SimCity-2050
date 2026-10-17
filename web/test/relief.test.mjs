@@ -6,8 +6,12 @@ import {
   supportsRelief, supportsTerraform, readRelief, setRelief, reliefBlockedReason, lineTiles, RELIEF_HELP,
 } from "../relief.js";
 import {
-  RESULT, readCatalog, reliefCatalog, callsFor, reliefLabel, shortcutFor, groupOf, shortcutRows, TOOL_GROUPS,
+  RESULT, readCatalog, callsFor, groupCatalog, shortcutRows, TOOL_GROUPS,
 } from "../tools.js";
+import {
+  catalog as reliefCatalog, label as reliefLabel, blockedReason as moduleBlockedReason,
+} from "../tools-relief.js";
+import { extraCatalog, extraBlockedReason } from "../extra-tools.js";
 import { MockCity, MOCK_TOOLS, TERRAFORM_COST, CASCADE_DEPTH, ALT_MAX, START_FUNDS } from "./mock-engine.mjs";
 
 // An engine with the relief methods that holds the flag where it likes (a file may carry it on).
@@ -134,16 +138,19 @@ describe("terraforming catalog entries", () => {
       { id: down.id, label: down.label, delta: down.delta, shortcut: down.shortcut },
       { id: "relief:-1", label: "Abaisser", delta: -1, shortcut: "d" },
     );
-    assert.equal(groupOf("relever").id, "terrain");
-    assert.ok(TOOL_GROUPS.find((g) => g.id === "terrain").keys.includes("abaisser"));
+    assert.equal(up.group, "terrain");
+    assert.ok(TOOL_GROUPS.some((g) => g.id === "terrain"), "the group of the entries exists");
+    const terrain = groupCatalog([...readCatalog(new MockCity(1)), ...reliefCatalog(new MockCity(1))])
+      .find((g) => g.id === "terrain");
+    assert.deepEqual(terrain.tools.map((t) => t.key).slice(-2), ["relever", "abaisser"]);
+    assert.equal(terrain.label, "Terrain");
   });
 
   test("the shortcuts do not clash with any other shortcut, and they reach the help", () => {
     const catalog = [...readCatalog(new MockCity(1)), ...reliefCatalog(new MockCity(1))];
     const letters = catalog.map((t) => t.shortcut).filter(Boolean);
     assert.equal(new Set(letters).size, letters.length, "one shortcut per key");
-    assert.equal(shortcutFor("relever"), "u");
-    assert.equal(shortcutFor("abaisser"), "d");
+    assert.deepEqual(reliefCatalog(new MockCity(1)).map((t) => t.shortcut), ["u", "d"]);
     const rows = shortcutRows(catalog);
     assert.ok(rows.some((r) => r.key === "U" && r.label === "Relever"));
     assert.ok(rows.some((r) => r.key === "D" && r.label === "Abaisser"));
@@ -154,6 +161,33 @@ describe("terraforming catalog entries", () => {
     assert.equal(reliefLabel(Int32Array.of(RESULT.OK, 0)), "gratuit");
     assert.equal(reliefLabel(Int32Array.of(RESULT.NO_MONEY, 40)), "—");
     assert.equal(reliefLabel(Int32Array.of(RESULT.FAILED, 0)), "—");
+  });
+});
+
+describe("the relief module through the registry", () => {
+  test("the registry lists the relief entries first, the empty modules add none", () => {
+    const city = new MockCity(1);
+    assert.deepEqual(extraCatalog(city), reliefCatalog(city));
+    assert.deepEqual(extraCatalog({}), []);
+  });
+
+  test("blocked: rules off, then flat map, then free; the engine tools are never blocked", () => {
+    const city = new MockCity(1);
+    const [up] = reliefCatalog(city);
+    const rulesOff = "Activez « Règles de relief » pour relever ou abaisser le terrain";
+    const flat = "Relever et abaisser se font en vue 3D : l'altitude ne se voit qu'en 3D";
+    assert.equal(extraBlockedReason(up, city, { in3d: true, flags: {} }), rulesOff);
+    assert.equal(extraBlockedReason(up, city, { in3d: false, flags: { relief: false } }), rulesOff);
+    assert.equal(extraBlockedReason(up, city, { in3d: false, flags: { relief: true } }), flat);
+    assert.equal(extraBlockedReason(up, city, { in3d: true, flags: { relief: true } }), "");
+    assert.equal(moduleBlockedReason(city, { in3d: true, flags: { relief: true } }), "");
+    assert.equal(extraBlockedReason({ id: 3 }, city, { in3d: false, flags: {} }), "");
+  });
+
+  test("the entries carry the texts the palette shows", () => {
+    const [up] = reliefCatalog(new MockCity(1));
+    assert.equal(up.costText, "selon pente");
+    assert.equal(up.idleHint, "coût affiché au survol");
   });
 });
 
