@@ -13,12 +13,17 @@ function layer(name, on, log) {
 }
 
 describe("the page's layers", () => {
-  test("none yet, and the list cannot be changed", () => {
-    assert.deepEqual([...MAP_LAYERS], []);
+  test("the water and metro layers, in this order, each well formed; the list cannot be changed", () => {
+    assert.deepEqual(MAP_LAYERS.map((l) => l.name), ["water", "transit"]);
+    for (const l of MAP_LAYERS) {
+      assert.equal(typeof l.visible, "function", l.name);
+      assert.equal(typeof l.draw, "function", l.name);
+    }
     assert.throws(() => MAP_LAYERS.push({}), TypeError);
   });
 
-  test("without layers the tiles keep their dirty-rectangle repaint", () => {
+  test("while no layer is visible the tiles keep their dirty-rectangle repaint", () => {
+    // the city of a plain game: no extended rule on, no network built
     const layers = createMapLayers();
     for (let i = 0; i < 3; i++) assert.deepEqual(layers.plan({}), { active: [], full: false });
   });
