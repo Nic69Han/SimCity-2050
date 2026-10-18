@@ -25,6 +25,10 @@
 //   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
 //   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
 //     so tool_preview's cost differs from the catalog price (the page must show the preview's)
+//   - agents (docs/game-design-v03.md): agent_rules() is off by default and after a new city or a
+//     load. Off: agent_stats() is five zeros, vehicles(max) is empty, traffic_load() is all zeros.
+//     On: agent_stats() is a few fixed numbers, vehicles(max) lists min(max, 5) cars at fixed places
+//     (records [id, 0, x16, y16, direction]), traffic_load() is (x + y) % 4 * 40 per tile.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -93,6 +97,9 @@ function lcg(seed) {
 
 const OFFSET = { 1: 0, 3: 1, 4: 1, 6: 2 };
 
+// Fixed cars of the traffic mock: [x, y, direction] in tiles, direction 0 n, 1 e, 2 s, 3 w.
+const MOCK_CARS = Object.freeze([[4, 12, 1], [9, 12, 3], [15, 6, 2], [22, 18, 0], [30, 9, 1]]);
+
 export class MockCity {
   #width;
   #height;
@@ -103,6 +110,7 @@ export class MockCity {
   #disasters = true;
   #alt; // relief: one altitude per tile, index x * height + y (City.heights)
   #rules = false; // relief rules (City.relief_rules)
+  #agentRules = false; // traffic agents switch (City.agent_rules)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -138,6 +146,7 @@ export class MockCity {
     this.#speed = 3; // engine defaults after a new city
     this.#disasters = true;
     this.#rules = false; // a new city starts with the rules off
+    this.#agentRules = false;
   }
 
   #inside(x, y) {
@@ -329,6 +338,37 @@ export class MockCity {
     this.log.push({ op: "terraform", x, y, delta, result: p.result });
     return p.result;
   }
+  // --- traffic agents (docs/game-design-v03.md, contract of crates/micropolis-wasm/src/agents.rs) ---
+  agent_rules() {
+    return this.#agentRules;
+  }
+  set_agent_rules(on) {
+    this.#agentRules = Boolean(on);
+  }
+  // [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
+  agent_stats() {
+    if (!this.#agentRules) return Int32Array.of(0, 0, 0, 0, 0);
+    return Int32Array.of(MOCK_CARS.length, 1234, 42, 2, 5678);
+  }
+  // Records of 5 [id, kind, x16, y16, direction]; at most `max` of them. Empty while the rule is off.
+  vehicles(max) {
+    const n = this.#agentRules && Number.isInteger(max) ? Math.max(0, Math.min(max, MOCK_CARS.length)) : 0;
+    const out = new Int32Array(n * 5);
+    for (let i = 0; i < n; i++) {
+      const [x, y, dir] = MOCK_CARS[i];
+      out.set([i + 1, 0, x * 16 + 8, y * 16 + 8, dir], i * 5);
+    }
+    return out;
+  }
+  // One load per tile, index x * height + y like tiles(); zeros while the rule is off.
+  traffic_load() {
+    const out = new Uint8Array(this.#width * this.#height);
+    if (!this.#agentRules) return out;
+    for (let x = 0; x < this.#width; x++) {
+      for (let y = 0; y < this.#height; y++) out[x * this.#height + y] = ((x + y) % 4) * 40;
+    }
+    return out;
+  }
   funds() {
     return this.#funds;
   }
@@ -363,6 +403,7 @@ export class MockCity {
   // A loaded file: the page's checks read the flag from the engine, and this one is off after a load.
   load_cty() {
     this.#rules = false;
+    this.#agentRules = false;
   }
   take_events() {
     return 0;

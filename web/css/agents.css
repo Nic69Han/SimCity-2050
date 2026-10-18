@@ -1,1 +1,15 @@
 /* agents: styles of web/agents-ui.js (docs/game-design-v03.md). */
+#agents-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#agents-panel .agent-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#agents-panel .agent-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#agents-panel .agent-state, #agents-panel .agent-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
+#agents-panel .agent-stats { list-style: none; margin: .5rem 0 0; padding: 0; }
+#agents-panel .agent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: .6rem;
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+#agents-panel .agent-value { font-weight: 600; white-space: nowrap; }
