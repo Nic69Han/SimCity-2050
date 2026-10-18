@@ -10,9 +10,9 @@ use crate::simulation::{Simulation, NOWHERE};
 use crate::tile::{Tile, CONDBIT};
 
 /// Number of tiles that a coal power plant can supply power to.
-const COAL_POWER_STRENGTH: i64 = 700;
+pub(crate) const COAL_POWER_STRENGTH: i64 = 700;
 /// Number of tiles that a nuclear power plant can supply power to.
-const NUCLEAR_POWER_STRENGTH: i64 = 2000;
+pub(crate) const NUCLEAR_POWER_STRENGTH: i64 = 2000;
 
 /// `MESSAGE_NOT_ENOUGH_POWER` from text.h (enum index 40).
 const MESSAGE_NOT_ENOUGH_POWER: i16 = 40;

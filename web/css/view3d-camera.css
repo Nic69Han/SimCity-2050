@@ -14,3 +14,13 @@
 .view3d-camera button:hover { background: var(--accent); color: var(--on-accent); }
 .view3d-cycle { display: flex; align-items: center; gap: .4rem; margin: 0 0 6px; font-size: .85rem; line-height: 1.2; cursor: pointer; }
 .view3d-cycle-box { margin: 0; }
+
+/* view3d-underground: the «Sous-sol» toggle (web/view3d-underground.js), under the camera buttons. */
+.view3d-underground { margin-top: 6px; }
+.view3d-underground button {
+  width: 100%; padding: 4px 8px; font-size: .85rem; line-height: 1.2;
+  color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  touch-action: manipulation;
+}
+.view3d-underground button:hover,
+.view3d-underground button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }

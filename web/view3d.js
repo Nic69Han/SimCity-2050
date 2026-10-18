@@ -76,7 +76,7 @@ export function mount(api, canvas) {
   );
 
   view = {
-    canvas, renderer, scene, camera, controls, group, outlineMesh,
+    api, canvas, renderer, scene, camera, controls, group, outlineMesh,
     raycaster: new THREE.Raycaster(),
     materials: {
       terrain: new THREE.MeshLambertMaterial({ vertexColors: true }),
@@ -120,6 +120,7 @@ export function mount(api, canvas) {
 // Brings the scene up to date with the city: only the chunks that changed are rebuilt.
 export function update(api) {
   if (!view) return;
+  view.api = api;
   const w = api.width(), h = api.height();
   const tiles = api.tiles();
   const heights = typeof api.heights === "function" ? api.heights() : null;
@@ -246,6 +247,9 @@ function makeContext() {
     lights: v.lights,
     grid: () => view?.grid ?? null,
     snapshot: () => view?.snapshot ?? null,
+    // the engine, read-only for layers (e.g. the underground networks): never call a method that
+    // changes the city from a layer
+    city: () => view?.api ?? null,
     corners: () => view?.corners ?? null,
     // the sea-level water plane (replaced when the terrain is rebuilt: read it, do not keep it)
     water: () => view?.water ?? null,
