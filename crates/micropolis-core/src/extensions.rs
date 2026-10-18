@@ -14,12 +14,13 @@
 //!   tag order, at most one per tag. [`encode_block`] writes it and [`decode_chunks`] checks it
 //!   completely before anything is applied, so a bad block never touches the engine.
 
+use crate::deals::DealList;
 use crate::position::Position;
 use crate::simulation::Simulation;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::water::WaterNetwork;
-use crate::{ordinances, transit, water};
+use crate::{deals, ordinances, transit, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
 pub const CHUNK_RULES: u8 = 1;
@@ -29,8 +30,10 @@ pub const CHUNK_ORDINANCES: u8 = 2;
 pub const CHUNK_WATER: u8 = 3;
 /// Chunk tag: the transit network ([`TransitNetwork::encode`]).
 pub const CHUNK_TRANSIT: u8 = 4;
+/// Chunk tag: the signed deals with the neighbours ([`DealList::encode`]).
+pub const CHUNK_DEALS: u8 = 5;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_TRANSIT;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_DEALS;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -38,6 +41,7 @@ pub const BLOCK_LENGTH_SIZE: usize = 4;
 
 const RULES_WATER: u8 = 0b01;
 const RULES_TRANSIT: u8 = 0b10;
+const RULES_DEALS: u8 = 0b100;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -48,12 +52,16 @@ pub struct Extensions {
     pub water_rules: bool,
     /// The metro rules.
     pub transit_rules: bool,
+    /// The deals with the neighbouring cities.
+    pub deals: bool,
+    /// The signed deals (kept only while `deals` is on; see [`deals`]).
+    pub deal_list: DealList,
 }
 
 impl Extensions {
     /// Whether any extended rule is on.
     pub fn is_active(&self) -> bool {
-        self.ordinances != 0 || self.water_rules || self.transit_rules
+        self.ordinances != 0 || self.water_rules || self.transit_rules || self.deals
     }
 
     fn rules_flags(&self) -> u8 {
@@ -63,6 +71,9 @@ impl Extensions {
         }
         if self.transit_rules {
             flags |= RULES_TRANSIT;
+        }
+        if self.deals {
+            flags |= RULES_DEALS;
         }
         flags
     }
@@ -82,11 +93,12 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
     let flags = ext.rules_flags();
     let rules = if flags == 0 { Vec::new() } else { vec![flags] };
-    let chunks: [(u8, Vec<u8>); 4] = [
+    let chunks: [(u8, Vec<u8>); 5] = [
         (CHUNK_RULES, rules),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
         (CHUNK_TRANSIT, sim.transit().encode()),
+        (CHUNK_DEALS, ext.deal_list.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -148,6 +160,7 @@ pub(crate) fn decode_chunks(
             CHUNK_RULES => decode_rules(bytes, &mut loaded.extensions)?,
             CHUNK_ORDINANCES => loaded.extensions.ordinances = ordinances::decode(bytes)?,
             CHUNK_WATER => loaded.water = WaterNetwork::decode(bytes, width, height)?,
+            CHUNK_DEALS => loaded.extensions.deal_list = DealList::decode(bytes)?,
             _ => loaded.transit = TransitNetwork::decode(bytes, width, height)?,
         }
     }
@@ -161,9 +174,10 @@ pub(crate) fn decode_chunks(
 fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> {
     match bytes {
         [] => Ok(()),
-        [flags] if flags & !(RULES_WATER | RULES_TRANSIT) == 0 => {
+        [flags] if flags & !(RULES_WATER | RULES_TRANSIT | RULES_DEALS) == 0 => {
             ext.water_rules = flags & RULES_WATER != 0;
             ext.transit_rules = flags & RULES_TRANSIT != 0;
+            ext.deals = flags & RULES_DEALS != 0;
             Ok(())
         }
         [_] => Err("unknown rules flag"),
@@ -210,7 +224,10 @@ impl Simulation {
     /// Whether a saved city needs the extensions block: a rule is on, or a network holds
     /// something. Otherwise the file is exactly the one written before the block existed.
     pub fn needs_extension_block(&self) -> bool {
-        self.extensions_active() || !self.water.is_empty() || !self.transit.is_empty()
+        self.extensions_active()
+            || !self.water.is_empty()
+            || !self.transit.is_empty()
+            || self.extensions.has_deals()
     }
 
     /// Applies a checked block (a loaded file).
@@ -225,6 +242,7 @@ impl Simulation {
         let (w, h) = self.world_size();
         self.water = WaterNetwork::new(w, h);
         self.transit = TransitNetwork::new(w, h);
+        self.extensions.deal_list = DealList::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -236,7 +254,8 @@ impl Simulation {
         }
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
-            .saturating_add(transit::monthly_balance(self));
+            .saturating_add(transit::monthly_balance(self))
+            .saturating_add(deals::monthly_balance(self));
         if net != 0 {
             self.spend(net);
         }
@@ -403,6 +422,31 @@ mod tests {
     }
 
     #[test]
+    fn the_deals_are_chunk_5_and_round_trip() {
+        let mut s = sim();
+        assert!(!s.needs_extension_block());
+        s.set_deals_rules(true);
+        assert!(s.extensions_active());
+        let rules_only = encode_block(&s);
+        assert!(s
+            .extensions_mut()
+            .deal_list
+            .push(crate::deals::offer_for(1, 0, 0).unwrap()));
+        let block = encode_block(&s);
+        assert!(block.len() > rules_only.len());
+        assert_eq!(block[BLOCK_LENGTH_SIZE], CHUNK_RULES);
+        let loaded = decode_chunks(&block[BLOCK_LENGTH_SIZE..], 80, 67).unwrap();
+        assert!(loaded.extensions.deals);
+        assert_eq!(loaded.extensions.deal_list, s.extensions().deal_list);
+        // deals saved with the rule off still need the block (and keep their chunk)
+        s.extensions_mut().deals = false;
+        assert!(s.needs_extension_block());
+        let block = encode_block(&s);
+        let loaded = decode_chunks(&block[BLOCK_LENGTH_SIZE..], 80, 67).unwrap();
+        assert!(!loaded.extensions.deals && loaded.extensions.deal_list.len() == 1);
+    }
+
+    #[test]
     fn an_empty_block_decodes_to_the_defaults() {
         let loaded = decode_chunks(&[], 80, 67).unwrap();
         assert_eq!(loaded.extensions, Extensions::default());
@@ -421,14 +465,15 @@ mod tests {
         let cat = |parts: &[Vec<u8>]| parts.concat();
         let refused = [
             chunk(0, &[]),
-            chunk(5, &[]),
+            chunk(6, &[]),
             cat(&[chunk(2, &[0, 0, 0, 1]), chunk(1, &[1])]),
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
-            chunk(1, &[0b100]),
+            chunk(1, &[0b1000]),
             chunk(1, &[1, 1]),
             chunk(2, &[1, 2, 3]),
             chunk(3, &[1, 2, 3]),
             chunk(4, &[1, 2, 3]),
+            chunk(5, &[1, 2, 3]),
             vec![1, 0, 0],
             vec![1, 0, 0, 0, 9, 1],
             cat(&[chunk(1, &[1]), vec![9]]),
