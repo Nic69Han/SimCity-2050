@@ -1,1 +1,24 @@
 /* deals: styles of web/deals-ui.js (docs/game-design-v02b.md). */
+#deals-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#deals-panel h3 { margin: .7rem 0 .2rem; font-size: 1rem; }
+#deals-panel .deal-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#deals-panel .deal-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#deals-panel .deal-note, #deals-panel .deal-surplus { margin: .3rem 0; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+#deals-panel .deal-list { list-style: none; margin: 0; padding: 0; }
+#deals-panel .deal-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "title action" "terms action" "state state";
+  gap: .05rem .6rem;
+  align-items: center;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+#deals-panel .deal-title { grid-area: title; font-weight: 600; }
+#deals-panel .deal-terms { grid-area: terms; font-size: .9rem; font-variant-numeric: tabular-nums; }
+#deals-panel .deal-state { grid-area: state; color: var(--muted); font-size: .85rem; }
+#deals-panel .deal-row.deal-threatened .deal-state { color: var(--bad); font-weight: 600; }
+#deals-panel .deal-row button { grid-area: action; font-size: .85rem; padding: .25rem .7rem; }
+#deals-panel .deal-total { margin: .5rem 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+#deals-panel .deal-notice { margin: .5rem 0 0; min-height: 1.2em; font-size: .9rem; }
+#deals-panel .deal-notice.deal-bad { color: var(--bad); font-weight: 600; }

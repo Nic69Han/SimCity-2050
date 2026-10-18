@@ -25,6 +25,7 @@ pub mod update;
 pub mod utilities;
 pub mod zone;
 
+pub mod deals;
 pub mod events;
 pub mod extensions;
 pub mod fileio;
