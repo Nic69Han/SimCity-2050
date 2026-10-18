@@ -68,3 +68,29 @@ impl LoadMap {
             .unwrap_or(0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crowded_tiles_saturate_and_empty_ones_relax() {
+        let mut g = RoadGraph::default();
+        g.w = 4;
+        g.h = 1;
+        g.roads = vec![1];
+        let mut m = LoadMap::new(4, 2, 2, 1);
+        let jam = [1u32; 4];
+        for _ in 0..30 {
+            m.update(&g, jam.iter().copied());
+        }
+        assert_eq!(m.tile[1], 255);
+        assert_eq!(m.saturated, 1);
+        assert_eq!(m.block_load(1, 0), 255);
+        for _ in 0..60 {
+            m.update(&g, std::iter::empty());
+        }
+        assert_eq!(m.tile[1], 0);
+        assert_eq!(m.saturated, 0);
+    }
+}

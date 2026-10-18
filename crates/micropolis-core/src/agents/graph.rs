@@ -6,7 +6,7 @@
 
 use crate::simulation::Simulation;
 use crate::tile::{Tile, COMBASE, HOSPITALBASE, INDBASE, LOMASK, PORTBASE, POWERBASE, RESBASE};
-use crate::tile::{RZB, ROADBASE, ZONEBIT};
+use crate::tile::{ROADBASE, RZB, ZONEBIT};
 
 pub const CLASS_NONE: u8 = 0;
 pub const CLASS_ROAD: u8 = 1;

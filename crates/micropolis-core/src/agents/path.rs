@@ -92,14 +92,18 @@ impl PathFinder {
     fn rebuild(&self, from: u32, to: u32) -> Option<Vec<u32>> {
         let mut path = vec![to];
         let mut at = to;
-        for _ in 0..MAX_PATH_LEN {
+        // at most MAX_PATH_LEN - 1 steps back: a longer path is refused
+        for _ in 1..MAX_PATH_LEN {
             if at == from {
-                path.reverse();
-                return Some(path);
+                break;
             }
             at = self.parent[at as usize];
             path.push(at);
         }
-        None
+        if at != from {
+            return None;
+        }
+        path.reverse();
+        Some(path)
     }
 }

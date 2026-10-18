@@ -50,3 +50,37 @@ impl Car {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saturated_tiles_slow_a_car() {
+        assert_eq!(speed_at(0), MAX_SPEED);
+        assert_eq!(speed_at(255), MIN_SPEED);
+        assert!((0..255u8).all(|l| speed_at(l) >= speed_at(l + 1)));
+    }
+
+    #[test]
+    fn a_car_covers_a_tile_slower_on_a_full_road() {
+        let ticks = |load| {
+            let mut c = Car {
+                id: 1,
+                home: 0,
+                path: vec![0, 1],
+                at: 0,
+                progress: 0,
+                born: 0,
+            };
+            let mut n = 0;
+            while !c.arrived() {
+                c.advance(load);
+                n += 1;
+            }
+            n
+        };
+        assert_eq!(ticks(0), 2);
+        assert_eq!(ticks(255), 16);
+    }
+}

@@ -121,7 +121,7 @@ impl Run {
 
     fn step(&mut self, sim: &Simulation) {
         self.ticks += 1;
-        if self.ticks % REFRESH_INTERVAL == 0 {
+        if self.ticks.is_multiple_of(REFRESH_INTERVAL) {
             self.refresh(sim);
         }
         self.spawn();
@@ -165,7 +165,8 @@ impl Run {
     /// random job zones, one bounded search.
     fn try_trip(&mut self) {
         let g = &self.graph;
-        let home = &g.zones[g.residential[self.rng.below(g.residential.len() as u32) as usize] as usize];
+        let home =
+            &g.zones[g.residential[self.rng.below(g.residential.len() as u32) as usize] as usize];
         let out = self.cars.iter().filter(|c| c.home == home.tile).count();
         let (Some(from), true) = (home.access, out < zone_car_cap(home.pop)) else {
             return;
@@ -237,7 +238,13 @@ impl Run {
             (0, 1) => 2,
             _ => 3,
         };
-        [c.id as i32, 0, x * 16 + 8 + dx * p, y * 16 + 8 + dy * p, dir]
+        [
+            c.id as i32,
+            0,
+            x * 16 + 8 + dx * p,
+            y * 16 + 8 + dy * p,
+            dir,
+        ]
     }
 
     fn fingerprint(&self) -> u64 {
@@ -255,7 +262,13 @@ impl Run {
             mix(u64::from(l));
         }
         let c = &self.counters;
-        for v in [c.spawned, c.finished, c.abandoned, c.trip_ticks, c.failed_searches] {
+        for v in [
+            c.spawned,
+            c.finished,
+            c.abandoned,
+            c.trip_ticks,
+            c.failed_searches,
+        ] {
             mix(v);
         }
         h
@@ -331,7 +344,11 @@ impl Simulation {
 pub(crate) fn tick(sim: &mut Simulation) {
     let mut fleet = std::mem::take(&mut sim.extensions.fleet);
     let (w, h) = sim.world_size();
-    if fleet.run.as_ref().is_none_or(|r| (r.graph.w, r.graph.h) != (w, h)) {
+    if fleet
+        .run
+        .as_ref()
+        .is_none_or(|r| (r.graph.w, r.graph.h) != (w, h))
+    {
         fleet.run = Some(Box::new(Run::new(sim)));
     }
     if let Some(run) = fleet.run.as_deref_mut() {
