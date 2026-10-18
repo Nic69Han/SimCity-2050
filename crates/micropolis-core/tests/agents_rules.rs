@@ -217,6 +217,37 @@ fn rail_crossings_are_roads() {
 }
 
 #[test]
+fn a_low_density_neighbourhood_is_a_home_with_its_houses_as_residents() {
+    use micropolis_core::agents::graph::{classify, CLASS_RES};
+    use micropolis_core::tile::{FREEZ, LHTHR, ROADBASE, ZONEBIT};
+    assert_eq!(classify(FREEZ | ZONEBIT), CLASS_RES);
+    // a FREEZ centre with two houses and a road on its ring
+    let mut s = Simulation::new(20, 20);
+    s.set_tile(10, 10, FREEZ | ZONEBIT);
+    s.set_tile(9, 9, LHTHR);
+    s.set_tile(11, 11, LHTHR);
+    s.set_tile(10, 12, ROADBASE + 1);
+    let g = RoadGraph::scan(&s);
+    assert_eq!(g.residential.len(), 1);
+    assert_eq!(g.zones[g.residential[0] as usize].pop, 2);
+}
+
+#[test]
+fn a_new_city_starts_a_new_fleet() {
+    use micropolis_core::simulation::GameLevel;
+    let mut s = haight(true);
+    run(&mut s, 300);
+    assert!(s.agent_stats()[0] > 0);
+    s.new_city(GameLevel::Easy, 7);
+    assert!(
+        s.agent_rules(),
+        "the switch stays as it was, like the other rules"
+    );
+    assert_eq!(s.agent_stats(), [0; 5], "nothing from the old city");
+    assert!(s.agent_vehicles(10).is_empty());
+}
+
+#[test]
 fn a_fleet_left_by_a_direct_write_is_not_reported() {
     let mut s = haight(true);
     run(&mut s, 300);

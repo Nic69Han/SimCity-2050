@@ -4,9 +4,10 @@
 //! scan differs from the one in use. Tile indices are column-major, `x * height + y`, like
 //! `Simulation::tiles`.
 
+use crate::position::Position;
 use crate::simulation::Simulation;
 use crate::tile::{Tile, COMBASE, HOSPITALBASE, INDBASE, LOMASK, PORTBASE, POWERBASE, RESBASE};
-use crate::tile::{HRAILROAD, ROADBASE, RZB, VRAILROAD, ZONEBIT};
+use crate::tile::{FREEZ, HRAILROAD, ROADBASE, RZB, VRAILROAD, ZONEBIT};
 
 pub const CLASS_NONE: u8 = 0;
 pub const CLASS_ROAD: u8 = 1;
@@ -44,7 +45,8 @@ pub fn classify(tile: Tile) -> u8 {
         return CLASS_NONE;
     }
     match t {
-        t if (RZB.max(RESBASE)..HOSPITALBASE).contains(&t) => CLASS_RES,
+        // FREEZ: a low-density neighbourhood (single houses around an empty centre)
+        t if t == FREEZ || (RZB.max(RESBASE)..HOSPITALBASE).contains(&t) => CLASS_RES,
         t if (COMBASE..INDBASE).contains(&t) => CLASS_COM,
         t if (INDBASE..PORTBASE).contains(&t) => CLASS_IND,
         _ => CLASS_NONE,
@@ -106,10 +108,12 @@ impl RoadGraph {
             .iter()
             .filter_map(|&(dx, dy)| self.index(x + dx, y + dy))
             .find(|&i| self.is_road(i));
-        let pop = if kind == CLASS_RES {
-            i32::from(sim.get_res_zone_pop(sim.tiles[tile as usize] & LOMASK))
-        } else {
-            0
+        // residents as the engine counts them: the houses of a FREEZ zone, else the zone's density
+        let centre = sim.tiles[tile as usize] & LOMASK;
+        let pop = match kind {
+            CLASS_RES if centre == FREEZ => i32::from(sim.do_free_pop(Position::new(x, y))),
+            CLASS_RES => i32::from(sim.get_res_zone_pop(centre)),
+            _ => 0,
         };
         let at = self.zones.len() as u32;
         self.zones.push(Zone {
