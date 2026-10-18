@@ -2,6 +2,7 @@
 // from the engine, the wording and thresholds are in advisors-model.js (pure, tested). This file reads
 // the engine, calls advise() and draws the list again only when the advice changes.
 // setup(api) runs once; update(api) runs after every redraw, so it stays cheap.
+import { DEAL_LEN } from "./deals-model.js";
 import { decodeBudget, decodeEvaluation } from "./budget-text.js";
 import { advise, SEVERITY_LABEL } from "./advisors-model.js";
 import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
@@ -33,22 +34,26 @@ function readRules(city) {
 const ints = (a) => (a && typeof a.length === "number" ? Array.from(a, Number) : null);
 
 /**
- * Deals (API of the neighbour deals workstream, feature-detected, shapes read tolerantly):
- * active_deals() = a list (its length is the count; an entry with a numeric `income` adds to the yearly
- * income); surplus() = a number, a list whose first value is the electricity surplus, or an object with
- * `electricity`. Anything else is left out.
+ * Deals (crates/micropolis-wasm/src/deals.rs, decoded with web/deals-model.js): active_deals() is flat
+ * records of DEAL_LEN numbers [neighbour, resource, amount, price, income, covered, cancel_penalty];
+ * surplus() is [electricity, water]. A malformed answer is left out.
  */
+// Field of a deal record: its yearly income.
+const DEAL_INCOME = 4;
+
 function readDeals(city) {
-  const active = call(city, "active_deals");
   const deals = {};
-  if (active && typeof active.length === "number") {
-    deals.count = active.length;
-    const incomes = Array.from(active, (d) => d?.income).filter((v) => typeof v === "number" && Number.isFinite(v));
-    if (incomes.length) deals.income = incomes.reduce((a, b) => a + b, 0);
+  const active = call(city, "active_deals");
+  if (active && typeof active.length === "number" && active.length % DEAL_LEN === 0) {
+    deals.count = active.length / DEAL_LEN;
+    let income = 0;
+    for (let i = 0; i < deals.count; i++) income += Number(active[i * DEAL_LEN + DEAL_INCOME]) || 0;
+    deals.income = income;
   }
   const sur = call(city, "surplus");
-  const surplus = typeof sur === "number" ? sur : sur && typeof sur === "object" ? (sur.electricity ?? sur[0]) : null;
-  if (typeof surplus === "number") deals.surplus = surplus;
+  if (sur && typeof sur.length === "number" && sur.length >= 1 && Number.isFinite(Number(sur[0]))) {
+    deals.surplus = Number(sur[0]); // electricity
+  }
   return deals;
 }
 
@@ -104,7 +109,7 @@ export function cheapKey(city) {
   }
   if (rules.water) parts.push(ints(call(city, "water_stats"))?.join());
   if (rules.transit) parts.push(ints(call(city, "transit_stats"))?.join());
-  if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.toString?.());
+  if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
   return parts.join("/");
 }
 

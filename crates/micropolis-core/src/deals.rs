@@ -51,9 +51,9 @@ pub const OFFER_COUNT: usize = NEIGHBOUR_COUNT * RESOURCE_COUNT;
 /// Most deals at a time (one per offer).
 pub const MAX_DEALS: usize = OFFER_COUNT;
 /// Power tiles a coal plant supplies (`COAL_POWER_STRENGTH` of `power.rs`).
-pub const COAL_POWER_UNITS: i64 = 700;
+pub const COAL_POWER_UNITS: i64 = crate::power::COAL_POWER_STRENGTH;
 /// Power tiles a nuclear plant supplies (`NUCLEAR_POWER_STRENGTH` of `power.rs`).
-pub const NUCLEAR_POWER_UNITS: i64 = 2000;
+pub const NUCLEAR_POWER_UNITS: i64 = crate::power::NUCLEAR_POWER_STRENGTH;
 /// Zones one water pump can serve.
 pub const WATER_PER_PUMP: i64 = 20;
 /// Percent of the yearly income paid when the player cancels a deal.
@@ -61,7 +61,7 @@ pub const CANCEL_PENALTY_PCT: i64 = 50;
 /// Percent of the yearly income paid when the city cannot supply a deal any more.
 pub const BREAK_PENALTY_PCT: i64 = 100;
 /// Game message sent when a deal breaks (the original messages stop at 57; no position).
-pub const MESSAGE_DEAL_BROKEN: i16 = 58;
+pub use crate::message::MESSAGE_DEAL_BROKEN;
 /// City-time steps in a game year (the tax collection period).
 const YEAR_STEPS: i64 = 48;
 /// Years after which the price drift stops.

@@ -70,6 +70,11 @@ pub const MESSAGE_SCENARIO_BOSTON: i16 = 56;
 pub const MESSAGE_SCENARIO_RIO_DE_JANEIRO: i16 = 57;
 pub const MESSAGE_LAST: i16 = 57;
 
+// Messages of the extended rules (docs/game-design-v02b.md), after the original ones. They are never
+// sent while the extended rules are off.
+/// A deal with a neighbouring city broke: the city could no longer supply it (`deals.rs`).
+pub const MESSAGE_DEAL_BROKEN: i16 = 58;
+
 /// `CC_METROPOLIS` as a numeric class (`CityClass` has no ordering).
 const CC_METROPOLIS: u8 = CityClass::Metropolis as u8;
 

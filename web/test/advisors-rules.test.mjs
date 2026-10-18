@@ -206,7 +206,9 @@ describe("snapshot reader and cheap key", () => {
     const city = fakeCity({
       water_rules: () => true, water_stats: () => Int32Array.of(2, 9, 5, 7),
       transit_rules: () => true, transit_stats: () => Int32Array.of(3, 8, 1, 60),
-      deals_rules: () => true, active_deals: () => [{ income: 500 }, { income: 250 }, {}], surplus: () => 12,
+      // active_deals: records of 7 [neighbour, resource, amount, price, income, covered, cancel_penalty]
+      deals_rules: () => true, active_deals: () => Int32Array.of(0, 0, 5, 100, 500, 1, 250, 1, 0, 5, 50, 250, 1, 125, 2, 1, 1, 1, 0, 1, 0),
+      surplus: () => Int32Array.of(12, 0),
     });
     const s = readSnapshot(city);
     assert.deepEqual(s.water, { pumps: 2, pipes: 9, watered: 5, dry: 7 });
@@ -216,11 +218,13 @@ describe("snapshot reader and cheap key", () => {
       ["community_policing", false, 200], ["pollution_control", true, 300], ["recycling", false, 100]]);
     assert.equal(s.ordinances[0].label, "Police de proximité");
   });
-  test("surplus shapes: number, list, object, junk; deals rule on but API absent", () => {
-    const base = { deals_rules: () => true, active_deals: () => [] };
+  test("surplus is [electricity, water]; malformed answers and an absent API are left out", () => {
+    const base = { deals_rules: () => true, active_deals: () => new Int32Array(0) };
     assert.equal(readSnapshot(fakeCity({ ...base, surplus: () => Int32Array.of(7, 1) })).deals.surplus, 7);
-    assert.equal(readSnapshot(fakeCity({ ...base, surplus: () => ({ electricity: 4 }) })).deals.surplus, 4);
+    assert.equal(readSnapshot(fakeCity({ ...base, surplus: () => 4 })).deals.surplus, undefined);
     assert.equal(readSnapshot(fakeCity({ ...base, surplus: () => "x" })).deals.surplus, undefined);
+    assert.equal(readSnapshot(fakeCity({ deals_rules: () => true, active_deals: () => Int32Array.of(1, 2, 3) })).deals.count, undefined,
+      "a record list that is not a whole number of records is left out");
     assert.deepEqual(readSnapshot(fakeCity({ deals_rules: () => true })).deals, {});
   });
   test("the cheap key changes with a rule switch, an ordinance, and the counters", () => {

@@ -143,11 +143,14 @@ describe("messages-text.js", () => {
     const last = constants.get("MESSAGE_LAST");
     assert.equal(last, 57);
     const numbers = [...constants.entries()].filter(([name]) => name !== "MESSAGE_LAST").map(([, n]) => n);
+    // the original messages are 1..=MESSAGE_LAST, each once; the extended rules' messages come after
     assert.deepEqual(
-      [...numbers].sort((a, b) => a - b),
+      numbers.filter((n) => n <= last).sort((a, b) => a - b),
       Array.from({ length: last }, (_, i) => i + 1),
-      "the constants are 1..=MESSAGE_LAST, each once",
+      "the original constants are 1..=MESSAGE_LAST, each once",
     );
+    const extended = numbers.filter((n) => n > last).sort((a, b) => a - b);
+    assert.deepEqual(extended, Array.from({ length: extended.length }, (_, i) => last + 1 + i), "then the extended ones, each once");
     for (const n of numbers) {
       const text = MESSAGE_TEXT[n];
       assert.equal(typeof text, "string", `no French text for message ${n}`);
@@ -166,13 +169,13 @@ describe("messages-text.js", () => {
   });
 
   test("unknown numbers degrade to a generic sentence that names the number", () => {
-    for (const n of [0, 58, -1, 999, 1.5, undefined, null, "x"]) {
+    for (const n of [0, 900, -1, 999, 1.5, undefined, null, "x"]) {
       const text = messageText(n);
       assert.equal(typeof text, "string");
       assert.ok(text.length > 0);
       assert.match(text, /Message du moteur/);
     }
-    assert.equal(messageText(58), "Message du moteur n° 58.");
+    assert.equal(messageText(900), "Message du moteur n° 900.");
   });
 });
 
