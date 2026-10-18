@@ -20,7 +20,7 @@ API wasm (`crates/micropolis-wasm/src/agents.rs`) :
 |---|---|
 | `agent_rules()` / `set_agent_rules(on)` | interrupteur |
 | `agent_stats()` | `Int32Array [voitures_actives, trajets_terminés, durée_moyenne_ticks, tuiles_saturées, habitants_motorisés]` |
-| `vehicles(max)` | `Int32Array` d'enregistrements de 5 entiers `[id, genre, x16, y16, direction]`, au plus `max` ; `x16`, `y16` = position en seizièmes de tuile ; `genre` 0 voiture (1 bus, 2 taxi, 3 train, 4 métro : étapes suivantes) ; `direction` 0 nord, 1 est, 2 sud, 3 ouest |
+| `vehicles(max)` | `Int32Array` d'enregistrements de 5 entiers `[id, genre, x16, y16, direction]`, au plus `max` ; `x16`, `y16` = position du centre du véhicule en seizièmes de tuile depuis le coin haut-gauche de la carte (au milieu de la tuile `(tx, ty)` : `tx*16+8`, `ty*16+8`) ; `genre` 0 voiture (1 bus, 2 taxi, 3 train, 4 métro : étapes suivantes) ; `direction` 0 nord, 1 est, 2 sud, 3 ouest |
 | `traffic_load()` | `Uint8Array` une valeur par tuile (ordre des tuiles), charge mesurée 0..=255 |
 
 ## Chantiers
