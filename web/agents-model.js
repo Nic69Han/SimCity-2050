@@ -1,0 +1,61 @@
+// Pure model of the «Circulation simulée» panel (docs/game-design-v03.md). The engine gives the
+// switch and five numbers (City.agent_rules, set_agent_rules, agent_stats); the French texts and the
+// number formatting live here. No DOM, no engine access: node --test checks it alone
+// (web/test/agents-model.test.mjs).
+
+/** Engine method names the panel needs; a build without them keeps the panel hidden. */
+export const REQUIRED = ["agent_rules", "set_agent_rules", "agent_stats"];
+
+/** Records of agent_stats: the engine's Int32Array, in this order. */
+export const STATS_LEN = 5;
+
+export const TITLE = "Circulation simulée";
+export const SWITCH_LABEL = "Activer la circulation simulée";
+export const NOTE =
+  "Des voitures roulent sur les routes entre les quartiers résidentiels et les zones d'emploi ; les bouchons apparaissent là où le réseau est saturé.";
+
+/** Whether `city` has the agents API the panel uses. */
+export function supports(city) {
+  return REQUIRED.every((m) => typeof city?.[m] === "function");
+}
+
+const int = (v) => Number(v) | 0;
+
+/**
+ * agent_stats() as a named record. A missing or short array gives zeros for the missing values.
+ * [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
+ */
+export function decodeStats(arr) {
+  const a = arr ?? [];
+  return {
+    activeCars: int(a[0]),
+    finishedTrips: int(a[1]),
+    meanTripTicks: int(a[2]),
+    saturatedTiles: int(a[3]),
+    motorisedResidents: int(a[4]),
+  };
+}
+
+/** A French-grouped number: 1234 -> "1 234" (the locale's own grouping). */
+export function formatCount(n) {
+  return int(n).toLocaleString("fr-FR");
+}
+
+/** The stats list shown while the rule is on: [[label, value], ...] in the panel's order. */
+export function statsLines(stats) {
+  const s = stats ?? decodeStats();
+  return [
+    ["Voitures en route", formatCount(s.activeCars)],
+    ["Trajets terminés", formatCount(s.finishedTrips)],
+    ["Durée moyenne d'un trajet", `${formatCount(s.meanTripTicks)} pas`],
+    ["Tuiles saturées", formatCount(s.saturatedTiles)],
+    ["Habitants motorisés", formatCount(s.motorisedResidents)],
+  ];
+}
+
+/** The state under the switch. */
+export function stateText(on) {
+  return on
+    ? "Activée : les voitures roulent sur les routes."
+    : "Désactivée : aucune voiture ne circule.";
+}

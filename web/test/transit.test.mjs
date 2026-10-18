@@ -226,7 +226,9 @@ describe("the map layer", () => {
   }
 
   test("it is the transit layer of the page, after the water layer", () => {
-    assert.equal(MAP_LAYERS.at(-1), TRANSIT_LAYER);
+    const at = MAP_LAYERS.indexOf(TRANSIT_LAYER);
+    assert.ok(at > 0, "registered");
+    assert.equal(MAP_LAYERS[at - 1].name, "water");
     assert.equal(TRANSIT_LAYER.name, "transit");
   });
 

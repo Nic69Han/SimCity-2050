@@ -7,6 +7,7 @@ use micropolis_core::tool::{EditingTool, ToolResult, TOOL_COUNT};
 use wasm_bindgen::prelude::*;
 
 // Feature modules: each adds its own `#[wasm_bindgen] impl City` block (one owner per file).
+mod agents;
 mod budget;
 mod deals;
 mod messages;

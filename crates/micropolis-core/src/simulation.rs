@@ -856,6 +856,8 @@ impl Simulation {
         self.init_sim_memory();
         self.set_game_level_funds(level);
         self.init_game();
+        // the simulated cars of the old city (runtime state, never saved) start again from this one
+        self.extensions.fleet = Default::default();
         self.push_event(Event::NewCity);
     }
 }
