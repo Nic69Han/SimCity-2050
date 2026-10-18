@@ -6,7 +6,7 @@
 
 use crate::simulation::Simulation;
 use crate::tile::{Tile, COMBASE, HOSPITALBASE, INDBASE, LOMASK, PORTBASE, POWERBASE, RESBASE};
-use crate::tile::{ROADBASE, RZB, ZONEBIT};
+use crate::tile::{HRAILROAD, ROADBASE, RZB, VRAILROAD, ZONEBIT};
 
 pub const CLASS_NONE: u8 = 0;
 pub const CLASS_ROAD: u8 = 1;
@@ -33,10 +33,11 @@ const ACCESS_RING: [(i32, i32); 12] = [
 /// Neighbour offsets: north, east, south, west.
 pub const STEPS: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 
-/// Class of a tile: road, or the centre of a residential, commercial or industrial zone.
+/// Class of a tile: road (rail crossings included, as in `Simulation::road_test`), or the centre
+/// of a residential, commercial or industrial zone.
 pub fn classify(tile: Tile) -> u8 {
     let t = tile & LOMASK;
-    if (ROADBASE..POWERBASE).contains(&t) {
+    if (ROADBASE..POWERBASE).contains(&t) || t == HRAILROAD || t == VRAILROAD {
         return CLASS_ROAD;
     }
     if tile & ZONEBIT == 0 {

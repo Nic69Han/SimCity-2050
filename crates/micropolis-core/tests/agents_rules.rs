@@ -201,6 +201,31 @@ fn a_cut_road_removes_the_cars_that_needed_it() {
         s.agent_stats()[0] as u64 + c.finished + c.abandoned
     );
     assert_eq!(s.agent_stats()[0], 0);
+    // a tile that is no longer a road reports no load (the 2D layer would tint it)
+    let g = RoadGraph::scan(&s);
+    for (t, &l) in s.agent_traffic_load().iter().enumerate() {
+        assert!(l == 0 || g.is_road(t as u32), "tile {t} kept load {l}");
+    }
+}
+
+#[test]
+fn rail_crossings_are_roads() {
+    use micropolis_core::agents::graph::{classify, CLASS_ROAD};
+    use micropolis_core::tile::{HRAILROAD, VRAILROAD};
+    assert_eq!(classify(HRAILROAD), CLASS_ROAD);
+    assert_eq!(classify(VRAILROAD), CLASS_ROAD);
+}
+
+#[test]
+fn a_fleet_left_by_a_direct_write_is_not_reported() {
+    let mut s = haight(true);
+    run(&mut s, 300);
+    assert!(s.agent_stats()[0] > 0);
+    s.extensions_mut().agents = false;
+    assert_eq!(s.agent_stats(), [0; 5]);
+    assert!(s.agent_vehicles(10).is_empty());
+    assert!(s.agent_traffic_load().iter().all(|&l| l == 0));
+    assert_eq!(s.agent_fingerprint(), 0);
 }
 
 #[test]

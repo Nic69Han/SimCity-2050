@@ -189,6 +189,20 @@ describe("agents panel", () => {
     assert.deepEqual(city.calls, []);
   });
 
+  test("a load of the same city name with the rule on still re-reads the stats at once (game id)", () => {
+    const city = fakeCity({ rules: true });
+    const { api, panel } = setupPage(city);
+    let game = { id: 1, kind: "sample" };
+    api.game = () => game;
+    ui.update(api);
+    assert.equal(rowTexts(panel)[0], "Voitures en route12");
+    // A save loaded over it: same label in the selector, the rule still on, other numbers.
+    city.stats = [3, 4, 5, 6, 7];
+    game = { id: 2, kind: "save" };
+    ui.update(api);
+    assert.equal(rowTexts(panel)[0], "Voitures en route3");
+  });
+
   test("a rule changed by the engine without a new city is noticed on the next update", () => {
     const city = fakeCity();
     const { api, panel } = setupPage(city);

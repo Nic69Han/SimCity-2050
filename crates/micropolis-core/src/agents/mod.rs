@@ -137,6 +137,12 @@ impl Run {
         if g == self.graph {
             return;
         }
+        // a tile that is no longer a road keeps no load (the load pass only visits roads)
+        for (t, l) in self.load.tile.iter_mut().enumerate() {
+            if !g.is_road(t as u32) {
+                *l = 0;
+            }
+        }
         self.graph = g;
         self.motorised = self.count_motorised();
         let before = self.cars.len();
@@ -291,8 +297,14 @@ impl Simulation {
         }
     }
 
+    /// The running fleet, only while the rule is on (a fleet left behind by a direct write to
+    /// `Extensions::agents` is never reported).
     fn agent_run(&self) -> Option<&Run> {
-        self.extensions().fleet.run.as_deref()
+        let ext = self.extensions();
+        if !ext.agents {
+            return None;
+        }
+        ext.fleet.run.as_deref()
     }
 
     /// `[active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]`.

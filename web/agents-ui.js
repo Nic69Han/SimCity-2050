@@ -3,7 +3,7 @@
 // rule and the numbers; the page keeps no copy it writes back. After a load or a new city update()
 // reads the engine again. The French texts and the formatting are in agents-model.js.
 // setup(api) runs once after the engine exists; update(api) runs after every redraw.
-// api = { city(): the engine, $(id): getElementById, redraw(), isReady(), describe() }.
+// api = { city(): the engine, $(id): getElementById, redraw(), isReady(), game(), describe() }.
 import { NOTE, SWITCH_LABEL, TITLE, decodeStats, statsLines, stateText, supports } from "./agents-model.js";
 
 /** update() reads agent_stats() once in this many calls (a scan of the traffic is not free). */
@@ -71,7 +71,8 @@ export function update(api) {
   if (!ui) ui = build(api);
   const rulesOn = Boolean(city.agent_rules());
   // Another city (a new one or a load) is a change the page did not make: read everything now.
-  const id = JSON.stringify(api.describe?.() ?? null);
+  // api.game().id changes on every new city or load, before the redraw that calls update()
+  const id = JSON.stringify(api.game?.()?.id ?? api.describe?.() ?? null);
   if (id !== cityId) {
     cityId = id;
     sinceRead = READ_EVERY;
