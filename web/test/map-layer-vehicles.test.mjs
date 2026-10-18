@@ -21,7 +21,7 @@ function recorder() {
   return { ctx, log };
 }
 
-// A fake engine: a w x h map, a traffic load per tile (row-major), and a list of vehicle records.
+// A fake engine: a w x h map, a traffic load per tile (engine tile order, x * h + y), and a list of vehicle records.
 class FakeTraffic {
   constructor({ w = 4, h = 3, rules = true, load = null, records = [] } = {}) {
     this.w = w;
@@ -119,10 +119,10 @@ describe("the layer", () => {
   });
 
   test("draws the tint of the busy tiles, then the vehicles, inside save and restore", () => {
-    // 4 x 3 map, row-major: tile (1, 0) busy, tile (2, 2) in a jam; scale 12 (short side 4 px)
+    // 4 x 3 map, index x * 3 + y: tile (1, 0) busy, tile (2, 2) in a jam; scale 12 (short side 4 px)
     const load = new Uint8Array(12);
-    load[0 * 4 + 1] = LOAD_TINT_MIN;
-    load[2 * 4 + 2] = 255;
+    load[1 * 3 + 0] = LOAD_TINT_MIN;
+    load[2 * 3 + 2] = 255;
     const city = new FakeTraffic({
       load,
       records: [[5, 1, 32, 16, 1]], // a bus at (2, 1), heading east: 8 px wide, 4 px tall

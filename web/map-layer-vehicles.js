@@ -13,15 +13,16 @@ const hasVehicles = (city) =>
   typeof city?.traffic_load === "function";
 
 function drawTraffic(ctx, city, scale) {
-  const w = city.width();
+  // tile order of the engine (like tiles()): index = x * height + y
+  const h = city.height();
   const load = city.traffic_load();
-  if (!(w > 0) || !load) return;
-  const n = Math.min(load.length, w * city.height());
+  if (!(h > 0) || !load) return;
+  const n = Math.min(load.length, city.width() * h);
   for (let i = 0; i < n; i++) {
     const color = loadColor(load[i]);
     if (color === null) continue;
     ctx.fillStyle = color;
-    ctx.fillRect((i % w) * scale, Math.floor(i / w) * scale, scale, scale);
+    ctx.fillRect(Math.floor(i / h) * scale, (i % h) * scale, scale, scale);
   }
 }
 
