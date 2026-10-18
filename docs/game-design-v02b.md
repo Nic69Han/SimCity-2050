@@ -17,3 +17,41 @@ Sonnet, relecture et intégration par Opus.
 * Chaque nouveauté se voit, se sauvegarde quand elle a un état, et se teste (règle désactivée = moteur
   identique ; règle activée = effet mesuré ; boucles bornées).
 * Relecture Opus de chaque livraison (diff lu, vérifications relancées) avant intégration.
+
+## Conseillers et sons (chantier livré)
+
+### Conseillers (`advisors-model.js`, `advisors.js`)
+Seuils en constantes documentées, texte déterministe, fonction totale ; les règles et l'ordre existants sont
+inchangés. Un bloc de règle n'est lu que si l'API du moteur existe **et** que son interrupteur
+(`water_rules`, `transit_rules`, `deals_rules`) est vrai ; sinon il est ignoré.
+
+| Conseiller | Règle | Seuils |
+|---|---|---|
+| Urbanisme | Zones sans eau (`water_stats` : pompes, canalisations, alimentées, à sec) ; conseille une pompe si aucune, sinon de prolonger les canalisations à `WATER_REACH` (3) cases | attention dès 1 zone à sec ; urgent à `WATER_DRY_URGENT_MIN` (4) zones et `WATER_DRY_URGENT_SHARE` (50 %) |
+| Urbanisme | Métro (`transit_stats` : stations, tunnels, lignes, tuiles desservies) : plaintes de circulation sans ligne en service → creuser une ligne ; avec lignes → les prolonger ; stations sans ligne → les relier ; lignes en service citées quand tout va bien | sévérité des plaintes (`VOTES_ATTENTION` 15, `VOTES_URGENT` 35) ; stations sans ligne : attention |
+| Finances | Coût annuel des ordonnances actives (`ordinance_info`/`ordinance_active`) ajouté au diagnostic ; si l'argent manque, retirer la plus chère | tout coût actif > 0 |
+| Finances | Accords (`deals_rules`) : nombre et recette annuelle ; surplus d'électricité à vendre aux voisins | surplus ≥ `DEAL_SURPLUS_MIN` (1) |
+| Sécurité | Criminalité en plainte (≥ 15 votes) : propose l'ordonnance inactive qui baisse le plus la criminalité, par son nom français et son coût | `VOTES_ATTENTION` |
+| Environnement | Pollution en plainte ou en hausse : même chose avec l'effet pollution | `VOTES_ATTENTION`, `POLLUTION_RISE` |
+
+Mise à jour légère : la clé de `update()` contient désormais `cheapKey(city)` (interrupteurs des règles,
+masque des ordonnances en vigueur, compteurs d'eau et de métro, nombre d'accords), donc un changement de règle
+ou d'ordonnance recalcule les conseils sans attendre le mois suivant.
+
+Forme **supposée** de l'API des accords (à confirmer avec le chantier voisin ; une forme inconnue est ignorée
+sans erreur) : `active_deals()` = liste dont la longueur est le nombre d'accords et dont les éléments
+portent un `income` numérique (dollars par an) ; `surplus()` = un nombre, une liste dont la première valeur est
+le surplus d'électricité, ou un objet `{ electricity }`.
+
+### Sons (`sound.js`, `sound-model.js`) et crochet de résultat (`tools.js`)
+* `tools.js` exporte `onToolResult(listener)` (renvoie la fonction de désabonnement). Chaque appel d'outil de la
+  page (outils du moteur et outils d'extension) appelle les écouteurs avec `{ kind, result, cost? }` : `kind` est
+  `"down"` (clic) ou `"drag"` ; `result` est le code `RESULT`, ou `null` quand le moteur n'en donne pas (un
+  glisser d'outil du moteur) ; `cost` (clic seulement) est le coût que `tool_preview` annonçait juste avant. Un
+  écouteur qui lève est signalé à la console sans arrêter l'outil. Le comportement des outils est inchangé.
+* `sound.js` s'y abonne : réussite → son « construction » (le clic, plus grave), « Pas assez d'argent » → son de
+  manque d'argent, refus → son de refus. Plus de lecture du texte de `#tool-msg`. La limite de débit est conservée.
+* Test seulement : avec `?soundlog=1` dans l'adresse, `window.__soundLog` liste les clés des sons démarrés (200
+  derniers) ; sans ce paramètre rien n'est exposé.
+* Limite : un glisser d'outil du moteur ne renvoie aucun code, donc seul le premier carreau d'une route tracée
+  au glisser fait entendre le son de construction.

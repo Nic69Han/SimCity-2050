@@ -2,7 +2,7 @@
 // sound (City.sound_name, crates/micropolis-wasm/src/messages.rs) or a page event, how loud, and
 // how often. No Web Audio, no DOM: web/sound.js plays what this module chooses.
 // Files and licence: web/sounds/ (Kenney packs, CC0; see docs/credits.md).
-import { RESULT, resultMessage } from "./tools.js";
+import { RESULT } from "./tools.js";
 
 /** At most this many sounds start in any window of one second (a fast drag must not spam). */
 export const MAX_PLAYS_PER_SECOND = 6;
@@ -17,6 +17,8 @@ export const STORAGE_KEY = "micropolis.sound";
  */
 export const SOUNDS = Object.freeze({
   click: { file: "ui-click.ogg", volume: 0.4 },
+  // a built tool: the click file, lower and a little louder (no new file: the folder is capped at 1 MB)
+  build: { file: "ui-click.ogg", volume: 0.5, rate: 0.7 },
   refused: { file: "ui-refused.ogg", volume: 0.6 },
   noMoney: { file: "ui-no-money.ogg", volume: 0.6 },
   siren: { file: "city-siren.ogg", volume: 0.35 },
@@ -58,17 +60,22 @@ export function soundForEngine(name) {
 }
 
 /**
- * The sound of a message of the tool line (#tool-msg): the refusals and "no money" the page shows
- * for a tool result (tools.js resultMessage). Success shows an empty line, so it has no sound here:
- * an empty line is also what a tool selection writes.
+ * The sound of a tool result (tools.js onToolResult: { kind, result }): success builds, a missing budget
+ * and the refusals have their own. A null result (an engine drag reports none) or an unknown code is
+ * silence. `kind` does not matter here: a drag segment that succeeds sounds like a click that does.
  */
-export function soundForToolMessage(text) {
-  if (!text) return null;
-  if (text === resultMessage(RESULT.NO_MONEY)) return soundOf("noMoney");
-  if (text === resultMessage(RESULT.NEED_BULLDOZE) || text === resultMessage(RESULT.FAILED)) {
-    return soundOf("refused");
+export function soundForToolResult(event) {
+  switch (event?.result) {
+    case RESULT.OK:
+      return soundOf("build");
+    case RESULT.NO_MONEY:
+      return soundOf("noMoney");
+    case RESULT.NEED_BULLDOZE:
+    case RESULT.FAILED:
+      return soundOf("refused");
+    default:
+      return null;
   }
-  return null;
 }
 
 /** Files of every sound of the table, each once (what the page loads). */

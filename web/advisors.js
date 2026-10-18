@@ -4,6 +4,7 @@
 // setup(api) runs once; update(api) runs after every redraw, so it stays cheap.
 import { decodeBudget, decodeEvaluation } from "./budget-text.js";
 import { advise, SEVERITY_LABEL } from "./advisors-model.js";
+import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
 
 const HIST_MONEY = 3;
 const HIST_POLLUTION = 5;
@@ -15,6 +16,40 @@ let lastReads = null;
 
 function call(city, name, ...args) {
   return typeof city?.[name] === "function" ? city[name](...args) : null;
+}
+
+const RULES = [["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"]];
+
+/** The rule switches the engine has, { water, transit, deals } (a missing method leaves the name out). */
+function readRules(city) {
+  const rules = {};
+  for (const [name, method] of RULES) {
+    const v = call(city, method);
+    if (v !== null && v !== undefined) rules[name] = v === true;
+  }
+  return rules;
+}
+
+const ints = (a) => (a && typeof a.length === "number" ? Array.from(a, Number) : null);
+
+/**
+ * Deals (API of the neighbour deals workstream, feature-detected, shapes read tolerantly):
+ * active_deals() = a list (its length is the count; an entry with a numeric `income` adds to the yearly
+ * income); surplus() = a number, a list whose first value is the electricity surplus, or an object with
+ * `electricity`. Anything else is left out.
+ */
+function readDeals(city) {
+  const active = call(city, "active_deals");
+  const deals = {};
+  if (active && typeof active.length === "number") {
+    deals.count = active.length;
+    const incomes = Array.from(active, (d) => d?.income).filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (incomes.length) deals.income = incomes.reduce((a, b) => a + b, 0);
+  }
+  const sur = call(city, "surplus");
+  const surplus = typeof sur === "number" ? sur : sur && typeof sur === "object" ? (sur.electricity ?? sur[0]) : null;
+  if (typeof surplus === "number") deals.surplus = surplus;
+  return deals;
 }
 
 /** Everything the engine can tell, in the shape advise() reads. Missing methods leave fields out. */
@@ -38,7 +73,39 @@ export function readSnapshot(city) {
   if (money?.length) s.moneyHistory = Array.from(money);
   const pol = call(city, "history", HIST_POLLUTION, HIST_SHORT);
   if (pol?.length) s.pollutionHistory = Array.from(pol);
+  const rules = readRules(city);
+  if (Object.keys(rules).length) s.rules = rules;
+  const w = rules.water ? ints(call(city, "water_stats")) : null;
+  if (w && w.length >= 4) s.water = { pumps: w[0], pipes: w[1], watered: w[2], dry: w[3] };
+  const t = rules.transit ? ints(call(city, "transit_stats")) : null;
+  if (t && t.length >= 4) s.transit = { stations: t[0], tunnels: t[1], lines: t[2], served: t[3] };
+  if (hasOrdinances(city)) {
+    s.ordinances = readOrdinances(city).map((o) => ({
+      key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
+    }));
+  }
+  if (rules.deals) s.deals = readDeals(city);
   return s;
+}
+
+/**
+ * The cheap flags of the extended rules, read every frame: the rule switches, the ordinances in force and
+ * the water and metro counters (few integers each). They change when the player flips a switch, votes an
+ * ordinance or builds a pipe, a pump, a tunnel or a station, so the advice follows without waiting a month.
+ */
+export function cheapKey(city) {
+  const rules = readRules(city);
+  const parts = [JSON.stringify(rules)];
+  if (hasOrdinances(city)) {
+    const n = Number(city.ordinance_count()) | 0;
+    let mask = 0;
+    for (let i = 0; i < Math.min(n, 31); i++) if (city.ordinance_active(i)) mask |= 1 << i;
+    parts.push(mask);
+  }
+  if (rules.water) parts.push(ints(call(city, "water_stats"))?.join());
+  if (rules.transit) parts.push(ints(call(city, "transit_stats"))?.join());
+  if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.toString?.());
+  return parts.join("/");
 }
 
 function render(advice) {
@@ -85,7 +152,7 @@ export function update(api) {
   // cheap guard: the evaluation and the histories move at most once a game month, so the advice is
   // recomputed on a new month, or when the player changes the funds, the tax or the budget. Not on
   // demand or population, which change on almost every tick and would recompute it every frame.
-  const reads = [call(city, "year"), call(city, "month"), call(city, "funds"), call(city, "budget")?.join()].join("|");
+  const reads = [call(city, "year"), call(city, "month"), call(city, "funds"), call(city, "budget")?.join(), cheapKey(city)].join("|");
   if (reads === lastReads) return;
   lastReads = reads;
   render(advise(readSnapshot(city)));

@@ -11,6 +11,49 @@ export const TILE_PX = 8; // canvas pixels per tile (same as main.js)
 // ToolResult codes returned by tool_down (docs/tools-contract.md).
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
+// Result hook: other page modules (the sounds) learn the outcome of every tool call the page makes,
+// without reading the status line. Listeners are called with { kind, result, cost? } after the call:
+//   kind    "down" (a click) or "drag" (a stroke segment);
+//   result  the ToolResult code (RESULT), or null when the engine gives none (an engine drag);
+//   cost    for "down" only: the cost tool_preview reported just before the call (a dry run, absent
+//           when the preview is unusable).
+// A listener that throws is reported on the console and does not stop the others or the tool.
+const resultListeners = new Set();
+
+export function onToolResult(listener) {
+  resultListeners.add(listener);
+  return () => resultListeners.delete(listener);
+}
+
+function emitToolResult(event) {
+  for (const listener of [...resultListeners]) {
+    try {
+      listener(event);
+    } catch (e) {
+      console.error("outil : un écouteur de résultat a échoué", e);
+    }
+  }
+}
+
+// ToolStroke talks to the engine by tool id; this adapter routes each id to its engine calls (`calls`:
+// Map id -> callsFor()) and tells the result listeners what came back. Exported for tests.
+export function strokeEngineOf(calls) {
+  return {
+    tool_down(id, x, y) {
+      const c = calls.get(id);
+      const cost = resultListeners.size > 0 ? c.preview(x, y)?.[1] : undefined;
+      const result = c.down(x, y);
+      emitToolResult(typeof cost === "number" ? { kind: "down", result, cost } : { kind: "down", result });
+      return result;
+    },
+    tool_drag(id, x0, y0, x1, y1) {
+      const result = calls.get(id).drag(x0, y0, x1, y1);
+      emitToolResult({ kind: "drag", result: typeof result === "number" ? result : null });
+      return result;
+    },
+  };
+}
+
 // Engine methods the palette needs. Without all of them the page keeps its old behaviour.
 const REQUIRED_METHODS = [
   "tool_count", "tool_info", "tool_key", "tool_down", "tool_drag", "tool_preview", "tool_footprint",
@@ -353,10 +396,7 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
   let pointerAbort = null;
 
   // ToolStroke talks to the engine by tool id; the adapter routes each id to its engine calls.
-  const strokeEngine = {
-    tool_down: (id, x, y) => calls.get(id).down(x, y),
-    tool_drag: (id, x0, y0, x1, y1) => calls.get(id).drag(x0, y0, x1, y1),
-  };
+  const strokeEngine = strokeEngineOf(calls);
   const stroke = new ToolStroke(strokeEngine, {
     isInspect,
     onResult: (code) => say(resultMessage(code)),

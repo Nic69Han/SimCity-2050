@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  SOUNDS, ENGINE_SOUNDS, MAX_PLAYS_PER_SECOND, WINDOW_MS, soundOf, soundForEngine, soundForToolMessage,
+  SOUNDS, ENGINE_SOUNDS, MAX_PLAYS_PER_SECOND, WINDOW_MS, soundOf, soundForEngine, soundForToolResult,
   soundFiles, createLimiter, preferenceOf, preferenceValue, muteLabel,
 } from "../sound-model.js";
-import { RESULT, resultMessage } from "../tools.js";
+import { RESULT } from "../tools.js";
 import { soundEventsOf, KIND } from "../messages.js";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url)); // web/
@@ -43,18 +43,27 @@ describe("engine sounds map to a file", () => {
   });
 });
 
-describe("tool messages map to a sound", () => {
-  test("a refusal and a missing budget have their sound", () => {
-    assert.equal(soundForToolMessage(resultMessage(RESULT.NO_MONEY)).key, "noMoney");
-    assert.equal(soundForToolMessage(resultMessage(RESULT.NEED_BULLDOZE)).key, "refused");
-    assert.equal(soundForToolMessage(resultMessage(RESULT.FAILED)).key, "refused");
+describe("tool results map to a sound", () => {
+  test("success builds; a refusal and a missing budget have their sound", () => {
+    assert.equal(soundForToolResult({ kind: "down", result: RESULT.OK }).key, "build");
+    assert.equal(soundForToolResult({ kind: "drag", result: RESULT.OK }).key, "build");
+    assert.equal(soundForToolResult({ kind: "down", result: RESULT.NO_MONEY }).key, "noMoney");
+    assert.equal(soundForToolResult({ kind: "down", result: RESULT.NEED_BULLDOZE }).key, "refused");
+    assert.equal(soundForToolResult({ kind: "down", result: RESULT.FAILED }).key, "refused");
   });
 
-  test("success (empty line), other lines and an empty text make no sound", () => {
-    assert.equal(soundForToolMessage(resultMessage(RESULT.OK)), null);
-    assert.equal(soundForToolMessage(""), null);
-    assert.equal(soundForToolMessage("Action impossible"), null);
-    assert.equal(soundForToolMessage("Pas de relief ici"), null);
+  test("a null result (engine drag), an unknown code and bad input are silence", () => {
+    assert.equal(soundForToolResult({ kind: "drag", result: null }), null);
+    assert.equal(soundForToolResult({ kind: "down", result: 7 }), null);
+    assert.equal(soundForToolResult({}), null);
+    assert.equal(soundForToolResult(null), null);
+    assert.equal(soundForToolResult(undefined), null);
+  });
+
+  test("the build sound uses an existing file at a lower pitch", () => {
+    const b = soundOf("build");
+    assert.equal(b.file, SOUNDS.click.file);
+    assert.ok(b.rate < 1 && b.volume > 0);
   });
 });
 
