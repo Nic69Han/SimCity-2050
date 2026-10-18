@@ -33,6 +33,11 @@ est refusée à la relecture.
 12. Avant de rendre son travail : `cargo test`, `cargo clippy -- -D warnings`, `cargo fmt --check`,
     `node --test web/test/*.test.mjs`, et selon le cas `./scripts/test-wasm.sh`, `./scripts/e2e.sh`, les
     scripts `compare-*.sh`. Le rapport dit exactement ce qui a tourné et ce qui n'a pas pu tourner.
-13. **Organisation** : les agents de développement (Sonnet, Haiku) livrent dans leur copie de travail ; la
-    relecture (Opus) lit le diff, relance les vérifications, refuse ou corrige, puis intègre. Rien n'arrive dans
-    `main` sans cette relecture.
+13. **Organisation** : les agents de développement livrent dans leur copie de travail ; la relecture (Opus)
+    conçoit, pose les points d'extension, lit le diff, relance les vérifications, refuse ou corrige, puis
+    intègre. Rien n'arrive dans `main` sans cette relecture.
+14. **Développeur cadré (Haiku par défaut)** : chaque tâche confiée est petite et fermée : liste exacte des
+    fichiers modifiables, contrat (signatures, codes, constantes) écrit dans la consigne, critères de test et
+    commandes de vérification imposés. Si la tâche exige un fichier hors liste, l'agent s'arrête et le dit. Les
+    tâches qui demandent de la conception ou touchent plusieurs couches sont d'abord découpées par la relecture
+    (points d'extension posés avant), ou confiées exceptionnellement à Sonnet.
