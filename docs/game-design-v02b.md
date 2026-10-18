@@ -17,3 +17,26 @@ Sonnet, relecture et intégration par Opus.
 * Chaque nouveauté se voit, se sauvegarde quand elle a un état, et se teste (règle désactivée = moteur
   identique ; règle activée = effet mesuré ; boucles bornées).
 * Relecture Opus de chaque livraison (diff lu, vérifications relancées) avant intégration.
+
+## Sous-sol en 3D (chantier livré)
+
+Calque `web/view3d-underground.js` (partie pure : `web/view3d-underground-model.js`), lit le moteur par `ctx.city()`
+(lecture seule) et ne dessine rien si `water_layer()` / `transit_layer()` manquent ou si la règle est désactivée.
+
+* **Formes** : canalisations = boîtes bleues fines sous le sol (grises-bleues à sec), pompes = petites tours
+  cyan sur le sol, tunnels = boîtes plus épaisses et plus profondes (grises, orange sur une ligne en service),
+  stations = petits bâtiments sur le sol (couleur plus forte en service). Un noeud par tuile et un segment par
+  voisin relié (droite et bas) ; hauteurs depuis `tileCentreY`.
+* **Capacités** (`CAPACITY`, une `InstancedMesh` par genre) : canalisations 12288, pompes 64 (`MAX_PUMPS`),
+  tunnels 12288, stations 64 (`MAX_STATIONS`). Au-delà, les placements sont abandonnés et comptés (`dropped`).
+* **Mises à jour** : `update()` tourne à chaque image ; l'empreinte (FNV-1a) des deux couches, les drapeaux de
+  règle et le tableau des coins du terrain sont comparés, et les instances ne sont reconstruites que s'ils changent.
+* **Bouton « Sous-sol »** dans `#view3d-controls` : les matériaux Lambert opaques trouvés dans `ctx.scene`
+  (terrain, volumes des bâtiments) deviennent translucides (opacité 0,3, sans écriture de profondeur) ; état
+  d'origine restauré au relâchement et au `dispose()`. Les réseaux sont dessinés dès que leur règle est active,
+  le bouton ne change que la transparence. Les canalisations et tunnels enterrés sont donc cachés par le terrain
+  opaque ; les pompes et stations, posées sur le sol, restent visibles.
+* **Crochet de test** : `canvas.undergroundStats()` → `{ pipeTiles, pumpTiles, tunnelTiles, stationTiles,
+  instances: {pipe, pump, tunnel, station}, dropped, seeThrough, rebuilds }` (retiré au `dispose()`).
+* **Tests** : `web/test/view3d-underground*.test.mjs` (placement, capacité, détection de changement),
+  `web/e2e/underground.test.mjs` (eau, vue 3D simple `?lite=1`, bascule).
