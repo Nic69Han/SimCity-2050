@@ -43,4 +43,6 @@ if ! curl -fsS -o /dev/null "http://127.0.0.1:$PORT/"; then
 fi
 
 export E2E_BASE_URL="http://127.0.0.1:$PORT/"
-node --test --test-concurrency=1 web/e2e/*.test.mjs
+# Arguments: the e2e files to run (all of web/e2e by default).
+if [ "$#" -gt 0 ]; then FILES=("$@"); else FILES=(web/e2e/*.test.mjs); fi
+node --test --test-concurrency=1 "${FILES[@]}"

@@ -83,3 +83,20 @@ passé de `0b1000` à `0b1_0000`.
 **Performance** (`cargo test --release -p micropolis-core --test agents_rules -- --ignored --nocapture`, Haight
 120×100, régime établi, ~190 voitures) : 0,022 ms/tick règle désactivée, 0,066 ms/tick règle active (≈ 15 000
 ticks/s), soit un surcoût de ≈ 0,044 ms par tick.
+
+## Affichage et panneau (chantiers livrés)
+* **Carte 2D** (`web/map-layer-vehicles.js`, partie pure `map-layer-vehicles-model.js`) : visible avec la règle
+  active ; teinte orange des tuiles de charge ≥ `LOAD_TINT_MIN` (128), rouge au-delà de `LOAD_JAM` (200), puis
+  chaque véhicule en petit rectangle allongé dans sa direction, couleur par genre ; au plus `MAX_DRAWN` (2 000).
+* **Vue 3D** (`web/view3d-vehicles.js`, partie pure `view3d-vehicles-model.js`) : une `InstancedMesh` de petites
+  boîtes (`MAX_VEHICLES_3D` = 4 000), lecture du moteur toutes les `READ_INTERVAL` (0,25 s), interpolation par
+  identifiant entre deux lectures, hauteur du terrain de la tuile ; crochet de test `canvas.vehiclesStats()`.
+* **Panneau** (`web/agents-ui.js`, `agents-model.js`, `css/agents.css`) : interrupteur et statistiques
+  (voitures en route, trajets terminés, durée moyenne en pas, tuiles saturées, habitants motorisés), lues une fois
+  sur `READ_EVERY` (5) mises à jour ; faux moteur de test (`web/test/mock-engine.mjs`).
+* **e2e** (`web/e2e/agents.test.mjs`, Haight, `?lite=1`) : règle éteinte au départ ; allumée, des voitures roulent,
+  le panneau les compte, la carte change, la vue 3D en dessine. `./scripts/e2e.sh <fichiers>` lance un seul fichier.
+
+## Suites prévues
+Trajet retour (domicile ← travail), conseiller de la circulation, scénario de congestion sur une grande carte ;
+étapes suivantes de docs/ia-simulation.md (bus, taxis, trains, métro animés).
