@@ -4,6 +4,7 @@
 //! Unlike the C++ original, world dimensions are runtime parameters, so the
 //! map can be made far larger than the original 120x100.
 
+pub mod agents;
 pub mod animate;
 pub mod budget;
 pub mod budget_api;
