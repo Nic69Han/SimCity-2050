@@ -39,5 +39,9 @@ est refusée à la relecture.
 14. **Développeur cadré (Haiku par défaut)** : chaque tâche confiée est petite et fermée : liste exacte des
     fichiers modifiables, contrat (signatures, codes, constantes) écrit dans la consigne, critères de test et
     commandes de vérification imposés. Si la tâche exige un fichier hors liste, l'agent s'arrête et le dit. Les
-    tâches qui demandent de la conception ou touchent plusieurs couches sont d'abord découpées par la relecture
-    (points d'extension posés avant), ou confiées exceptionnellement à Sonnet.
+    tâches qui touchent plusieurs couches sont d'abord découpées par la relecture (points d'extension posés
+    avant).
+15. **Développeur senior (Sonnet)** : réservé aux concepts complexes (algorithmes de simulation, moteur,
+    format de sauvegarde, architecture d'un module, performance, rendu 3D avancé). Il reçoit un objectif et
+    un contrat de haut niveau, peut proposer la conception détaillée et la découpe en tâches Haiku, et suit les
+    mêmes règles (fichiers autorisés, tests, vérifications, relecture Opus).
