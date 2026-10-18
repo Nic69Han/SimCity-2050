@@ -3,7 +3,10 @@
 // a remembered choice waits for the first gesture before it loads anything. No error appears.
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { launchBrowser, openPage, assertNoErrors, waitForReady, pollUntil } from "./helpers.mjs";
+import {
+  launchBrowser, openPage, assertNoErrors, waitForReady, pollUntil, readMap, findRun, findTile, selectTool, clickTile, newCity,
+  WATER_LABEL, DIRT_LABEL,
+} from "./helpers.mjs";
 
 const TIMEOUT = 60000;
 
@@ -67,6 +70,59 @@ describe("sound button", () => {
 
       await page.locator("h1").click(); // a gesture of the player, not on the button
       await pollUntil(async () => requests.length > 0, "the sound files to be fetched after a gesture");
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+});
+
+// Test mode: the address ends in ?soundlog=1, and the page lists in window.__soundLog the key of every
+// sound it starts (sound.js). The sounds are decoded asynchronously after the button press, so a build is
+// repeated on fresh tiles until the first one is heard.
+describe("tool sounds", () => {
+  const soundLog = (page) => page.evaluate(() => globalThis.__soundLog ?? null);
+
+  test("muted: a road is built in silence; sound on: the build sound plays; a refusal sounds too", { timeout: 90000 }, async () => {
+    const { page, errors, close } = await openPage(browser, { query: "?soundlog=1" });
+    try {
+      assert.deepEqual(await soundLog(page), [], "the log exists in test mode and starts empty");
+      await newCity(page, "42"); // a fresh city: bare land and a lake for sure
+      await pollUntil(async () => (await page.locator("#status").textContent()).includes("Graine 42"), "the new city");
+      const map = await readMap(page);
+      const run = findRun(map, DIRT_LABEL, 8); // 8 bare tiles in a row: one road tile per attempt
+      const dirt = run?.[0];
+      const water = findTile(map, WATER_LABEL);
+      assert.ok(run && water, "a bare tile and a water tile in the sample");
+
+      await selectTool(page, "road");
+      await clickTile(page, dirt.x, dirt.y);
+      assert.deepEqual(await soundLog(page), [], "muted: nothing plays");
+
+      await page.click("#sound-toggle");
+      assert.equal(await label(page), "Son : activé");
+      let next = 1;
+      await pollUntil(async () => {
+        const t = run[Math.min(next++, run.length - 1)];
+        await clickTile(page, t.x, t.y);
+        return (await soundLog(page)).includes("build");
+      }, "the build sound to be played once the sounds are decoded", 30000);
+
+      await selectTool(page, "road");
+      await pollUntil(async () => {
+        await clickTile(page, water.x, water.y); // a road cannot go on water: refused
+        return (await soundLog(page)).includes("refused");
+      }, "the refusal sound to be played", 30000);
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  test("without ?soundlog=1 the page exposes no log", { timeout: TIMEOUT }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      assert.equal(await soundLog(page), null);
       assertNoErrors(errors);
     } finally {
       await close();

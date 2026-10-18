@@ -6,13 +6,19 @@
 import { onSound } from "./messages.js";
 import {
   STORAGE_KEY, preferenceOf, preferenceValue, muteLabel, createLimiter, soundFiles, soundOf,
-  soundForEngine, soundForToolMessage,
+  soundForEngine, soundForToolResult,
 } from "./sound-model.js";
+import { onToolResult } from "./tools.js";
 
 const limiter = createLimiter();
 let on = false; // the player's choice (muted until they turn it on)
 let button = null; // the mute button in #sound-controls
 let audio = null; // { ctx, buffers: Map(file -> AudioBuffer) } once a gesture has come and sound is on
+
+// Test mode only (address ending in ?soundlog=1): window.__soundLog lists the key of every sound started (the last LOG_MAX),
+// so an end-to-end test can observe what Web Audio plays. Nothing is kept or exposed otherwise.
+const log = new URLSearchParams(globalThis.location?.search ?? "").has("soundlog") ? (globalThis.__soundLog = []) : null;
+const LOG_MAX = 200;
 
 function audioContextClass() {
   return window.AudioContext ?? window.webkitAudioContext ?? null;
@@ -79,6 +85,10 @@ function play(sound) {
   gain.gain.value = sound.volume;
   source.connect(gain).connect(ctx.destination);
   source.start();
+  if (log) {
+    log.push(sound.key);
+    if (log.length > LOG_MAX) log.shift();
+  }
 }
 
 function render() {
@@ -118,10 +128,6 @@ export function setup(api) {
   }
   document.addEventListener("click", clickSound, true);
   onSound(({ name }) => play(soundForEngine(name)));
-  const toolLine = api.$("tool-msg");
-  if (toolLine) {
-    // the tool line states the result of each tool press (tools.js): a refusal sounds
-    new MutationObserver(() => play(soundForToolMessage(toolLine.textContent)))
-      .observe(toolLine, { childList: true, characterData: true, subtree: true });
-  }
+  // every tool call of the page reports its result (tools.js): a build, a refusal, no money
+  onToolResult((event) => play(soundForToolResult(event)));
 }
