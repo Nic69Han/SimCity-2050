@@ -159,6 +159,9 @@ impl Simulation {
         let speed_index = clamp_c(self.sim_speed - 1, 0, 2) as usize;
         let (w, _) = self.world_size();
 
+        // Extended rule (inert unless the cars are on): the only place the agents run.
+        self.ext_agents_tick();
+
         // The simulator has 16 different phases, which we cycle through
         // according to phaseCycle, which is incremented and wrapped at the end.
         if self.init_sim_load != 0 {

@@ -14,6 +14,7 @@
 //!   tag order, at most one per tag. [`encode_block`] writes it and [`decode_chunks`] checks it
 //!   completely before anything is applied, so a bad block never touches the engine.
 
+use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::position::Position;
 use crate::simulation::Simulation;
@@ -42,9 +43,12 @@ pub const BLOCK_LENGTH_SIZE: usize = 4;
 const RULES_WATER: u8 = 0b01;
 const RULES_TRANSIT: u8 = 0b10;
 const RULES_DEALS: u8 = 0b100;
+/// Bit 3 of the rules chunk: the simulated cars (`Extensions::agents`). The cars themselves
+/// are not saved; a loaded city restarts them from the map.
+const RULES_AGENTS: u8 = 0b1000;
 
 /// The switches of the extended rules. Everything off by default.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Extensions {
     /// Active ordinances: bit `n` is ordinance `n`.
     pub ordinances: u32,
@@ -56,12 +60,16 @@ pub struct Extensions {
     pub deals: bool,
     /// The signed deals (kept only while `deals` is on; see [`deals`]).
     pub deal_list: DealList,
+    /// The simulated cars (docs/game-design-v03.md). Only this switch is saved.
+    pub agents: bool,
+    /// The cars on the road: runtime state, never saved, ignored when comparing.
+    pub fleet: Fleet,
 }
 
 impl Extensions {
     /// Whether any extended rule is on.
     pub fn is_active(&self) -> bool {
-        self.ordinances != 0 || self.water_rules || self.transit_rules || self.deals
+        self.ordinances != 0 || self.water_rules || self.transit_rules || self.deals || self.agents
     }
 
     fn rules_flags(&self) -> u8 {
@@ -74,6 +82,9 @@ impl Extensions {
         }
         if self.deals {
             flags |= RULES_DEALS;
+        }
+        if self.agents {
+            flags |= RULES_AGENTS;
         }
         flags
     }
@@ -174,10 +185,11 @@ pub(crate) fn decode_chunks(
 fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> {
     match bytes {
         [] => Ok(()),
-        [flags] if flags & !(RULES_WATER | RULES_TRANSIT | RULES_DEALS) == 0 => {
+        [flags] if flags & !(RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS) == 0 => {
             ext.water_rules = flags & RULES_WATER != 0;
             ext.transit_rules = flags & RULES_TRANSIT != 0;
             ext.deals = flags & RULES_DEALS != 0;
+            ext.agents = flags & RULES_AGENTS != 0;
             Ok(())
         }
         [_] => Err("unknown rules flag"),
@@ -299,7 +311,23 @@ impl Simulation {
         if !self.extensions_active() {
             return t;
         }
+        if self.extensions.agents {
+            // measured load replaces the statistical density (the agents rewrite the map too)
+            return agents::traffic(self, x, y, t);
+        }
         transit::traffic(self, x, y, t)
+    }
+
+    /// Hook: one step of the simulated cars. Called at the top of `simulate` (`simulate.rs`),
+    /// once per simulated phase. Does nothing unless `Extensions::agents` is on; on, it uses its
+    /// own generator (never the simulation's) and writes the measured load into the traffic
+    /// density map.
+    #[inline]
+    pub fn ext_agents_tick(&mut self) {
+        if !self.extensions.agents {
+            return;
+        }
+        agents::tick(self);
     }
 
     /// Hook: adjusts the zoning valves. Called at the end of `set_valves` (`simulate.rs`).
@@ -468,7 +496,7 @@ mod tests {
             chunk(6, &[]),
             cat(&[chunk(2, &[0, 0, 0, 1]), chunk(1, &[1])]),
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
-            chunk(1, &[0b1000]),
+            chunk(1, &[0b1_0000]),
             chunk(1, &[1, 1]),
             chunk(2, &[1, 2, 3]),
             chunk(3, &[1, 2, 3]),
