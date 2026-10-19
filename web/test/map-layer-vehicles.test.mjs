@@ -4,10 +4,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   decodeVehicles, vehicleRect, loadColor, kindColor, lengthFactor, LOAD_TINT_MIN, LOAD_JAM, MAX_DRAWN,
-  TINT_COLORS, KIND_COLORS, UNKNOWN_KIND_COLOR, BASE_LENGTH, LENGTH_FACTOR,
+  TINT_COLORS, KIND_COLORS, UNKNOWN_KIND_COLOR, BASE_LENGTH, LENGTH_FACTOR, METRO_KIND, shownIn2D,
 } from "../map-layer-vehicles-model.js";
 import { VEHICLES_LAYER } from "../map-layer-vehicles.js";
 import { MAP_LAYERS } from "../map-layers.js";
+import { setPlanShown, setMetroToolActive } from "../transit-model.js";
 
 // A fake context that records what is painted, with the fill style in force at each call.
 function recorder() {
@@ -206,5 +207,42 @@ describe("the layer", () => {
     VEHICLES_LAYER.draw(ctx, city, 8);
     const rects = log.filter((e) => e[0] === "rect");
     assert.equal(rects.length, MAX_DRAWN);
+  });
+});
+
+describe("the 2D rule for metro rames", () => {
+  test("a rame (kind 4) is drawn only when metroOn is true; every other kind is always drawn", () => {
+    assert.equal(METRO_KIND, 4);
+    assert.equal(shownIn2D(4, true), true);
+    assert.equal(shownIn2D(4, false), false);
+    for (const metroOn of [false, true]) {
+      for (const kind of [0, 1, 2, 3, 99]) assert.equal(shownIn2D(kind, metroOn), true, `kind ${kind}`);
+    }
+  });
+
+  test("metroOn must be the boolean true: any other value hides a rame", () => {
+    for (const metroOn of [undefined, null, 1, "yes", {}]) assert.equal(shownIn2D(4, metroOn), false, String(metroOn));
+  });
+
+  test("the layer hides a rame unless the metro plan or a metro tool is shown; a train is always drawn", () => {
+    const records = [[1, 3, 32, 16, 1], [2, 4, 64, 16, 1]]; // a train and a rame, both at tile row 1
+    const colours = () => {
+      const { ctx, log } = recorder();
+      VEHICLES_LAYER.draw(ctx, new FakeTraffic({ records }), 12);
+      return log.filter((e) => e[0] === "rect").map((e) => e[5]);
+    };
+    try {
+      setPlanShown(false);
+      setMetroToolActive(false);
+      assert.deepEqual(colours(), [KIND_COLORS[3]], "no plan, no tool: the train only");
+      setPlanShown(true);
+      assert.deepEqual(colours(), [KIND_COLORS[3], KIND_COLORS[4]], "plan shown: the rame too");
+      setPlanShown(false);
+      setMetroToolActive(true);
+      assert.deepEqual(colours(), [KIND_COLORS[3], KIND_COLORS[4]], "metro tool active: the rame too");
+    } finally {
+      setPlanShown(false);
+      setMetroToolActive(false);
+    }
   });
 });

@@ -78,3 +78,11 @@ export function loadColor(load) {
 export function kindColor(kind) {
   return Object.hasOwn(KIND_COLORS, kind) ? KIND_COLORS[kind] : UNKNOWN_KIND_COLOR;
 }
+
+// A metro rame (kind 4) is drawn in 2D only while the metro plan or a metro tool is shown (metroOn);
+// every other kind, trains included, is always drawn (docs/game-design-v06.md).
+export const METRO_KIND = 4;
+
+export function shownIn2D(kind, metroOn) {
+  return kind !== METRO_KIND || metroOn === true;
+}
