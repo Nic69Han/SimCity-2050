@@ -295,9 +295,14 @@ fn cost_of_a_tick() {
         run(&mut s, 500);
         let t = std::time::Instant::now();
         run(&mut s, 3000);
-        (t.elapsed().as_secs_f64() * 1000.0 / 3000.0, s.agent_stats())
+        let ms = t.elapsed().as_secs_f64() * 1000.0 / 3000.0;
+        (ms, s.agent_stats(), s.agent_counters())
     };
-    let (off, _) = time(false);
-    let (on, st) = time(true);
+    let (off, ..) = time(false);
+    let (on, st, c) = time(true);
     println!("ms/tick off {off:.4} on {on:.4} stats {st:?}");
+    println!(
+        "parked {} returning {} round trips {} max present {}",
+        c.parked, c.returning, c.round_trips, c.max_present
+    );
 }

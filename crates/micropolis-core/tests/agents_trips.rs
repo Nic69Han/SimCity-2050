@@ -152,11 +152,6 @@ fn the_fingerprint_covers_parked_cars() {
     assert_eq!(a.agent_fingerprint(), b.agent_fingerprint());
     // one more tick of parked time changes it even if no car moves on the road
     assert_ne!(run(301).agent_fingerprint(), a.agent_fingerprint());
-    // two runs with a different number of parked cars differ
-    let mut c = run(300);
-    let before = c.agent_fingerprint();
-    ticks(&mut c, 0);
-    assert_eq!(c.agent_fingerprint(), before);
 }
 
 const HOMES: i32 = 16;
