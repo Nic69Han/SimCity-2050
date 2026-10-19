@@ -265,7 +265,7 @@ describe("traffic of the agents rule", () => {
     assert.equal(M.TRAFFIC_TRIP_LONG, 120);
     const long = trafficOf(ag(0, M.TRAFFIC_TRIP_LONG));
     assert.equal(long.severity, "attention");
-    assert.match(long.diagnosis, /Les trajets durent en moyenne 120 tours\./);
+    assert.match(long.diagnosis, /Les trajets durent en moyenne 120 pas\./);
     assert.equal(trafficOf(ag(0, M.TRAFFIC_TRIP_LONG - 1)).severity, "ok");
   });
   test("remedy: a metro line when the metro rule is on, else parallel roads or another access", () => {

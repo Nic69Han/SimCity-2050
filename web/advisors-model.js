@@ -277,7 +277,7 @@ function agentsFinding(s) {
   if (!severity) return null;
   const parts = [];
   if (a.saturated >= TRAFFIC_SAT_ATTENTION) parts.push(`Les routes sont saturées sur ${formatInt(a.saturated)} ${plural(a.saturated, "case", "cases")}.`);
-  if (long) parts.push(`Les trajets durent en moyenne ${formatInt(a.meanTicks)} tours.`);
+  if (long) parts.push(`Les trajets durent en moyenne ${formatInt(a.meanTicks)} pas.`);
   const action = flag(s, "transit")
     ? "Ajoutez une ligne de métro pour désengorger les routes."
     : "Ajoutez des routes parallèles ou un autre accès vers les zones d'emploi.";
