@@ -340,3 +340,92 @@ describe("agents panel transport rows", () => {
     assert.equal(rowTexts(panel)[7], "Voyageurs en attente7");
   });
 });
+
+// ---- rail rows (docs/game-design-v06.md): after the transport rows, read in the same throttle ----
+
+/** A fake City with the rail answer too; `rreads` counts rail_stats() calls. withRail false removes the method. */
+function fakeRailCity({ rules = true, rail = [2, 1, 340, 120, 900, 1, 1], withRail = true } = {}) {
+  const city = fakeTransportCity({ rules });
+  city.rail = rail;
+  city.rreads = 0;
+  city.rail_stats = () => {
+    city.rreads++;
+    return city.rules ? Int32Array.from(city.rail) : Int32Array.of(0, 0, 0, 0, 0, 0, 0);
+  };
+  if (!withRail) delete city.rail_stats;
+  return city;
+}
+
+const RAIL_LABELS = ["Trains", "Rames de métro", "Voyageurs en train ce mois", "Voyageurs en métro ce mois", "Recettes du rail"];
+/** [label, value] of each row, the value with plain spaces. */
+const pairsOf = (panel) => statsOf(panel).children.map((li) => [
+  li.children[0].textContent, li.children[1].textContent.replace(/[\s  ]/g, " "),
+]);
+
+describe("agents panel rail rows", () => {
+  test("rule on with rail_stats: the five rail rows follow the transport rows", () => {
+    const { api, panel } = setupPage(fakeRailCity());
+    ui.update(api);
+    const rows = pairsOf(panel);
+    assert.equal(rows.length, 16);
+    assert.deepEqual(rows.slice(5, 11).map((r) => r[0]), TRANSPORT_LABELS);
+    assert.deepEqual(rows.slice(11), [
+      ["Trains", "2"],
+      ["Rames de métro", "1"],
+      ["Voyageurs en train ce mois", "340"],
+      ["Voyageurs en métro ce mois", "120"],
+      ["Recettes du rail", "900 $"],
+    ]);
+  });
+
+  test("rule off: no rail row, and rail_stats is never read", () => {
+    const city = fakeRailCity({ rules: false });
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    assert.equal(city.rreads, 0);
+    assert.equal(statsOf(panel).hidden, true);
+    assert.equal(statsOf(panel).children.length, 0);
+  });
+
+  test("an engine without rail_stats keeps the traffic and transport rows only", () => {
+    const { api, panel } = setupPage(fakeRailCity({ withRail: false }));
+    ui.update(api);
+    assert.equal(statsOf(panel).children.length, 11);
+    assert.equal(pairsOf(panel)[10][0], "Recettes des transports");
+  });
+
+  test("without transport_stats the rail rows follow the five traffic rows", () => {
+    const city = fakeRailCity();
+    delete city.transport_stats;
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    const rows = pairsOf(panel);
+    assert.equal(rows.length, 10);
+    assert.deepEqual(rows.slice(5).map((r) => r[0]), RAIL_LABELS);
+  });
+
+  test("a short rail answer gives zeros for the missing values", () => {
+    const { api, panel } = setupPage(fakeRailCity({ rail: [3, 4] }));
+    ui.update(api);
+    assert.deepEqual(pairsOf(panel).slice(11).map((r) => r[1]), ["3", "4", "0", "0", "0 $"]);
+  });
+
+  test("a new rail value shows after the reading window, as the other rows do", () => {
+    const city = fakeRailCity();
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    city.rail = [9, 1, 340, 120, 900, 1, 1];
+    flush(api);
+    assert.equal(pairsOf(panel)[11][1], "9");
+  });
+
+  test("the mock engine shows the rail rows after the transport rows", () => {
+    const { api, panel } = setupPage(new MockCity(1));
+    api.city().set_agent_rules(true);
+    ui.update(api);
+    const rows = pairsOf(panel);
+    assert.equal(rows.length, 16);
+    assert.deepEqual(rows[11], ["Trains", "2"]);
+    assert.deepEqual(rows[15], ["Recettes du rail", "900 $"]);
+  });
+});
