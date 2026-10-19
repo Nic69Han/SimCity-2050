@@ -10,10 +10,10 @@ export const RECORD_LENGTH = 8;
 export const MAX_CATALOG_RECORDS = 32;
 
 // French names of the genres of the milestone; the engine only knows numbers.
-// The transport genres (docs/game-design-v05.md) are named here too.
+// The transport genres (docs/game-design-v05.md) and the rail genre (docs/game-design-v06.md) are named here too.
 export const NAMES = Object.freeze({
   1: "Parc urbain", 2: "Place publique", 3: "Monument",
-  10: "Arrêt de bus", 11: "Dépôt de bus", 12: "Dépôt de taxis",
+  10: "Arrêt de bus", 11: "Dépôt de bus", 12: "Dépôt de taxis", 13: "Gare",
 });
 
 // Why the buildings cannot be placed now (the page shows it as the button's reason).
