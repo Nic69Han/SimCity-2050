@@ -259,3 +259,84 @@ describe("mock engine agents", () => {
     assert.equal(city.agent_rules(), false);
   });
 });
+
+// ---- transport rows (docs/game-design-v05.md): after the five traffic rows, read in the same throttle ----
+
+/** A fake City with the transport answer too; `treads` counts transport_stats() calls. */
+function fakeTransportCity({ rules = true, transport = [2, 1, 25, 340, 60, 1200] } = {}) {
+  const city = fakeCity({ rules });
+  city.transport = transport;
+  city.treads = 0;
+  city.transport_stats = () => {
+    city.treads++;
+    return city.rules ? Int32Array.from(city.transport) : Int32Array.of(0, 0, 0, 0, 0, 0);
+  };
+  return city;
+}
+
+const TRANSPORT_LABELS = [
+  "Bus en service", "Taxis en service", "Voyageurs en attente",
+  "Voyages en bus ce mois", "Courses de taxi ce mois", "Recettes des transports",
+];
+
+describe("agents panel transport rows", () => {
+  test("with transport_stats the six rows follow the five traffic rows, in order", () => {
+    const { api, panel } = setupPage(fakeTransportCity());
+    ui.update(api);
+    const items = statsOf(panel).children;
+    assert.equal(items.length, 11);
+    assert.deepEqual(items.slice(5).map((li) => li.children[0].textContent), TRANSPORT_LABELS);
+    const values = items.slice(5).map((li) => li.children[1].textContent.replace(/[\s\u00a0\u202f]/g, " "));
+    assert.deepEqual(values, ["2", "1", "25", "340", "60", "1 200 $"]);
+  });
+
+  test("the transport rows are not there while the traffic rule is off, and transport_stats is not read", () => {
+    const city = fakeTransportCity({ rules: false });
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    assert.equal(city.treads, 0);
+    assert.equal(statsOf(panel).hidden, true);
+    assert.equal(statsOf(panel).children.length, 0);
+  });
+
+  test("an engine without transport_stats keeps the five traffic rows", () => {
+    const city = fakeCity({ rules: true });
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    assert.equal(statsOf(panel).children.length, 5);
+  });
+
+  test("a short transport answer gives zeros for the missing values", () => {
+    const city = fakeTransportCity({ transport: [3, 4] });
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    const values = statsOf(panel).children.slice(5).map((li) => li.children[1].textContent.replace(/[\s  ]/g, " "));
+    assert.deepEqual(values, ["3", "4", "0", "0", "0", "0 $"]);
+  });
+
+  test("transport_stats is read once in READ_EVERY calls, and the waiting count shows after the window", () => {
+    const city = fakeTransportCity();
+    const { api, panel } = setupPage(city);
+    ui.update(api);
+    const reads = city.treads;
+    for (let i = 0; i < 5 * ui.READ_EVERY; i++) ui.update(api);
+    assert.ok(city.treads - reads <= 5, `${city.treads - reads} reads in ${5 * ui.READ_EVERY} updates`);
+    const before = writes(panel);
+    for (let i = 0; i < 5 * ui.READ_EVERY; i++) ui.update(api);
+    assert.equal(writes(panel), before, "no DOM write when nothing changed");
+    city.transport = [2, 1, 99, 340, 60, 1200];
+    flush(api);
+    assert.equal(rowTexts(panel)[7], "Voyageurs en attente99");
+  });
+
+  test("another city with the rule on shows the transport numbers of that city at once", () => {
+    const city = fakeTransportCity();
+    const { api, panel, page } = setupPage(city);
+    api.game = () => page;
+    ui.update(api);
+    city.transport = [0, 0, 7, 0, 0, 0];
+    page.label = "Kyoto";
+    ui.update(api);
+    assert.equal(rowTexts(panel)[7], "Voyageurs en attente7");
+  });
+});

@@ -29,6 +29,9 @@
 //     load. Off: agent_stats() is five zeros, vehicles(max) is empty, traffic_load() is all zeros.
 //     On: agent_stats() is a few fixed numbers, vehicles(max) lists min(max, 5) cars at fixed places
 //     (records [id, 0, x16, y16, direction]), traffic_load() is (x + y) % 4 * 40 per tile.
+//   - transport_stats() (docs/game-design-v05.md): six zeros while the agents rule is off, else the fixed
+//     numbers TRANSPORT_FIXED. The transit genres 10-12 (MOCK_TRANSIT_STRUCTURES) join the catalog only with
+//     the structures option AND the `transit` option, so the v0.4 catalog stays the same for the other tests.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -100,6 +103,17 @@ export const MOCK_STRUCTURES = Object.freeze([
   { genre: 3, width: 3, height: 3, cost: 1000, upkeep: 20 },
 ]);
 
+// Transport genres (the `transit` option of the mock): bus stop, bus depot, taxi depot.
+export const MOCK_TRANSIT_STRUCTURES = Object.freeze([
+  { genre: 10, width: 1, height: 1, cost: 50, upkeep: 1 },
+  { genre: 11, width: 2, height: 2, cost: 300, upkeep: 8 },
+  { genre: 12, width: 2, height: 2, cost: 400, upkeep: 10 },
+]);
+
+// transport_stats() while the agents rule is on: [buses, taxis, waiting, bus_trips_month,
+// taxi_rides_month, income_month].
+export const TRANSPORT_FIXED = Object.freeze([2, 1, 25, 340, 60, 1200]);
+
 function lcg(seed) {
   let s = (seed >>> 0) || 1;
   return () => {
@@ -126,6 +140,7 @@ export class MockCity {
   #agentRules = false; // traffic agents switch (City.agent_rules)
   #structRules = false; // extended buildings switch (City.structure_rules)
   #structures = []; // placed buildings: { genre, x, y, width, height }
+  #specs = MOCK_STRUCTURES; // the catalog of this mock (MOCK_STRUCTURES, plus the transit genres if asked)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -133,11 +148,12 @@ export class MockCity {
 
   // `structures: true` gives the extended buildings API (docs/game-design-v04.md). Without it the
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
-  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false } = {}) {
+  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
     this.#rubble = rubble;
+    if (structures && transit) this.#specs = [...MOCK_STRUCTURES, ...MOCK_TRANSIT_STRUCTURES];
     this.#generate(seed);
     if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
   }
@@ -365,6 +381,10 @@ export class MockCity {
   set_agent_rules(on) {
     this.#agentRules = Boolean(on);
   }
+  // [buses, taxis, waiting, bus_trips_month, taxi_rides_month, income_month]; zeros while the rule is off.
+  transport_stats() {
+    return this.#agentRules ? Int32Array.from(TRANSPORT_FIXED) : Int32Array.of(0, 0, 0, 0, 0, 0);
+  }
   // [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
   agent_stats() {
     if (!this.#agentRules) return Int32Array.of(0, 0, 0, 0, 0);
@@ -406,7 +426,7 @@ export class MockCity {
   }
   // Records of 8 [genre, width, height, cost, upkeep, flags, radius, effect].
   structure_catalog() {
-    return Int32Array.from(MOCK_STRUCTURES.flatMap((s) => [s.genre, s.width, s.height, s.cost, s.upkeep, 0, 4, 1]));
+    return Int32Array.from(this.#specs.flatMap((s) => [s.genre, s.width, s.height, s.cost, s.upkeep, 0, 4, 1]));
   }
   // Records of 6 [genre, x, y, width, height, state], in placing order.
   structures() {
@@ -414,7 +434,7 @@ export class MockCity {
   }
   // Dry run of a placement: { result, cost }, as place_structure would decide, without changing state.
   #structVerdict(genre, x, y) {
-    const spec = MOCK_STRUCTURES.find((s) => s.genre === genre);
+    const spec = this.#specOf(genre);
     if (!this.#structRules || !spec || !this.#inside(x, y)) return { result: RESULT.FAILED, cost: 0 };
     if (x + spec.width > this.#width || y + spec.height > this.#height) return { result: RESULT.FAILED, cost: 0 };
     let rubble = false;
@@ -430,6 +450,9 @@ export class MockCity {
     if (this.#funds < spec.cost) return { result: RESULT.NO_MONEY, cost: spec.cost };
     return { result: RESULT.OK, cost: spec.cost };
   }
+  #specOf(genre) {
+    return this.#specs.find((s) => s.genre === genre);
+  }
   #structureAt(x, y) {
     return this.#structures.find((s) => x >= s.x && x < s.x + s.width && y >= s.y && y < s.y + s.height);
   }
@@ -441,7 +464,7 @@ export class MockCity {
   place_structure(genre, x, y) {
     const v = this.#structVerdict(genre, x, y);
     if (v.result === RESULT.OK) {
-      const spec = MOCK_STRUCTURES.find((s) => s.genre === genre);
+      const spec = this.#specOf(genre);
       this.#funds -= v.cost;
       this.#structures.push({ genre, x, y, width: spec.width, height: spec.height });
     }
@@ -457,7 +480,7 @@ export class MockCity {
   }
   // Monthly upkeep of the placed buildings, in dollars.
   structures_upkeep() {
-    return this.#structures.reduce((sum, s) => sum + MOCK_STRUCTURES.find((m) => m.genre === s.genre).upkeep, 0);
+    return this.#structures.reduce((sum, s) => sum + this.#specOf(s.genre).upkeep, 0);
   }
 
   funds() {

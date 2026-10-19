@@ -4,7 +4,10 @@
 // reads the engine again. The French texts and the formatting are in agents-model.js.
 // setup(api) runs once after the engine exists; update(api) runs after every redraw.
 // api = { city(): the engine, $(id): getElementById, redraw(), isReady(), game(), describe() }.
-import { NOTE, SWITCH_LABEL, TITLE, decodeStats, statsLines, stateText, supports } from "./agents-model.js";
+import {
+  NOTE, SWITCH_LABEL, TITLE, decodeStats, decodeTransport, statsLines, stateText, supports, supportsTransport,
+  transportLines,
+} from "./agents-model.js";
 
 /** update() reads agent_stats() once in this many calls (a scan of the traffic is not free). */
 export const READ_EVERY = 5;
@@ -51,6 +54,13 @@ function statRow([label, value]) {
   return li;
 }
 
+/** The rows while the rule is on: the traffic ones, then the transport ones when the engine has them. */
+function trafficLines(city) {
+  const traffic = statsLines(decodeStats(city.agent_stats()));
+  if (!supportsTransport(city)) return traffic;
+  return [...traffic, ...transportLines(decodeTransport(city.transport_stats()))];
+}
+
 export function setup(api) {
   panel = api.$("agents-panel");
   ui = null;
@@ -86,7 +96,7 @@ export function update(api) {
   if (++sinceRead < READ_EVERY && lastKey !== null) return;
   sinceRead = 0;
 
-  const lines = rulesOn ? statsLines(decodeStats(city.agent_stats())) : [];
+  const lines = rulesOn ? trafficLines(city) : [];
   const key = rulesOn ? lines.map((l) => l.join("|")).join(";") : "off";
   if (key === lastKey) return; // nothing the panel shows has changed
   lastKey = key;
