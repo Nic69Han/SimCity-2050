@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn the_surface_family_stays_inside_the_free_characters() {
-        assert!(SURFACE_TILE <= LEGACY_SURFACE_LAST && LEGACY_SURFACE_LAST <= 1023);
+        const { assert!(SURFACE_TILE <= LEGACY_SURFACE_LAST && LEGACY_SURFACE_LAST <= 1023) };
         assert!(is_surface(SURFACE_TILE) && is_surface(LEGACY_SURFACE_LAST));
         assert!(!is_surface(SURFACE_TILE - 1) && !is_surface(LEGACY_SURFACE_LAST + 1));
     }

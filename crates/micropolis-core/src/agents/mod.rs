@@ -6,6 +6,7 @@
 //! * [`rng`]: the agents' own generator, seeded from the city, never the simulation's.
 //!
 //! * [`run`]: the running fleet. * [`trips`]: departures, returns and arrivals.
+//! * [`transport`]: buses and taxis (docs/game-design-v05.md), on when the buildings rule is on too.
 //!
 //! One step per simulated phase (`Simulation::ext_agents_tick`): refresh the graph every
 //! [`REFRESH_INTERVAL`] ticks, start at most [`MAX_PATH_SEARCHES_PER_TICK`] searches (return

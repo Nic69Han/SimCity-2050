@@ -24,6 +24,9 @@ pub mod route;
 mod step;
 pub mod taxi;
 
+#[cfg(test)]
+mod tests;
+
 pub use crate::structures::{GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_TAXI_DEPOT};
 pub use bus::Bus;
 pub use riders::{Audit, Rider, TransportCounters};
@@ -176,12 +179,15 @@ impl Transport {
 
     /// Where the riders are, counted from the containers (the conservation law's two sides).
     pub fn audit(&self) -> Audit {
-        let in_taxis = self.taxis.iter().filter(|t| t.rider.is_some());
-        let fetching = self.taxis.iter().filter(|t| t.is_fetching()).count();
-        let waiting: usize =
-            self.queues.iter().map(Vec::len).sum::<usize>() + self.requests.len() + fetching;
-        let on_board =
-            self.buses.iter().map(|b| b.riders.len()).sum::<usize>() + in_taxis.count() - fetching;
+        let (fetching, riding) = self.taxis.iter().fold((0, 0), |(f, r), t| {
+            (
+                f + usize::from(t.is_fetching()),
+                r + usize::from(t.picked && t.rider.is_some()),
+            )
+        });
+        let queued: usize = self.queues.iter().map(Vec::len).sum();
+        let waiting = queued + self.requests.len() + fetching;
+        let on_board = self.buses.iter().map(|b| b.riders.len()).sum::<usize>() + riding;
         let c = &self.counters;
         Audit {
             waiting,

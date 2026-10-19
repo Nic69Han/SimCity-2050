@@ -62,9 +62,7 @@ impl Taxi {
     /// The pick-up or the drop-off if the taxi is on the tile where it happens. The rider is
     /// taken out of the taxi at the drop-off and returned in the event's place by the caller.
     pub fn event(&mut self) -> Option<Event> {
-        if self.rider.is_none() {
-            return None;
-        }
+        self.rider.as_ref()?;
         if !self.picked && self.at == self.pickup_at {
             self.picked = true;
             return Some(Event::PickedUp);
