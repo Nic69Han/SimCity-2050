@@ -17,6 +17,7 @@ mod relief;
 mod saves;
 mod sizes;
 mod sprites;
+mod structures;
 mod transit;
 mod water;
 
