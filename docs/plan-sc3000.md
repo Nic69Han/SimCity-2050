@@ -33,3 +33,17 @@ avec les voisins), v0.3 (voitures simulées), v0.3b (aller-retour, conseiller de
 * Entiers, déterminisme, boucles bornées par des constantes nommées, tests de chaque plafond.
 * Contrat moteur ↔ page écrit avant les chantiers ; la page détecte les méthodes absentes et ne casse jamais.
 * Rien de nouveau sans tests ; un jalon n'est fusionné que vert partout.
+
+## Au-delà : niveau SimCity 4 (après v1.0)
+Ce que SimCity 4 ajoute à SimCity 3000, dans l'ordre proposé :
+
+| Jalon | Contenu |
+|---|---|
+| **v1.1 Régions** | Plusieurs villes sur une carte de région, voisins réels (et non fictifs), demande, trajets domicile-travail et échanges (électricité, eau, déchets) entre villes de la région ; vue de région. |
+| **v1.2 Richesse et sous-types** | Habitants et emplois par niveau de richesse (§, §§, §§§) ; commerces de services et de bureaux, industrie agricole, sale, manufacturière, de haute technologie ; demande séparée par sous-type. |
+| **v1.3 Lots et croissance réaliste** | Parcelles de tailles variées orientées vers la rue, remplacement progressif des bâtiments, désirabilité par sous-type (bruit, pollution, distance au travail, services). |
+| **v1.4 Réseau routier complet** | Rue, route, avenue, sens unique, autoroute surélevée et au sol, échangeurs ; ferry, monorail, rail surélevé ; heure de pointe et choix du mode par trajet. |
+| **v1.5 Services à capacité** | Chaque école, hôpital, caserne, commissariat a une capacité, un budget propre et une zone de couverture ; âge des habitants (éducation et santé par tranche d'âge). |
+| **v1.6 Mode « Ma Sim » et missions** | Suivre un habitant (domicile, travail, humeur) ; missions de conduite (pompiers, police, bus) dans la ville. |
+| **v1.7 Mode divin étendu et catastrophes** | Terraformage complet avant la fondation (montagnes, rivières, érosion), volcan, robot géant, pluie de météores. |
+| **v1.8 Rendu SimCity 4** | Bâtiments 3D détaillés et variés par sous-type et richesse, saisons, ombres portées, zoom rapproché sur les habitants. |
