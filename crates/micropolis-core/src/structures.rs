@@ -226,14 +226,14 @@ impl StructureList {
     /// whole number of records, more than [`MAX_STRUCTURES`], an unknown genre, a footprint off
     /// the map or two buildings that overlap.
     pub fn decode(bytes: &[u8], width: i32, height: i32) -> Result<StructureList, &'static str> {
-        if bytes.len() % RECORD_SIZE != 0 {
+        if !bytes.len().is_multiple_of(RECORD_SIZE) {
             return Err("structures chunk is not a whole number of records");
         }
         if bytes.len() / RECORD_SIZE > MAX_STRUCTURES {
             return Err("structures chunk has too many buildings");
         }
         let mut list = StructureList::default();
-        for r in bytes.chunks_exact(RECORD_SIZE) {
+        for r in bytes.as_chunks::<RECORD_SIZE>().0 {
             let s = Structure {
                 genre: r[0],
                 x: i32::from(u16::from_be_bytes([r[1], r[2]])),
@@ -307,13 +307,32 @@ mod tests {
 
     #[test]
     fn footprints_distances_and_overlaps() {
-        let park = Structure { genre: GENRE_PARK, x: 5, y: 5 };
+        let park = Structure {
+            genre: GENRE_PARK,
+            x: 5,
+            y: 5,
+        };
         assert_eq!(park.tiles(), vec![(5, 5), (6, 5), (5, 6), (6, 6)]);
         assert!(park.covers(6, 6) && !park.covers(7, 6));
-        assert_eq!((park.distance(6, 6), park.distance(8, 5), park.distance(8, 9)), (0, 2, 5));
-        let plaza = Structure { genre: GENRE_PLAZA, x: 6, y: 6 };
+        assert_eq!(
+            (
+                park.distance(6, 6),
+                park.distance(8, 5),
+                park.distance(8, 9)
+            ),
+            (0, 2, 5)
+        );
+        let plaza = Structure {
+            genre: GENRE_PLAZA,
+            x: 6,
+            y: 6,
+        };
         assert!(park.overlaps(&plaza));
-        assert!(!park.overlaps(&Structure { genre: GENRE_PLAZA, x: 7, y: 6 }));
+        assert!(!park.overlaps(&Structure {
+            genre: GENRE_PLAZA,
+            x: 7,
+            y: 6
+        }));
     }
 
     #[test]
@@ -321,8 +340,16 @@ mod tests {
         let mut l = StructureList::default();
         assert!(l.encode().is_empty());
         assert_eq!(StructureList::decode(&[], 80, 67), Ok(l.clone()));
-        assert!(l.push(Structure { genre: GENRE_MONUMENT, x: 70, y: 60 }));
-        assert!(l.push(Structure { genre: GENRE_PARK, x: 1, y: 2 }));
+        assert!(l.push(Structure {
+            genre: GENRE_MONUMENT,
+            x: 70,
+            y: 60
+        }));
+        assert!(l.push(Structure {
+            genre: GENRE_PARK,
+            x: 1,
+            y: 2
+        }));
         let bytes = l.encode();
         assert_eq!(bytes.len(), 2 * RECORD_SIZE);
         assert_eq!(StructureList::decode(&bytes, 80, 67), Ok(l));
@@ -355,9 +382,17 @@ mod tests {
     fn the_list_is_capped() {
         let mut l = StructureList::default();
         for i in 0..MAX_STRUCTURES {
-            assert!(l.push(Structure { genre: GENRE_PLAZA, x: i as i32, y: 0 }));
+            assert!(l.push(Structure {
+                genre: GENRE_PLAZA,
+                x: i as i32,
+                y: 0
+            }));
         }
-        assert!(!l.push(Structure { genre: GENRE_PLAZA, x: 0, y: 1 }));
+        assert!(!l.push(Structure {
+            genre: GENRE_PLAZA,
+            x: 0,
+            y: 1
+        }));
         assert_eq!(l.len(), MAX_STRUCTURES);
     }
 }

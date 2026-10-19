@@ -17,8 +17,8 @@
 use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::position::Position;
-use crate::structures::StructureList;
 use crate::simulation::Simulation;
+use crate::structures::StructureList;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::water::WaterNetwork;
@@ -52,8 +52,7 @@ const RULES_AGENTS: u8 = 0b1000;
 /// Bit 4 of the rules chunk: the extended buildings (`Extensions::structures`).
 const RULES_STRUCTURES: u8 = 0b1_0000;
 
-const RULES_KNOWN: u8 =
-    RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS | RULES_STRUCTURES;
+const RULES_KNOWN: u8 = RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS | RULES_STRUCTURES;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -81,7 +80,12 @@ pub struct Extensions {
 impl Extensions {
     /// Whether any extended rule is on.
     pub fn is_active(&self) -> bool {
-        self.ordinances != 0 || self.water_rules || self.transit_rules || self.deals || self.agents || self.structures
+        self.ordinances != 0
+            || self.water_rules
+            || self.transit_rules
+            || self.deals
+            || self.agents
+            || self.structures
     }
 
     fn rules_flags(&self) -> u8 {

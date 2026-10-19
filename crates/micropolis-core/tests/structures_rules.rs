@@ -69,8 +69,19 @@ fn placing_checks_the_site_and_the_money_in_order() {
     let mut s = bare();
     let park = kind(GENRE_PARK);
     // unknown genre, off the map, on water: Failed
-    for (g, x, y) in [(0, 20, 20), (9, 20, 20), (1, -1, 5), (1, 89, 5), (3, 88, 68), (1, 9, 20)] {
-        assert_eq!(s.structure_preview(g, x, y).result, ToolResult::Failed, "{g} {x} {y}");
+    for (g, x, y) in [
+        (0, 20, 20),
+        (9, 20, 20),
+        (1, -1, 5),
+        (1, 89, 5),
+        (3, 88, 68),
+        (1, 9, 20),
+    ] {
+        assert_eq!(
+            s.structure_preview(g, x, y).result,
+            ToolResult::Failed,
+            "{g} {x} {y}"
+        );
     }
     // trees, a road, a fire: bulldoze first
     s.set_tile(31, 31, WOODS);
@@ -95,7 +106,11 @@ fn placing_checks_the_site_and_the_money_in_order() {
 #[test]
 fn a_placed_building_is_listed_costs_money_and_covers_its_footprint() {
     let mut s = bare();
-    for (genre, x, y) in [(GENRE_PARK, 20, 20), (GENRE_PLAZA, 30, 20), (GENRE_MONUMENT, 40, 20)] {
+    for (genre, x, y) in [
+        (GENRE_PARK, 20, 20),
+        (GENRE_PLAZA, 30, 20),
+        (GENRE_MONUMENT, 40, 20),
+    ] {
         let k = kind(genre);
         let before = s.total_funds;
         assert_eq!(s.place_structure(genre, x, y), ToolResult::Ok);
@@ -118,9 +133,18 @@ fn a_placed_building_is_listed_costs_money_and_covers_its_footprint() {
     }
     let views = s.structures();
     assert_eq!(views.len(), 3);
-    let wh: Vec<_> = views.iter().map(|v| (v.genre, v.x, v.y, v.width, v.height)).collect();
-    assert_eq!(wh, [(1, 20, 20, 2, 2), (2, 30, 20, 1, 1), (3, 40, 20, 3, 3)]);
-    assert_eq!(s.structures_upkeep(), CATALOG.iter().map(|k| k.upkeep).sum::<i32>());
+    let wh: Vec<_> = views
+        .iter()
+        .map(|v| (v.genre, v.x, v.y, v.width, v.height))
+        .collect();
+    assert_eq!(
+        wh,
+        [(1, 20, 20, 2, 2), (2, 30, 20, 1, 1), (3, 40, 20, 3, 3)]
+    );
+    assert_eq!(
+        s.structures_upkeep(),
+        CATALOG.iter().map(|k| k.upkeep).sum::<i32>()
+    );
 }
 
 #[test]
@@ -217,10 +241,17 @@ fn switching_the_rule_off_removes_everything_without_refund() {
 fn the_number_of_buildings_is_capped() {
     let mut s = bare();
     for i in 0..MAX_STRUCTURES as i32 {
-        assert_eq!(s.place_structure(GENRE_PLAZA, 12 + i % 60, 2 + 2 * (i / 60)), ToolResult::Ok, "{i}");
+        assert_eq!(
+            s.place_structure(GENRE_PLAZA, 12 + i % 60, 2 + 2 * (i / 60)),
+            ToolResult::Ok,
+            "{i}"
+        );
     }
     assert_eq!(s.structures().len(), MAX_STRUCTURES);
-    assert_eq!(s.structure_preview(GENRE_PLAZA, 12, 40).result, ToolResult::Failed);
+    assert_eq!(
+        s.structure_preview(GENRE_PLAZA, 12, 40).result,
+        ToolResult::Failed
+    );
     assert_eq!(s.place_structure(GENRE_PLAZA, 12, 40), ToolResult::Failed);
     assert_eq!(s.tile(12, 40), Some(DIRT));
     assert_eq!(s.remove_structure(12, 2), ToolResult::Ok);
@@ -278,7 +309,11 @@ fn water_links_the_building_when_the_water_rules_are_on() {
     assert_eq!(s.water().pipes.get(9, 33), PUMP);
     assert_eq!(s.structures()[0].state & 2, 2);
     s.set_water_rules(false);
-    assert_eq!(s.structures()[0].state & 2, 0, "no water without the water rules");
+    assert_eq!(
+        s.structures()[0].state & 2,
+        0,
+        "no water without the water rules"
+    );
 }
 
 /// Marks every tile of a building powered, as the power scan does.

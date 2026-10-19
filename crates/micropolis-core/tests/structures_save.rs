@@ -106,7 +106,10 @@ fn a_rule_on_without_building_saves_the_flag_only() {
     s.set_structure_rules(true);
     let file = file_of(&s);
     assert_eq!(version(&file), 3);
-    assert_eq!(file.len(), file_of(&city()).len() + RELIEF_BLOCK_OVERHEAD + (W * H) as usize + 4 + 6);
+    assert_eq!(
+        file.len(),
+        file_of(&city()).len() + RELIEF_BLOCK_OVERHEAD + (W * H) as usize + 4 + 6
+    );
     let back = loaded(&file);
     assert!(back.structure_rules() && back.structures().is_empty());
 }
@@ -120,7 +123,10 @@ fn buildings_round_trip() {
     assert!(back.structure_rules());
     assert_eq!(back.structures(), s.structures());
     assert_eq!(back.structures().len(), 3);
-    assert_eq!(back.extensions().structure_list, s.extensions().structure_list);
+    assert_eq!(
+        back.extensions().structure_list,
+        s.extensions().structure_list
+    );
     // the surface tiles are the saved ones; a load recomputes derived tile bits (power), so
     // the file is stable from the second save on
     for v in back.structures() {
@@ -159,16 +165,24 @@ fn a_bad_chunk_is_refused_and_leaves_the_engine_untouched() {
         ("cut record", chunk(CHUNK_STRUCTURES, &[1, 0, 0])),
         ("unknown genre", chunk(CHUNK_STRUCTURES, &record(9, 5, 5))),
         ("genre zero", chunk(CHUNK_STRUCTURES, &record(0, 5, 5))),
-        ("off the map", chunk(CHUNK_STRUCTURES, &record(GENRE_MONUMENT, W as u16 - 2, 5))),
+        (
+            "off the map",
+            chunk(CHUNK_STRUCTURES, &record(GENRE_MONUMENT, W as u16 - 2, 5)),
+        ),
         (
             "overlap",
-            chunk(CHUNK_STRUCTURES, &[record(GENRE_PARK, 5, 5), record(GENRE_PLAZA, 6, 6)].concat()),
+            chunk(
+                CHUNK_STRUCTURES,
+                &[record(GENRE_PARK, 5, 5), record(GENRE_PLAZA, 6, 6)].concat(),
+            ),
         ),
         (
             "too many",
             chunk(
                 CHUNK_STRUCTURES,
-                &(0..257u16).flat_map(|i| record(GENRE_PLAZA, i % 90, i / 90)).collect::<Vec<_>>(),
+                &(0..257u16)
+                    .flat_map(|i| record(GENRE_PLAZA, i % 90, i / 90))
+                    .collect::<Vec<_>>(),
             ),
         ),
         ("unknown tag", chunk(7, &[1])),
