@@ -19,9 +19,9 @@ function call(city, name, ...args) {
   return typeof city?.[name] === "function" ? city[name](...args) : null;
 }
 
-const RULES = [["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"]];
+const RULES = [["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"]];
 
-/** The rule switches the engine has, { water, transit, deals } (a missing method leaves the name out). */
+/** The rule switches the engine has, { water, transit, deals, agents } (a missing method leaves the name out). */
 function readRules(city) {
   const rules = {};
   for (const [name, method] of RULES) {
@@ -84,6 +84,9 @@ export function readSnapshot(city) {
   if (w && w.length >= 4) s.water = { pumps: w[0], pipes: w[1], watered: w[2], dry: w[3] };
   const t = rules.transit ? ints(call(city, "transit_stats")) : null;
   if (t && t.length >= 4) s.transit = { stations: t[0], tunnels: t[1], lines: t[2], served: t[3] };
+  // agent_stats: [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
+  const a = rules.agents ? ints(call(city, "agent_stats")) : null;
+  if (a && a.length >= 5) s.agents = { cars: a[0], finished: a[1], meanTicks: a[2], saturated: a[3], motorised: a[4] };
   if (hasOrdinances(city)) {
     s.ordinances = readOrdinances(city).map((o) => ({
       key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
@@ -95,8 +98,9 @@ export function readSnapshot(city) {
 
 /**
  * The cheap flags of the extended rules, read every frame: the rule switches, the ordinances in force and
- * the water and metro counters (few integers each). They change when the player flips a switch, votes an
- * ordinance or builds a pipe, a pump, a tunnel or a station, so the advice follows without waiting a month.
+ * the water and metro counters (few integers each) and the saturated road count. They change when the player
+ * flips a switch, votes an ordinance, builds a pipe, a pump, a tunnel or a station, or when the traffic jams,
+ * so the advice follows without waiting a month. The switches are in JSON.stringify(rules), agents included.
  */
 export function cheapKey(city) {
   const rules = readRules(city);
@@ -109,6 +113,7 @@ export function cheapKey(city) {
   }
   if (rules.water) parts.push(ints(call(city, "water_stats"))?.join());
   if (rules.transit) parts.push(ints(call(city, "transit_stats"))?.join());
+  if (rules.agents) parts.push(ints(call(city, "agent_stats"))?.[3] ?? null);
   if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
   return parts.join("/");
 }

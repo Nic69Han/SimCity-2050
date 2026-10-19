@@ -5,26 +5,30 @@
 //! * [`path`]: bounded A*. * [`vehicles`]: the cars. * [`load`]: the measured load per tile.
 //! * [`rng`]: the agents' own generator, seeded from the city, never the simulation's.
 //!
-//! One [`Fleet::step`] per simulated phase (`Simulation::ext_agents_tick`): refresh the graph
-//! every [`REFRESH_INTERVAL`] ticks, start at most [`MAX_PATH_SEARCHES_PER_TICK`] trips from
-//! residential zones to job zones, move every car, then measure the load. Cars are not saved:
-//! a loaded city starts a new fleet from the map.
+//! * [`run`]: the running fleet. * [`trips`]: departures, returns and arrivals.
+//!
+//! One step per simulated phase (`Simulation::ext_agents_tick`): refresh the graph every
+//! [`REFRESH_INTERVAL`] ticks, start at most [`MAX_PATH_SEARCHES_PER_TICK`] searches (return
+//! trips of parked cars first, then new trips from residential zones to job zones), move every
+//! car, then measure the load. A car that reaches its job parks for [`WORK_TICKS`] ticks, then
+//! drives home. Cars are not saved: a loaded city starts a new fleet from the map.
 
 pub mod graph;
 pub mod load;
 pub mod path;
 pub mod rng;
+mod run;
+mod trips;
 pub mod vehicles;
 
-use crate::map::Map;
-use crate::simulation::Simulation;
-use graph::RoadGraph;
-use load::LoadMap;
-use path::PathFinder;
-use rng::AgentRng;
-use vehicles::Car;
+#[cfg(test)]
+mod trips_tests;
 
-/// Most cars on the road at once.
+use crate::simulation::Simulation;
+use run::Run;
+use vehicles::Leg;
+
+/// Most cars at once, driving and parked together.
 pub const MAX_VEHICLES: usize = 1024;
 /// Most path searches started in one tick.
 pub const MAX_PATH_SEARCHES_PER_TICK: usize = 2;
@@ -32,17 +36,25 @@ pub const MAX_PATH_SEARCHES_PER_TICK: usize = 2;
 pub const DEST_SAMPLES: u32 = 3;
 /// Ticks between two looks at the map for changes.
 pub const REFRESH_INTERVAL: u64 = 16;
+/// Fleet ticks a car stays parked at its job zone before driving home.
+pub const WORK_TICKS: u64 = 120;
+/// Return searches that may find no path before the parked car is counted abandoned.
+pub const MAX_RETURN_FAILURES: u32 = 8;
 /// Percent of the residents of a zone who own a car.
 pub const MOTORISED_PCT: i32 = 60;
-/// Motorised residents per car a zone may have on the road at once.
+/// Motorised residents per car a zone may have out at once (driving or parked).
 pub const RESIDENTS_PER_CAR: i32 = 4;
 
 /// What the fleet has done so far (tests and the stats read it).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Counters {
+    /// Round trips begun (cars created).
     pub spawned: u64,
+    /// Legs arrived, outward and return alike.
     pub finished: u64,
-    /// Cars removed because the road under their path disappeared.
+    /// Round trips completed: the car came home and disappeared.
+    pub round_trips: u64,
+    /// Cars removed: road, home or job zone gone, or too many failed return searches.
     pub abandoned: u64,
     pub trip_ticks: u64,
     pub failed_searches: u64,
@@ -50,20 +62,16 @@ pub struct Counters {
     pub max_searches_in_tick: usize,
     pub max_expansions: usize,
     pub max_path_len: usize,
+    /// Most cars driving at once.
     pub max_cars: usize,
-}
-
-#[derive(Debug, Clone)]
-struct Run {
-    graph: RoadGraph,
-    cars: Vec<Car>,
-    load: LoadMap,
-    finder: PathFinder,
-    rng: AgentRng,
-    ticks: u64,
-    next_id: u32,
-    motorised: i32,
-    counters: Counters,
+    /// Most parked cars at once.
+    pub max_parked: usize,
+    /// Most cars driving plus parked at once (bounded by [`MAX_VEHICLES`]).
+    pub max_present: usize,
+    /// Cars parked now (a snapshot, not a total).
+    pub parked: usize,
+    /// Cars driving home now (a snapshot).
+    pub returning: usize,
 }
 
 /// The cars of a city. Runtime state: it takes no part in comparing two [`Extensions`]
@@ -82,203 +90,9 @@ impl PartialEq for Fleet {
 }
 impl Eq for Fleet {}
 
-/// Cars a zone of `pop` residents may have on the road at once.
+/// Cars a zone of `pop` residents may have out (driving or parked) at once.
 pub fn zone_car_cap(pop: i32) -> usize {
     (pop * MOTORISED_PCT / 100 / RESIDENTS_PER_CAR).max(1) as usize
-}
-
-fn manhattan(g: &RoadGraph, a: u32, b: u32) -> u32 {
-    let ((ax, ay), (bx, by)) = (g.xy(a), g.xy(b));
-    (ax - bx).unsigned_abs() + (ay - by).unsigned_abs()
-}
-
-impl Run {
-    fn new(sim: &Simulation) -> Run {
-        let graph = RoadGraph::scan(sim);
-        let map = &sim.traffic_density_map;
-        let (bw, bh) = map.size();
-        let tiles = graph.class_len();
-        let seed = (graph.w as u64) << 32 | graph.h as u64;
-        let mut run = Run {
-            rng: AgentRng::seeded(seed, sim.city_time as u64, tiles as u64),
-            load: LoadMap::new(tiles, map.block_size(), bw, bh),
-            graph,
-            cars: Vec::new(),
-            finder: PathFinder::default(),
-            ticks: 0,
-            next_id: 1,
-            motorised: 0,
-            counters: Counters::default(),
-        };
-        run.motorised = run.count_motorised();
-        run
-    }
-
-    fn count_motorised(&self) -> i32 {
-        let pop: i32 = self.graph.zones.iter().map(|z| z.pop).sum();
-        pop * MOTORISED_PCT / 100
-    }
-
-    fn step(&mut self, sim: &Simulation) {
-        self.ticks += 1;
-        if self.ticks.is_multiple_of(REFRESH_INTERVAL) {
-            self.refresh(sim);
-        }
-        self.spawn();
-        self.drive();
-        let tiles = self.cars.iter().map(Car::tile);
-        self.load.update(&self.graph, tiles);
-        self.counters.max_cars = self.counters.max_cars.max(self.cars.len());
-    }
-
-    /// Adopts a new graph when the map changed and drops the cars whose road is gone.
-    fn refresh(&mut self, sim: &Simulation) {
-        let g = RoadGraph::scan(sim);
-        if g == self.graph {
-            return;
-        }
-        // a tile that is no longer a road keeps no load (the load pass only visits roads)
-        for (t, l) in self.load.tile.iter_mut().enumerate() {
-            if !g.is_road(t as u32) {
-                *l = 0;
-            }
-        }
-        self.graph = g;
-        self.motorised = self.count_motorised();
-        let before = self.cars.len();
-        let graph = &self.graph;
-        self.cars
-            .retain(|c| c.path[c.at..].iter().all(|&t| graph.is_road(t)));
-        self.counters.abandoned += (before - self.cars.len()) as u64;
-    }
-
-    fn spawn(&mut self) {
-        self.counters.searches_in_last_tick = 0;
-        for _ in 0..MAX_PATH_SEARCHES_PER_TICK {
-            if self.cars.len() >= MAX_VEHICLES
-                || self.graph.residential.is_empty()
-                || self.graph.jobs.is_empty()
-            {
-                break;
-            }
-            self.try_trip();
-        }
-        let c = &mut self.counters;
-        c.max_searches_in_tick = c.max_searches_in_tick.max(c.searches_in_last_tick);
-    }
-
-    /// One trip attempt: a random residential zone with room for a car, the nearest of a few
-    /// random job zones, one bounded search.
-    fn try_trip(&mut self) {
-        let g = &self.graph;
-        let home =
-            &g.zones[g.residential[self.rng.below(g.residential.len() as u32) as usize] as usize];
-        let out = self.cars.iter().filter(|c| c.home == home.tile).count();
-        let (Some(from), true) = (home.access, out < zone_car_cap(home.pop)) else {
-            return;
-        };
-        let mut best: Option<(u32, u32)> = None;
-        for _ in 0..DEST_SAMPLES {
-            let job = &g.zones[g.jobs[self.rng.below(g.jobs.len() as u32) as usize] as usize];
-            let Some(to) = job.access else { continue };
-            let d = manhattan(g, from, to);
-            if best.is_none_or(|(bd, _)| d < bd) {
-                best = Some((d, to));
-            }
-        }
-        let Some((_, to)) = best else { return };
-        self.counters.searches_in_last_tick += 1;
-        let found = self.finder.find(g, &self.load.tile, from, to);
-        let c = &mut self.counters;
-        c.max_expansions = c.max_expansions.max(self.finder.last_expansions);
-        match found {
-            Some(path) if path.len() >= 2 => {
-                c.max_path_len = c.max_path_len.max(path.len());
-                c.spawned += 1;
-                self.cars.push(Car {
-                    id: self.next_id,
-                    home: home.tile,
-                    path,
-                    at: 0,
-                    progress: 0,
-                    born: self.ticks,
-                });
-                self.next_id += 1;
-            }
-            _ => c.failed_searches += 1,
-        }
-    }
-
-    fn drive(&mut self) {
-        let (load, now) = (&self.load.tile, self.ticks);
-        let (mut done, mut trip) = (0, 0);
-        self.cars.retain_mut(|c| {
-            c.advance(load[c.tile() as usize]);
-            if c.arrived() {
-                done += 1;
-                trip += now - c.born;
-            }
-            !c.arrived()
-        });
-        self.counters.finished += done;
-        self.counters.trip_ticks += trip;
-    }
-
-    fn write_density(&self, map: &mut Map<u8>) {
-        let (bw, bh) = map.size();
-        for bx in 0..bw {
-            for by in 0..bh {
-                map.set(bx, by, self.load.block[(bx * bh + by) as usize]);
-            }
-        }
-    }
-
-    fn vehicle(&self, c: &Car) -> [i32; 5] {
-        let (x, y) = self.graph.xy(c.tile());
-        let (nx, ny) = self.graph.xy(c.path[c.at + 1]);
-        let (dx, dy) = (nx - x, ny - y);
-        let p = c.progress as i32;
-        let dir = match (dx, dy) {
-            (0, -1) => 0,
-            (1, 0) => 1,
-            (0, 1) => 2,
-            _ => 3,
-        };
-        [
-            c.id as i32,
-            0,
-            x * 16 + 8 + dx * p,
-            y * 16 + 8 + dy * p,
-            dir,
-        ]
-    }
-
-    fn fingerprint(&self) -> u64 {
-        let mut h: u64 = 1_469_598_103_934_665_603;
-        let mut mix = |v: u64| {
-            h ^= v;
-            h = h.wrapping_mul(1_099_511_628_211);
-        };
-        for c in &self.cars {
-            for v in [c.id, c.home, c.at as u32, c.progress, c.path.len() as u32] {
-                mix(u64::from(v));
-            }
-        }
-        for &l in &self.load.tile {
-            mix(u64::from(l));
-        }
-        let c = &self.counters;
-        for v in [
-            c.spawned,
-            c.finished,
-            c.abandoned,
-            c.trip_ticks,
-            c.failed_searches,
-        ] {
-            mix(v);
-        }
-        h
-    }
 }
 
 impl Simulation {
@@ -343,7 +157,12 @@ impl Simulation {
 
     /// What the fleet did so far (all zero while off).
     pub fn agent_counters(&self) -> Counters {
-        self.agent_run().map(|r| r.counters).unwrap_or_default()
+        self.agent_run()
+            .map_or_else(Counters::default, |r| Counters {
+                parked: r.parked.len(),
+                returning: r.cars.iter().filter(|c| c.leg == Leg::Back).count(),
+                ..r.counters
+            })
     }
 
     /// A fingerprint of the cars, the load and the counters (determinism tests).
