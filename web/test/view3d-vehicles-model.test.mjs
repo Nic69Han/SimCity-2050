@@ -2,8 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  CAR_SIZE, MAX_VEHICLES_3D, READ_INTERVAL, buildPlacements, decodeVehicles, interpolate, kindColor,
-  shouldRead, writeVehicleMatrix, yawFor,
+  MAX_VEHICLES_3D, READ_INTERVAL, SIZES, buildPlacements, decodeVehicles, interpolate, kindColor,
+  shouldRead, sizeOf, writeVehicleMatrix, yawFor,
 } from "../view3d-vehicles-model.js";
 import { cornerAltitudes, tileCentreY } from "../view3d-model.js";
 
@@ -77,13 +77,65 @@ test("yaw: north -Z, east +X, south +Z, west -X (a box's length along its way)",
   assert.equal(yawFor(Number.NaN), yawFor(0));
 });
 
-test("the matrix of a box turns it to its yaw, scales it to CAR_SIZE and moves it to the place", () => {
+test("the matrix of a box turns it to its yaw, scales it to its size and moves it to the place", () => {
   const out = new Float32Array(16);
-  writeVehicleMatrix(out, 0, { x: 2.5, y: 0.7, z: 1.5, yaw: yawFor(2) });
-  const along = [out[0], out[2]].map((c) => c / CAR_SIZE.length); // image of local X, unit length
+  writeVehicleMatrix(out, 0, { x: 2.5, y: 0.7, z: 1.5, yaw: yawFor(2) }, SIZES[0]);
+  const along = [out[0], out[2]].map((c) => c / SIZES[0].length); // image of local X, unit length
   assert.ok(Math.abs(along[0]) < 1e-6 && Math.abs(along[1] - 1) < 1e-6, "south: +Z");
   [2.5, 0.7, 1.5, 1].forEach((v, i) => assert.ok(Math.abs(out[12 + i] - v) < 1e-6, `translation ${i}`));
-  assert.ok(Math.abs(out[5] - CAR_SIZE.height) < 1e-6);
+  assert.ok(Math.abs(out[5] - SIZES[0].height) < 1e-6);
+});
+
+test("the size table: one box per kind 0 to 4, the car, bus, taxi, train and metro sizes", () => {
+  assert.deepEqual(Object.keys(SIZES), ["0", "1", "2", "3", "4"]);
+  assert.deepEqual(SIZES[0], { length: 0.35, height: 0.2, width: 0.18 });
+  assert.deepEqual(SIZES[1], { length: 0.8, height: 0.3, width: 0.22 });
+  assert.deepEqual(SIZES[2], { length: 0.33, height: 0.2, width: 0.18 });
+  assert.deepEqual(SIZES[3], { length: 0.9, height: 0.3, width: 0.25 });
+  assert.deepEqual(SIZES[4], { length: 0.9, height: 0.3, width: 0.25 });
+  for (const k of [0, 1, 2, 3, 4]) {
+    for (const d of ["length", "height", "width"]) assert.ok(SIZES[k][d] > 0, `kind ${k} ${d}`);
+  }
+  assert.ok(Object.isFrozen(SIZES));
+});
+
+test("the size of a kind; an unknown kind has the car's size", () => {
+  for (const k of [0, 1, 2, 3, 4]) assert.equal(sizeOf(k), SIZES[k]);
+  for (const k of [5, 42, -1, 1.5, Number.NaN, "toString"]) assert.equal(sizeOf(k), SIZES[0], `kind ${k}`);
+});
+
+test("the matrix scales each kind's box to its own size, whatever the yaw", () => {
+  for (const kind of [0, 1, 2, 3, 4]) {
+    for (const dir of [0, 1, 2, 3]) {
+      const out = new Float32Array(16);
+      writeVehicleMatrix(out, 0, { x: 1, y: 1, z: 1, yaw: yawFor(dir) }, sizeOf(kind));
+      const s = sizeOf(kind);
+      const tag = `kind ${kind} dir ${dir}`;
+      assert.ok(Math.abs(Math.hypot(out[0], out[2]) - s.length) < 1e-6, `length ${tag}`);
+      assert.ok(Math.abs(out[5] - s.height) < 1e-6, `height ${tag}`);
+      assert.ok(Math.abs(Math.hypot(out[8], out[10]) - s.width) < 1e-6, `width ${tag}`);
+    }
+  }
+});
+
+test("the matrix of a bus and of a train is longer than a car's", () => {
+  const len = (size) => {
+    const out = new Float32Array(16);
+    writeVehicleMatrix(out, 0, { x: 0, y: 0, z: 0, yaw: 0 }, size);
+    return Math.hypot(out[0], out[2]);
+  };
+  assert.ok(Math.abs(len(sizeOf(1)) - 0.8) < 1e-6, "bus");
+  assert.ok(len(sizeOf(3)) > len(sizeOf(0)), "train longer than car");
+  assert.ok(len(sizeOf(1)) > len(sizeOf(2)), "bus longer than taxi");
+});
+
+test("the matrix writes at its offset, one 16-value block per instance", () => {
+  const out = new Float32Array(32);
+  writeVehicleMatrix(out, 16, { x: 3, y: 4, z: 5, yaw: 0 }, SIZES[1]);
+  assert.deepEqual(Array.from(out.slice(0, 16)), new Array(16).fill(0), "the first block untouched");
+  assert.equal(out[16 + 12], 3);
+  assert.equal(out[16 + 15], 1);
+  assert.ok(Math.abs(out[16 + 5] - SIZES[1].height) < 1e-6);
 });
 
 test("kind colours: one per kind, distinct; an unknown kind is drawn as a car", () => {
@@ -109,9 +161,23 @@ test("placements: the box stands on the tile ground, carries its yaw and colour"
   const p = items[0];
   assert.equal(p.x, 2.25);
   assert.equal(p.z, 3.5);
-  assert.ok(Math.abs(p.y - (tileCentreY(corners, H, 2, 3) + CAR_SIZE.height / 2)) < 1e-9);
+  assert.ok(Math.abs(p.y - (tileCentreY(corners, H, 2, 3) + SIZES[1].height / 2)) < 1e-9);
   assert.equal(p.yaw, yawFor(1));
   assert.deepEqual(p.rgb, kindColor(1));
+  assert.deepEqual(p.size, SIZES[1]);
+});
+
+test("placements: each box has the size of its kind and stands on half of its own height", () => {
+  const corners = flat();
+  const vehicles = [0, 1, 2, 3, 4, 99].map((kind, i) => ({ id: i, kind, dir: 0, x: 1.5, y: 1.5 }));
+  const { items } = buildPlacements({ w: W, h: H, corners, vehicles });
+  const ground = tileCentreY(corners, H, 1, 1);
+  items.forEach((p, i) => {
+    const size = sizeOf(vehicles[i].kind);
+    assert.deepEqual(p.size, size, `kind ${vehicles[i].kind}`);
+    assert.ok(Math.abs(p.y - (ground + size.height / 2)) < 1e-9, `height of kind ${vehicles[i].kind}`);
+  });
+  assert.deepEqual(items[5].size, SIZES[0], "an unknown kind is a car");
 });
 
 test("placements: a position outside the grid still uses a ground tile of the grid", () => {
@@ -120,7 +186,7 @@ test("placements: a position outside the grid still uses a ground tile of the gr
     w: W, h: H, corners, vehicles: [{ id: 1, kind: 0, dir: 0, x: -0.5, y: H + 3 }],
   });
   assert.ok(Number.isFinite(items[0].y));
-  assert.ok(Math.abs(items[0].y - (tileCentreY(corners, H, 0, H - 1) + CAR_SIZE.height / 2)) < 1e-9);
+  assert.ok(Math.abs(items[0].y - (tileCentreY(corners, H, 0, H - 1) + SIZES[0].height / 2)) < 1e-9);
 });
 
 test("capacity: vehicles past it are dropped and counted, never placed", () => {

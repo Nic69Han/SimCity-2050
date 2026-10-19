@@ -55,6 +55,10 @@ export const DEAL_SURPLUS_MIN = 1;
 export const TRAFFIC_SAT_ATTENTION = 1;
 export const TRAFFIC_SAT_URGENT = 10;
 export const TRAFFIC_TRIP_LONG = 120;
+/** Transport (only when the agents rule is on): riders waiting at stops from which more buses are worth a word
+ *  (attention) and from which they are urgent. */
+export const TRANSIT_WAIT_ATTENTION = 20;
+export const TRANSIT_WAIT_URGENT = 80;
 
 const TITLES = { finances: "Finances", security: "Sécurité", planning: "Urbanisme", environment: "Environnement" };
 /** Display order on equal severity. */
@@ -284,6 +288,19 @@ function agentsFinding(s) {
   return finding(severity, parts.join(" "), action);
 }
 
+/** Riders waiting for a bus or a taxi (rule on, snapshot.transport = { waiting }), or null when absent. */
+function transportOf(s) {
+  return num((flag(s, "agents") ? s.transport : null)?.waiting);
+}
+
+/** Waiting riders finding: urgent from TRANSIT_WAIT_URGENT, attention from TRANSIT_WAIT_ATTENTION, else null. */
+function transportFinding(waiting) {
+  if (waiting === null || waiting < TRANSIT_WAIT_ATTENTION) return null;
+  const severity = waiting >= TRANSIT_WAIT_URGENT ? SEVERITY.URGENT : SEVERITY.ATTENTION;
+  const who = `${formatInt(waiting)} ${plural(waiting, "voyageur attend", "voyageurs attendent")} un bus ou un taxi.`;
+  return finding(severity, who, "Ajoutez un dépôt de bus ou des arrêts près des zones d'emploi.");
+}
+
 function planningAdvice(s) {
   const rate = num(s.taxRate);
   const road = fundingFinding(s.funding, "road", "Routes et rails", "l'entretien");
@@ -297,7 +314,7 @@ function planningAdvice(s) {
   const demandKnown = dr !== null || dc !== null || di !== null;
   const ag = agentsOf(s);
   if (rate === null && !road && housing === null && traffic === null && !demandKnown && num(s.populationDelta) === null &&
-    !flag(s, "water") && !flag(s, "transit") && !ag) return null;
+    !flag(s, "water") && !flag(s, "transit") && !ag && transportOf(s) === null) return null;
   const f = [];
   const water = waterFinding(s);
   const ts = traffic === null ? null : votesSeverity(traffic);
@@ -313,6 +330,8 @@ function planningAdvice(s) {
   else if (ts) f.push(finding(ts, "La circulation est dense.", "Ajoutez des routes ou des lignes de transport en commun."));
   const jam = agentsFinding(s);
   if (jam) f.push(jam);
+  const waitFinding = transportFinding(transportOf(s));
+  if (waitFinding) f.push(waitFinding);
   if (water) f.push(water);
   if (metro.idle) f.push(metro.idle);
   const js = jobs === null ? null : votesSeverity(jobs);
@@ -371,6 +390,7 @@ function environmentAdvice(s) {
  *   ordinances: [{ key, label, active, cost, crime, pollution }],  // cost per year, effects in percent
  *   deals: { count, income, surplus },        // active deals, their yearly income, electricity surplus
  *   agents: { cars, finished, meanTicks, saturated, motorised },  // City.agent_stats (cars on the road, saturated tiles)
+ *   transport: { waiting },                   // City.transport_stats (riders waiting), read with the agents rule
  * }
  * Returns [{ id, title, severity, diagnosis, action }] sorted by severity (urgent first), then ORDER.
  * An advisor whose data is absent is left out. Total: any input (null, wrong types) gives an array.

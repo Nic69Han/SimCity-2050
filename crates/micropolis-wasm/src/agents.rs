@@ -8,7 +8,10 @@
 //! * `vehicles(max) -> Int32Array`: records of 5 values
 //!   `[id, kind, x16, y16, direction]`, at most `max`; `x16`/`y16` = centre of the vehicle in
 //!   sixteenths of a tile from the top-left corner of the map (the middle of tile `(tx, ty)` is
-//!   `tx * 16 + 8`); kind 0 = car; direction 0 N, 1 E, 2 S, 3 W.
+//!   `tx * 16 + 8`); kind 0 = car, 1 = bus, 2 = taxi; direction 0 N, 1 E, 2 S, 3 W.
+//! * `transport_stats() -> Int32Array`: `[buses, taxis, waiting_riders, bus_trips_month,
+//!   taxi_rides_month, income_month]` (docs/game-design-v05.md; zeros unless both this rule and
+//!   the extended buildings are on). Buses are vehicles of kind 1, taxis of kind 2.
 //! * `traffic_load() -> Uint8Array`: measured load 0..=255 per tile, tile order `x * height + y`.
 
 use crate::City;
@@ -37,6 +40,11 @@ impl City {
         self.sim.agent_vehicles(max).into_iter().flatten().collect()
     }
 
+    /// `[buses, taxis, waiting_riders, bus_trips_month, taxi_rides_month, income_month]`.
+    pub fn transport_stats(&self) -> Vec<i32> {
+        self.sim.transport_stats().to_vec()
+    }
+
     /// Measured load of every tile (tile order), 0..=255.
     pub fn traffic_load(&self) -> Vec<u8> {
         self.sim.agent_traffic_load()
@@ -52,6 +60,7 @@ mod tests {
         let mut city = City::new(1);
         assert!(!city.agent_rules());
         assert_eq!(city.agent_stats(), vec![0; 5]);
+        assert_eq!(city.transport_stats(), vec![0; 6]);
         assert!(city.vehicles(10).is_empty());
         assert_eq!(city.traffic_load().len(), 120 * 100);
         city.set_agent_rules(true);

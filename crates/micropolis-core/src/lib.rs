@@ -37,6 +37,7 @@ pub mod relief;
 pub mod relief_rules;
 pub mod rng;
 pub mod simulation;
+pub mod structures;
 pub mod tile;
 pub mod tile_chars;
 pub mod transit;

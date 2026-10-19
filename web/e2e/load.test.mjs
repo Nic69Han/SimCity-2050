@@ -4,16 +4,15 @@ import assert from "node:assert/strict";
 import { TOOL_LABELS } from "../tools.js";
 import { extraCatalog } from "../extra-tools.js";
 
-// The extra tools (relief, water, metro...) come from their modules, not from TOOL_LABELS. An
-// engine that answers every method stands for the real one, which has them all.
-const EVERY_METHOD = new Proxy({}, { get: () => () => 0 });
-const EXTRA = extraCatalog(EVERY_METHOD);
+// The extra tools (relief, water, metro, buildings...) come from their modules, not from
+// TOOL_LABELS: their catalog is read from the real engine (the buildings' list is the engine's).
+const EXTRA = extraCatalog((await engine()).City.new_sized(120, 100, 1));
 const EXTRA_LABELS = Object.fromEntries(EXTRA.map((t) => [t.key, t.label]));
 const EXTRA_COST_TEXT = Object.fromEntries(EXTRA.map((t) => [t.key, t.costText]));
 // the 20 building tools of the engine, then the extra tools
 const PALETTE_SIZE = 20 + EXTRA.length;
 import {
-  launchBrowser, openPage, assertNoErrors, readStatus, readPalette, shot, mapDigest, pollUntil,
+  engine, launchBrowser, openPage, assertNoErrors, readStatus, readPalette, shot, mapDigest, pollUntil,
   baseUrl,
 } from "./helpers.mjs";
 

@@ -60,6 +60,8 @@ async function pickVisibleTile(page, shadow) {
     }
   }
   candidates.sort((a, b) => a.d - b.d);
+  // the palette above the map grows with the tools: bring the whole canvas on screen before pointing at it
+  await page.locator("#map3d").scrollIntoViewIfNeeded();
   for (const c of candidates.slice(0, 60)) {
     const seen = await page.evaluate(([x, y]) => {
       const canvas = document.getElementById("map3d");
@@ -94,10 +96,11 @@ describe("the 3D view", () => {
 
       // a residential zone built by a click in the 3D view
       const shadow = await shadowCity({ cty: await readSample("haight") });
+      // the tool first: clicking its button may scroll the page, and the tile is found on the scrolled canvas
+      await selectTool(page, "residential");
       const spot = await pickVisibleTile(page, shadow);
       assert.ok(spot, "a visible bare tile with room for a zone");
       const before = await readFunds(page);
-      await selectTool(page, "residential");
       await page.mouse.click(spot.p.x, spot.p.y);
       shadow.down("residential", spot.x, spot.y);
       await pollUntil(async () => (await readFunds(page)) !== before, "the funds to change after the 3D click");

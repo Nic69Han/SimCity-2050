@@ -53,6 +53,43 @@ export function statsLines(stats) {
   ];
 }
 
+/** Records of transport_stats (the buses and taxis of docs/game-design-v05.md), in this order. */
+export const TRANSPORT_LEN = 6;
+
+/** Whether `city` has transport_stats(); a build without it simply has no transport rows. */
+export function supportsTransport(city) {
+  return typeof city?.transport_stats === "function";
+}
+
+/**
+ * transport_stats() as a named record. A missing or short array gives zeros for the missing values.
+ * [buses, taxis, waiting, bus_trips_month, taxi_rides_month, income_month]
+ */
+export function decodeTransport(arr) {
+  const a = arr ?? [];
+  return {
+    buses: int(a[0]),
+    taxis: int(a[1]),
+    waiting: int(a[2]),
+    busTrips: int(a[3]),
+    taxiRides: int(a[4]),
+    income: int(a[5]),
+  };
+}
+
+/** The transport rows shown after the traffic rows: [[label, value], ...]. The income is in dollars. */
+export function transportLines(t) {
+  const s = t ?? decodeTransport();
+  return [
+    ["Bus en service", formatCount(s.buses)],
+    ["Taxis en service", formatCount(s.taxis)],
+    ["Voyageurs en attente", formatCount(s.waiting)],
+    ["Voyages en bus ce mois", formatCount(s.busTrips)],
+    ["Courses de taxi ce mois", formatCount(s.taxiRides)],
+    ["Recettes des transports", `${formatCount(s.income)} $`],
+  ];
+}
+
 /** The state under the switch. */
 export function stateText(on) {
   return on

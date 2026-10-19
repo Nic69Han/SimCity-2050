@@ -50,6 +50,8 @@ const reliefButton = (page, key) => page.locator(`#palette button.tool[data-tool
 async function show3d(page) {
   await page.locator("#view3d").click();
   await page.waitForFunction(() => document.getElementById("map-frame").classList.contains("is-3d"));
+  // the palette above the map grows with the tools: bring the whole canvas on screen before pointing at it
+  await page.locator("#map3d").scrollIntoViewIfNeeded();
 }
 
 // Client position of tile (x, y) in the 3D canvas, or null when it is not inside the canvas.
@@ -218,10 +220,12 @@ describe("relief rules on the real wasm engine", { skip: realSkip }, () => {
       const shadow = await shadowCity({ cty: await readSample("haight") });
       shadow.city.set_relief_rules(true);
       const city = shadow.city;
+      // the tool first: clicking its button may scroll the page, so the canvas is scrolled back on screen after it
+      await selectTool(page, "relever");
+      await page.locator("#map3d").scrollIntoViewIfNeeded();
       const spot = await visibleTile(page, city,
         (x, y) => city.tiles()[x * city.height() + y] === DIRT && city.terraform_preview(x, y, 1)[0] === 1);
       assert.ok(spot, "a visible dirt tile that can be raised");
-      await selectTool(page, "relever");
       const funds = await readFunds(page);
       await page.mouse.click(spot.p.x, spot.p.y);
       city.terraform(spot.x, spot.y, 1);

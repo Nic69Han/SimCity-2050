@@ -1178,6 +1178,10 @@ impl Simulation {
         let result = self.charged_result(tool, planned, &effects);
         if result == ToolResult::Ok && tool != EditingTool::Query {
             effects.modify_world(self);
+            // Structure rules: a tool that hit a building removes all of it at once.
+            if self.extensions_active() && self.structure_rules() {
+                self.repair_structures();
+            }
         }
         result
     }

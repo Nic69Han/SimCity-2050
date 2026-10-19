@@ -3,8 +3,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
-  decodeVehicles, vehicleRect, loadColor, kindColor, LOAD_TINT_MIN, LOAD_JAM, MAX_DRAWN,
-  TINT_COLORS, KIND_COLORS, UNKNOWN_KIND_COLOR,
+  decodeVehicles, vehicleRect, loadColor, kindColor, lengthFactor, LOAD_TINT_MIN, LOAD_JAM, MAX_DRAWN,
+  TINT_COLORS, KIND_COLORS, UNKNOWN_KIND_COLOR, BASE_LENGTH, LENGTH_FACTOR,
 } from "../map-layer-vehicles-model.js";
 import { VEHICLES_LAYER } from "../map-layer-vehicles.js";
 import { MAP_LAYERS } from "../map-layers.js";
@@ -78,6 +78,42 @@ describe("the rectangle of a vehicle", () => {
     assert.equal(Math.min(w, h), 1);
     assert.equal(Math.max(w, h), 2);
   });
+
+  test("the length depends on the kind: bus x2.2, train and metro x2.6, car and taxi as before", () => {
+    assert.equal(BASE_LENGTH, 2);
+    assert.deepEqual({ ...LENGTH_FACTOR }, { 0: 1, 1: 2.2, 2: 1, 3: 2.6, 4: 2.6 });
+    assert.equal(Object.isFrozen(LENGTH_FACTOR), true);
+    const longSide = (kind, dir) => {
+      const [, , w, h] = vehicleRect({ kind, x: 2, y: 3, dir }, 12); // short side 4 px
+      return dir === 1 || dir === 3 ? w : h;
+    };
+    assert.equal(longSide(0, 0), 8, "car: 2 short sides, as before");
+    assert.equal(longSide(2, 2), 8, "taxi: as a car");
+    assert.ok(Math.abs(longSide(1, 0) - 17.6) < 1e-9, "bus: 8 x 2.2");
+    assert.ok(Math.abs(longSide(3, 1) - 20.8) < 1e-9, "train: 8 x 2.6");
+    assert.ok(Math.abs(longSide(4, 3) - 20.8) < 1e-9, "metro: 8 x 2.6");
+  });
+
+  test("the width stays the short side for every kind, and the box stays centred", () => {
+    for (const kind of [0, 1, 2, 3, 4]) {
+      const [x, y, w, h] = vehicleRect({ kind, x: 2, y: 3, dir: 1 }, 12);
+      assert.equal(h, 4, `kind ${kind}: short side`);
+      assert.ok(Math.abs(x + w / 2 - 24) < 1e-9, `kind ${kind}: centred on x`);
+      assert.equal(y + h / 2, 36, `kind ${kind}: centred on y`);
+    }
+  });
+
+  test("a kind outside the table, or no kind, has the base length", () => {
+    assert.equal(lengthFactor(0), 1);
+    assert.equal(lengthFactor(1), 2.2);
+    assert.equal(lengthFactor(7), 1);
+    assert.equal(lengthFactor(-1), 1);
+    assert.equal(lengthFactor(undefined), 1);
+    assert.equal(lengthFactor("toString"), 1);
+    const [, , w, h] = vehicleRect({ x: 0, y: 0, dir: 0 }, 12);
+    assert.equal(h, 8);
+    assert.equal(w, 4);
+  });
 });
 
 describe("colours and thresholds", () => {
@@ -125,7 +161,7 @@ describe("the layer", () => {
     load[2 * 3 + 2] = 255;
     const city = new FakeTraffic({
       load,
-      records: [[5, 1, 32, 16, 1]], // a bus at (2, 1), heading east: 8 px wide, 4 px tall
+      records: [[5, 2, 32, 16, 1]], // a taxi at (2, 1), heading east: 8 px wide, 4 px tall
     });
     const { ctx, log } = recorder();
     VEHICLES_LAYER.draw(ctx, city, 12);
@@ -133,9 +169,21 @@ describe("the layer", () => {
       ["save"],
       ["rect", 12, 0, 12, 12, TINT_COLORS.busy],
       ["rect", 24, 24, 12, 12, TINT_COLORS.jam],
-      ["rect", 20, 10, 8, 4, KIND_COLORS[1]],
+      ["rect", 20, 10, 8, 4, KIND_COLORS[2]],
       ["restore"],
     ]);
+  });
+
+  test("a bus is drawn longer than a taxi, in its own colour", () => {
+    const city = new FakeTraffic({ records: [[5, 1, 32, 16, 1]] }); // a bus at (2, 1), heading east
+    const { ctx, log } = recorder();
+    VEHICLES_LAYER.draw(ctx, city, 12);
+    const [, x, y, w, h, color] = log.find((e) => e[0] === "rect");
+    assert.ok(Math.abs(w - 17.6) < 1e-9, "17.6 px long");
+    assert.equal(h, 4);
+    assert.ok(Math.abs(x - (24 - 8.8)) < 1e-9);
+    assert.equal(y, 10);
+    assert.equal(color, KIND_COLORS[1]);
   });
 
   test("draws nothing but the frame for an empty map and no vehicle", () => {

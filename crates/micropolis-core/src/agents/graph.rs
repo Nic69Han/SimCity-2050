@@ -153,6 +153,12 @@ impl RoadGraph {
         STEPS.map(|(dx, dy)| self.index(x + dx, y + dy).filter(|&n| self.is_road(n)))
     }
 
+    /// Manhattan distance in tiles between tiles `a` and `b`.
+    pub fn distance(&self, a: u32, b: u32) -> u32 {
+        let ((ax, ay), (bx, by)) = (self.xy(a), self.xy(b));
+        (ax - bx).unsigned_abs() + (ay - by).unsigned_abs()
+    }
+
     /// Position in `zones` of the zone centred on tile `tile`.
     pub fn zone_at(&self, tile: u32) -> Option<usize> {
         self.zones.binary_search_by_key(&tile, |z| z.tile).ok()

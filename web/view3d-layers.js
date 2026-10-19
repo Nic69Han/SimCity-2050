@@ -6,6 +6,8 @@ import * as ambiance from "./view3d-ambiance.js";
 import * as camera from "./view3d-camera.js";
 import * as underground from "./view3d-underground.js";
 import * as vehicles from "./view3d-vehicles.js";
+import * as structures from "./view3d-structures.js";
+import * as farms from "./view3d-farms.js";
 
 // `heavy` layers cost the most to draw (many triangles, a running animation loop).
 export const LAYERS = Object.freeze([
@@ -13,6 +15,8 @@ export const LAYERS = Object.freeze([
   Object.freeze({ name: "ambiance", module: ambiance, heavy: true }),
   Object.freeze({ name: "camera", module: camera, heavy: false }),
   Object.freeze({ name: "underground", module: underground, heavy: false }),
+  Object.freeze({ name: "structures", module: structures, heavy: false }),
+  Object.freeze({ name: "farms", module: farms, heavy: false }),
   Object.freeze({ name: "vehicles", module: vehicles, heavy: false }),
 ]);
 

@@ -43,6 +43,11 @@ describe("simulated traffic", () => {
       await pollUntil(async () => (await panelStats(page))["Voitures en route"] > 0, "cars on the road");
       const stats = await panelStats(page);
       assert.ok(stats["Habitants motorisés"] > 0, JSON.stringify(stats));
+      // the buses and taxis (docs/game-design-v05.md): the engine has transport_stats(), so the rows are
+      // there, at zero without depots
+      for (const row of ["Bus en service", "Taxis en service", "Voyageurs en attente"]) {
+        assert.ok(row in stats, `row «${row}» in ${JSON.stringify(Object.keys(stats))}`);
+      }
       assert.notEqual(await mapDigest(page), before, "the map shows the cars");
       await shot(page, "agents-2d");
 
