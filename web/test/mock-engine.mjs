@@ -39,6 +39,9 @@
 //   - rail_stats() (docs/game-design-v06.md): seven zeros while the agents rule is off, else the fixed numbers
 //     RAIL_FIXED. The rail genre 13 (MOCK_RAIL_STRUCTURES, a station) joins the catalog only with the structures
 //     option AND the `rail` option, for the same reason as the transit genres.
+//   - service_rules() / service_stats() (docs/game-design-v09.md): service_rules() is off by default and after a
+//     new city or a load; service_stats() is ten zeros while it is off, else the fixed numbers SERVICES_FIXED.
+//     Both methods are hidden unless the constructor has `services: true`.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -140,6 +143,14 @@ export const MOCK_RAIL_STRUCTURES = Object.freeze([
 // rail_income_month, train_lines, metro_lines].
 export const RAIL_FIXED = Object.freeze([2, 1, 340, 120, 900, 1, 1]);
 
+// The methods of the public services API (docs/game-design-v09.md), hidden unless the constructor asks for
+// them with `services: true`.
+const SERVICE_METHODS = Object.freeze(["service_rules", "set_service_rules", "service_stats"]);
+
+// service_stats() while the services rule is on: [eq, life, students, school_places, patients, care_places,
+// inmates, prison_places, education_pct, health_pct] (docs/game-design-v09.md). Ten zeros while it is off.
+export const SERVICES_FIXED = Object.freeze([85, 72, 340, 400, 120, 150, 30, 40, 60, 45]);
+
 function lcg(seed) {
   let s = (seed >>> 0) || 1;
   return () => {
@@ -169,6 +180,7 @@ export class MockCity {
   #specs = MOCK_STRUCTURES; // the catalog of this mock (MOCK_STRUCTURES, plus the transit genres if asked)
   #densRules = false; // zoning by density switch (City.density_rules)
   #zones = []; // placed zones by density: { genre, density, x, y }, in placing order
+  #servRules = false; // public services switch (City.service_rules)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -178,7 +190,7 @@ export class MockCity {
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
-    densities = false,
+    densities = false, services = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -189,6 +201,7 @@ export class MockCity {
     this.#generate(seed);
     if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
     if (!densities) for (const name of DENSITY_METHODS) this[name] = undefined;
+    if (!services) for (const name of SERVICE_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -218,6 +231,7 @@ export class MockCity {
     this.#structures = [];
     this.#densRules = false;
     this.#zones = [];
+    this.#servRules = false;
   }
 
   #inside(x, y) {
@@ -581,6 +595,20 @@ export class MockCity {
     return zoneStats(this.#zones, this.#densRules);
   }
 
+  // --- public services (docs/game-design-v09.md, contract of crates/micropolis-wasm/src/services.rs);
+  // present only with the constructor option `services: true` ---
+  // Mock rules: off by default and after a new city or a load. The statistics are ten zeros while the rule
+  // is off, and SERVICES_FIXED while it is on (no building is counted in the mock).
+  service_rules() {
+    return this.#servRules;
+  }
+  set_service_rules(on) {
+    this.#servRules = Boolean(on);
+  }
+  service_stats() {
+    return this.#servRules ? Int32Array.from(SERVICES_FIXED) : Int32Array.from(SERVICES_FIXED, () => 0);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -620,6 +648,7 @@ export class MockCity {
     this.#structures = [];
     this.#densRules = false;
     this.#zones = [];
+    this.#servRules = false;
   }
   take_events() {
     return 0;

@@ -4,6 +4,7 @@
 // only decides when to WORD what the engine reports. Tested by web/test/advisors.test.mjs.
 import { formatMoney, formatInt } from "./budget-text.js";
 import { railFindings, railOf } from "./advisors-rail.js";
+import { servicesFindings } from "./advisors-services.js";
 
 export const SEVERITY = Object.freeze({ OK: "ok", ATTENTION: "attention", URGENT: "urgent" });
 export const SEVERITY_LABEL = Object.freeze({ ok: "Tout va bien", attention: "Attention", urgent: "Urgent" });
@@ -315,7 +316,7 @@ function planningAdvice(s) {
   const demandKnown = dr !== null || dc !== null || di !== null;
   const ag = agentsOf(s);
   if (rate === null && !road && housing === null && traffic === null && !demandKnown && num(s.populationDelta) === null &&
-    !flag(s, "water") && !flag(s, "transit") && !ag && transportOf(s) === null && !railOf(s)) return null;
+    !flag(s, "water") && !flag(s, "transit") && !ag && transportOf(s) === null && !railOf(s) && !flag(s, "services")) return null;
   const f = [];
   const water = waterFinding(s);
   const ts = traffic === null ? null : votesSeverity(traffic);
@@ -334,6 +335,7 @@ function planningAdvice(s) {
   const waitFinding = transportFinding(transportOf(s));
   if (waitFinding) f.push(waitFinding);
   f.push(...railFindings(s));
+  f.push(...servicesFindings(s));
   if (water) f.push(water);
   if (metro.idle) f.push(metro.idle);
   const js = jobs === null ? null : votesSeverity(jobs);
@@ -394,6 +396,7 @@ function environmentAdvice(s) {
  *   agents: { cars, finished, meanTicks, saturated, motorised },  // City.agent_stats (cars on the road, saturated tiles)
  *   transport: { waiting },                   // City.transport_stats (riders waiting), read with the agents rule
  *   rail: { trainLines, trainRiders, metroLines, metroRiders, ... },  // City.rail_stats, read with the agents rule
+ *   services: { eq, life, students, schoolPlaces, patients, carePlaces, ... },  // services-model.js decodeStats, read with the services rule
  * }
  * Returns [{ id, title, severity, diagnosis, action }] sorted by severity (urgent first), then ORDER.
  * An advisor whose data is absent is left out. Total: any input (null, wrong types) gives an array.
