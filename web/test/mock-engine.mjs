@@ -39,6 +39,11 @@
 //   - rail_stats() (docs/game-design-v06.md): seven zeros while the agents rule is off, else the fixed numbers
 //     RAIL_FIXED. The rail genre 13 (MOCK_RAIL_STRUCTURES, a station) joins the catalog only with the structures
 //     option AND the `rail` option, for the same reason as the transit genres.
+//   - waste (docs/game-design-v08.md; `waste: true`, the waste genres 20-23 also need `structures: true`):
+//     waste_rules() is off by default and after a new city or a load. Off: waste_stats() is seven zeros and
+//     waste_layer() is all zeros. On: waste_stats() is the numbers given by set_mock_waste(values) (a test hook,
+//     not in the engine contract; zeros until called), waste_layer() is all zeros. The four genres join the
+//     catalog (MOCK_WASTE_STRUCTURES) only with both options, for the same reason as the transit genres.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -46,6 +51,7 @@
 import {
   isZone, zoneCost, zoneTile, zoneLayer, zoneStats, ZONE_HALF,
 } from "./mock-zoning.mjs";
+import { MOCK_WASTE_STRUCTURES, wasteStatsOf } from "./mock-waste.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -114,6 +120,9 @@ export const MOCK_STRUCTURES = Object.freeze([
   { genre: 3, width: 3, height: 3, cost: 1000, upkeep: 20 },
 ]);
 
+// The methods of the waste API (docs/game-design-v08.md), hidden unless the constructor asks with `waste: true`.
+const WASTE_METHODS = Object.freeze(["waste_rules", "set_waste_rules", "waste_stats", "waste_layer"]);
+
 // The methods of the zoning by density API (docs/game-design-v07.md), hidden unless the constructor
 // asks for them with `densities: true`.
 const DENSITY_METHODS = Object.freeze([
@@ -169,6 +178,8 @@ export class MockCity {
   #specs = MOCK_STRUCTURES; // the catalog of this mock (MOCK_STRUCTURES, plus the transit genres if asked)
   #densRules = false; // zoning by density switch (City.density_rules)
   #zones = []; // placed zones by density: { genre, density, x, y }, in placing order
+  #wasteRules = false; // waste switch (City.waste_rules)
+  #wasteValues = wasteStatsOf(true, []); // the numbers set by set_mock_waste (zeros until then)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -178,7 +189,7 @@ export class MockCity {
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
-    densities = false,
+    densities = false, waste = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -186,9 +197,11 @@ export class MockCity {
     this.#rubble = rubble;
     if (structures && transit) this.#specs = [...MOCK_STRUCTURES, ...MOCK_TRANSIT_STRUCTURES];
     if (structures && rail) this.#specs = [...this.#specs, ...MOCK_RAIL_STRUCTURES];
+    if (structures && waste) this.#specs = [...this.#specs, ...MOCK_WASTE_STRUCTURES];
     this.#generate(seed);
     if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
     if (!densities) for (const name of DENSITY_METHODS) this[name] = undefined;
+    if (!waste) for (const name of WASTE_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -218,6 +231,8 @@ export class MockCity {
     this.#structures = [];
     this.#densRules = false;
     this.#zones = [];
+    this.#wasteRules = false;
+    this.#wasteValues = wasteStatsOf(true, []);
   }
 
   #inside(x, y) {
@@ -322,6 +337,27 @@ export class MockCity {
       13 + (y % 4),
       17 + ((x + 2 * y) % 4),
     );
+  }
+
+  // --- waste (docs/game-design-v08.md, contract of crates/micropolis-wasm/src/waste.rs); present only with the
+  // constructor option `waste: true` ---
+  waste_rules() {
+    return this.#wasteRules;
+  }
+  set_waste_rules(on) {
+    this.#wasteRules = Boolean(on);
+  }
+  // Test hook (not in the engine contract): the numbers waste_stats reports while the rule is on.
+  set_mock_waste(values) {
+    this.#wasteValues = wasteStatsOf(true, values ?? []);
+  }
+  // Seven integers, see mock-waste.mjs; zeros while the rule is off.
+  waste_stats() {
+    return wasteStatsOf(this.#wasteRules, this.#wasteValues);
+  }
+  // One value per tile, index x * height + y like tiles(): always zeros in the mock.
+  waste_layer() {
+    return new Uint8Array(this.#width * this.#height);
   }
 
   // --- city state used by the page (not part of the tool contract) ---
@@ -620,6 +656,8 @@ export class MockCity {
     this.#structures = [];
     this.#densRules = false;
     this.#zones = [];
+    this.#wasteRules = false;
+    this.#wasteValues = wasteStatsOf(true, []);
   }
   take_events() {
     return 0;

@@ -7,6 +7,7 @@ import { decodeBudget, decodeEvaluation } from "./budget-text.js";
 import { advise, SEVERITY_LABEL } from "./advisors-model.js";
 import { decodeRail } from "./agents-model.js";
 import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
+import { countLandfills, wasteSnapshot } from "./waste-model.js";
 
 const HIST_MONEY = 3;
 const HIST_POLLUTION = 5;
@@ -20,7 +21,9 @@ function call(city, name, ...args) {
   return typeof city?.[name] === "function" ? city[name](...args) : null;
 }
 
-const RULES = [["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"]];
+const RULES = [
+  ["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"], ["waste", "waste_rules"],
+];
 
 /** The rule switches the engine has, { water, transit, deals, agents } (a missing method leaves the name out). */
 function readRules(city) {
@@ -100,6 +103,10 @@ export function readSnapshot(city) {
     }));
   }
   if (rules.deals) s.deals = readDeals(city);
+  // waste_stats: [produced, treated, recycled, exported, accumulated, landfill_left, power], read with the rule only;
+  // the landfills are counted in structures() (docs/game-design-v08.md).
+  const ws = rules.waste ? ints(call(city, "waste_stats")) : null;
+  if (ws && ws.length >= 6) s.waste = wasteSnapshot(ws, ints(call(city, "structures")));
   return s;
 }
 
@@ -126,6 +133,11 @@ export function cheapKey(city) {
     parts.push(ints(call(city, "agent_stats"))?.[3] ?? null, ints(call(city, "transport_stats"))?.[2] ?? null, rail?.[2] ?? null, rail?.[3] ?? null);
   }
   if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
+  if (rules.waste) {
+    // the garbage on the map (index 4) and the landfill room (index 5), and the landfills placed
+    const ws = ints(call(city, "waste_stats"));
+    parts.push(ws?.[4] ?? null, ws?.[5] ?? null, countLandfills(ints(call(city, "structures"))));
+  }
   return parts.join("/");
 }
 
