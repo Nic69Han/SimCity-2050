@@ -41,6 +41,8 @@ const isQuarterMultiple = (a) => Math.abs(a / QUARTER - Math.round(a / QUARTER))
 
 // A right-button drag over the 3D canvas pans the orbit target (OrbitControls: right button pans).
 async function panView(page) {
+  // the palette above the map grows with the tools: bring the whole canvas on screen before dragging on it
+  await page.locator("#map3d").scrollIntoViewIfNeeded();
   const box = await page.locator("#map3d").boundingBox();
   const x = box.x + box.width / 2, y = box.y + box.height / 2;
   await page.mouse.move(x, y);

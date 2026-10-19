@@ -60,6 +60,8 @@ async function pickVisibleTile(page, shadow) {
     }
   }
   candidates.sort((a, b) => a.d - b.d);
+  // the palette above the map grows with the tools: bring the whole canvas on screen before pointing at it
+  await page.locator("#map3d").scrollIntoViewIfNeeded();
   for (const c of candidates.slice(0, 60)) {
     const seen = await page.evaluate(([x, y]) => {
       const canvas = document.getElementById("map3d");
