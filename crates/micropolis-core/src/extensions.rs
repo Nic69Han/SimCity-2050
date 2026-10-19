@@ -294,11 +294,13 @@ impl Simulation {
         if self.structure_rules() {
             self.repair_structures_fully();
         }
+        let fares = self.take_transport_income();
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
             .saturating_add(transit::monthly_balance(self))
             .saturating_add(deals::monthly_balance(self))
-            .saturating_add(structures::monthly_balance(self));
+            .saturating_add(structures::monthly_balance(self))
+            .saturating_sub(fares);
         if net != 0 {
             self.spend(net);
         }
