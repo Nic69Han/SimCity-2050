@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 mod agents;
 mod budget;
 mod deals;
+mod densities;
 mod messages;
 mod ordinances;
 mod overlays;

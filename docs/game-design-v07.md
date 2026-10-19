@@ -50,3 +50,34 @@ API wasm (`crates/micropolis-wasm/src/densities.rs`) :
 Comparaisons C++ identiques ; règle éteinte = moteur d'origine ; plafonds de croissance testés pour les 9
 combinaisons ; fermes testées (apparition, disparition quand la valeur monte, pollution nulle) ; sauvegarde aller-
 retour ; e2e : poser une zone résidentielle légère, la voir dans la couche « Densités » ; tous les tests verts ; relecture.
+
+## Cœur des densités (chantier livré)
+Code : `crates/micropolis-core/src/densities.rs` (constantes, liste sauvegardée), `densities/rules.rs` (pose, plafonds,
+couche, statistiques, réparation), `densities/farms.rs` (fermes, pollution) ; adaptateur `crates/micropolis-wasm/src/densities.rs`.
+Tests : `tests/densities_rules.rs`, `densities_farms.rs`, `densities_save.rs`.
+
+* **Interrupteur** `Extensions::densities` = bit `0b10_0000` du morceau 1 (les tests « drapeau inconnu » sont passés à
+  `0b100_0000`). **Morceau 7** (`CHUNK_DENSITIES`, `CHUNK_MAX_TAG` = 7) : 5 octets par zone non dense, `x`, `y` (u16
+  gros-boutiste, centre de la zone) et densité (1 légère, 2 moyenne) ; liste triée sans doublon, 2048 zones au plus
+  (`MAX_DENSITY_ZONES`). Règle éteinte et aucune zone enregistrée = fichier identique octet pour octet.
+* **Pose** : `place_zone(genre, densité, x, y)` appelle l'outil de zone classique (`tool_down`) au centre `(x, y)`, puis
+  enregistre la densité (une zone dense n'a pas d'entrée). Seul le prix de la zone est mis à l'échelle,
+  `DENSITY_COST_PCT = [60, 80, 100]` : le déblaiement et les coûts de relief restent au tarif classique. Le test de fonds
+  de l'outil classique réclame le prix plein ; la pose crédite donc la remise avant l'appel puis la reprend si l'outil
+  refuse. `zone_preview` reflète la même chose (`Failed` : règle éteinte, genre ou densité inconnus, liste pleine).
+* **Plafonds** (`DENSITY_CAP[genre][densité]`, population classique de la zone ; la croissance est refusée quand elle
+  l'a atteint) : résidentiel 16 / 32 / 40, commercial 2 / 4 / 5, industriel 2 / 3 / 4. Une zone dense (ou sans entrée)
+  n'est jamais bridée : le moteur classique est inchangé.
+* **Fermes** : zone industrielle légère, valeur du terrain du bloc du centre `< FARM_LAND_VALUE_MAX` (40) et pollution
+  maximale sur l'anneau carré de `FARM_RING` (6) tuiles autour d'elle `< FARM_POLLUTION_MAX` (30). L'anneau (et non le
+  centre) évite qu'une ferme lise sa propre diffusion. Recalcul au bilan mensuel, au chargement et à l'allumage de la
+  règle (entre deux mois rien ne change, sauf la perte d'une zone détruite). Un bloc de pollution touché par l'emprise
+  d'une ferme vaut 0 (`ext_pollution`). L'ensemble des fermes est un état dérivé, jamais sauvegardé.
+* **Couche** `density_layer` : `x * hauteur + y`, 1-3 sur les 9 tuiles de chaque zone (3 pour les zones classiques),
+  4 pour une ferme, 0 ailleurs ; tout à 0 règle éteinte. **Statistiques** `density_stats` : légères, moyennes,
+  denses, fermes, emplois agricoles ; une ferme est aussi comptée parmi les zones légères.
+* **Cohérence** (`repair_densities`) : une entrée dont le centre n'est plus un centre de zone est supprimée (passage des
+  valves, bilan mensuel, chargement, avant chaque pose) ; règle éteinte, toutes les entrées disparaissent.
+* **Limite connue** : une zone rasée puis reconstruite au même centre avec un outil classique *avant* le passage suivant
+  des valves hérite de l'ancienne entrée (le bulldozer ne passe pas par la réparation). Remède d'une ligne : appeler
+  `repair_densities()` dans `do_tool` à côté de `repair_structures()` (`tool.rs`, hors du périmètre de ce chantier).

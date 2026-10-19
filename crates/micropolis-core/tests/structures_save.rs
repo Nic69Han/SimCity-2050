@@ -5,7 +5,7 @@
 #[path = "save_support/mod.rs"]
 mod support;
 
-use micropolis_core::extensions::{CHUNK_MAX_TAG, CHUNK_RULES, CHUNK_STRUCTURES};
+use micropolis_core::extensions::{CHUNK_DENSITIES, CHUNK_MAX_TAG, CHUNK_RULES, CHUNK_STRUCTURES};
 use micropolis_core::fileio::{CITY_FILE_HEADER_SIZE, RELIEF_BLOCK_OVERHEAD};
 use micropolis_core::simulation::Simulation;
 use micropolis_core::structures::{
@@ -146,7 +146,7 @@ fn buildings_round_trip() {
 #[test]
 fn the_buildings_chunk_follows_the_deals_chunk_in_tag_order() {
     assert_eq!(CHUNK_STRUCTURES, 6);
-    assert_eq!(CHUNK_MAX_TAG, CHUNK_STRUCTURES);
+    assert_eq!(CHUNK_MAX_TAG, CHUNK_DENSITIES);
     let file = file_of(&with_buildings());
     let chunks = &file[block_at() + 4..];
     assert_eq!(chunks[0], CHUNK_RULES);
@@ -187,7 +187,7 @@ fn a_bad_chunk_is_refused_and_leaves_the_engine_untouched() {
                     .collect::<Vec<_>>(),
             ),
         ),
-        ("unknown tag", chunk(7, &[1])),
+        ("unknown tag", chunk(8, &[1])),
     ];
     let mut engine = with_buildings();
     let before = file_of(&engine);
