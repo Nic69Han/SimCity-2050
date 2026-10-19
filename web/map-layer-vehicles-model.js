@@ -45,11 +45,21 @@ export function decodeVehicles(arr) {
   return out;
 }
 
+// Length of a vehicle relative to the base length (2 short sides): a bus is longer, a train or a metro
+// longer still; a car and a taxi have the base length. A kind not in this table has the base length.
+export const BASE_LENGTH = 2;
+export const LENGTH_FACTOR = Object.freeze({ 0: 1, 1: 2.2, 2: 1, 3: 2.6, 4: 2.6 });
+
+export function lengthFactor(kind) {
+  return Object.hasOwn(LENGTH_FACTOR, kind) ? LENGTH_FACTOR[kind] : 1;
+}
+
 // The rectangle [x, y, w, h] of a vehicle in canvas pixels, centred on its position. It is
-// elongated along its direction: north and south (0, 2) are tall, east and west (1, 3) are wide.
+// elongated along its direction: north and south (0, 2) are tall, east and west (1, 3) are wide. The
+// length depends on the kind (lengthFactor).
 export function vehicleRect(v, scale) {
   const short = Math.max(1, scale / 3);
-  const long = short * 2;
+  const long = short * BASE_LENGTH * lengthFactor(v.kind);
   const horizontal = v.dir === 1 || v.dir === 3;
   const w = horizontal ? long : short;
   const h = horizontal ? short : long;

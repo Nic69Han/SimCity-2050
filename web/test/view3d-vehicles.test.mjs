@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createLayer } from "../view3d-vehicles.js";
-import { MAX_VEHICLES_3D, READ_INTERVAL } from "../view3d-vehicles-model.js";
+import { MAX_VEHICLES_3D, READ_INTERVAL, SIZES, kindColor } from "../view3d-vehicles-model.js";
 import { cornerAltitudes } from "../view3d-model.js";
 import { LAYERS } from "../view3d-layers.js";
 
@@ -173,6 +173,32 @@ test("dropped beyond capacity: 4000 drawn, the rest counted", () => {
   assert.equal(s.drawn, MAX_VEHICLES_3D);
   assert.equal(s.dropped, 5);
   assert.equal(s.vehicles, MAX_VEHICLES_3D + 5);
+  layer.dispose(ctx);
+});
+
+test("one instanced mesh, each box scaled to its kind; an unknown kind is drawn as a car", () => {
+  // a bus heading north, then a kind 9 (unknown) heading north: both in the same mesh
+  const city = {
+    agent_rules: () => true,
+    vehicles: () => records([[1, 1, 8, 8, 0], [2, 9, 40, 8, 0]]),
+  };
+  const ctx = fakeCtx(city);
+  const layer = createLayer();
+  layer.mount(ctx);
+  layer.frame(ctx, READ_INTERVAL);
+  const mesh = meshOf(ctx);
+  assert.equal(ctx.scene.children.length, 1, "a single mesh");
+  assert.equal(mesh.count, 2);
+  const a = mesh.instanceMatrix.array;
+  const near = (x, y) => Math.abs(x - y) < 1e-6;
+  // north: the length runs along -Z, so the length of the box is the norm of its column 0 (x, z)
+  assert.ok(near(Math.hypot(a[0], a[2]), SIZES[1].length), "bus length");
+  assert.ok(near(a[5], SIZES[1].height), "bus height");
+  assert.ok(near(Math.hypot(a[8], a[10]), SIZES[1].width), "bus width");
+  assert.ok(near(Math.hypot(a[16], a[18]), SIZES[0].length), "unknown kind: car length");
+  assert.ok(near(a[16 + 5], SIZES[0].height), "unknown kind: car height");
+  const cols = mesh.instanceColor.array;
+  assert.deepEqual(Array.from(cols.slice(3, 6)), kindColor(0).map((c) => Math.fround(c)), "unknown kind: car colour");
   layer.dispose(ctx);
 });
 
