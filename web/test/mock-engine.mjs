@@ -87,6 +87,19 @@ export const MOCK_TOOLS = Object.freeze([
   { key: "forest", cost: 0, size: 1 },
 ]);
 
+// The methods of the extended buildings API, hidden unless the constructor asks for them.
+const STRUCTURE_METHODS = Object.freeze([
+  "structure_rules", "set_structure_rules", "structure_catalog", "structures",
+  "structure_preview", "place_structure", "remove_structure", "structures_upkeep",
+]);
+
+// Extended buildings of the mock catalog (genre, footprint, price, monthly upkeep).
+export const MOCK_STRUCTURES = Object.freeze([
+  { genre: 1, width: 2, height: 2, cost: 200, upkeep: 5 },
+  { genre: 2, width: 1, height: 1, cost: 100, upkeep: 2 },
+  { genre: 3, width: 3, height: 3, cost: 1000, upkeep: 20 },
+]);
+
 function lcg(seed) {
   let s = (seed >>> 0) || 1;
   return () => {
@@ -111,17 +124,22 @@ export class MockCity {
   #alt; // relief: one altitude per tile, index x * height + y (City.heights)
   #rules = false; // relief rules (City.relief_rules)
   #agentRules = false; // traffic agents switch (City.agent_rules)
+  #structRules = false; // extended buildings switch (City.structure_rules)
+  #structures = []; // placed buildings: { genre, x, y, width, height }
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
   log = [];
 
-  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60 } = {}) {
+  // `structures: true` gives the extended buildings API (docs/game-design-v04.md). Without it the
+  // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
+  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
     this.#rubble = rubble;
     this.#generate(seed);
+    if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -147,6 +165,8 @@ export class MockCity {
     this.#disasters = true;
     this.#rules = false; // a new city starts with the rules off
     this.#agentRules = false;
+    this.#structRules = false;
+    this.#structures = [];
   }
 
   #inside(x, y) {
@@ -369,6 +389,77 @@ export class MockCity {
     }
     return out;
   }
+  // --- extended buildings (docs/game-design-v04.md, contract of crates/micropolis-wasm/src/structures.rs);
+  // present only with the constructor option `structures: true` ---
+  // Mock rules: off by default and after a new city or a load. Turning the rule off (set_structure_rules
+  // (false)) removes every placed building, with no refund (docs/game-design-v04.md). Catalog: genre 1
+  // (2x2, 200 $, upkeep 5), genre 2 (1x1, 100 $, upkeep 2), genre 3 (3x3, 1000 $, upkeep 20). A building
+  // needs every tile of its footprint to be dirt on the map and free of buildings: rubble gives
+  // NeedBulldoze (-1), anything else Failed (0); funds below the price give NoMoney (-2). The tiles stay
+  // dirt (the inert tile is not modelled). structures() states are 0 (no power or water is modelled).
+  structure_rules() {
+    return this.#structRules;
+  }
+  set_structure_rules(on) {
+    this.#structRules = Boolean(on);
+    if (!this.#structRules) this.#structures = [];
+  }
+  // Records of 8 [genre, width, height, cost, upkeep, flags, radius, effect].
+  structure_catalog() {
+    return Int32Array.from(MOCK_STRUCTURES.flatMap((s) => [s.genre, s.width, s.height, s.cost, s.upkeep, 0, 4, 1]));
+  }
+  // Records of 6 [genre, x, y, width, height, state], in placing order.
+  structures() {
+    return Int32Array.from(this.#structures.flatMap((s) => [s.genre, s.x, s.y, s.width, s.height, 0]));
+  }
+  // Dry run of a placement: { result, cost }, as place_structure would decide, without changing state.
+  #structVerdict(genre, x, y) {
+    const spec = MOCK_STRUCTURES.find((s) => s.genre === genre);
+    if (!this.#structRules || !spec || !this.#inside(x, y)) return { result: RESULT.FAILED, cost: 0 };
+    if (x + spec.width > this.#width || y + spec.height > this.#height) return { result: RESULT.FAILED, cost: 0 };
+    let rubble = false;
+    for (let i = x; i < x + spec.width; i++) {
+      for (let j = y; j < y + spec.height; j++) {
+        if (this.#structureAt(i, j)) return { result: RESULT.FAILED, cost: 0 };
+        const tile = this.#get(i, j);
+        if (tile === RUBBLE) rubble = true;
+        else if (tile !== DIRT) return { result: RESULT.FAILED, cost: 0 };
+      }
+    }
+    if (rubble) return { result: RESULT.NEED_BULLDOZE, cost: spec.cost };
+    if (this.#funds < spec.cost) return { result: RESULT.NO_MONEY, cost: spec.cost };
+    return { result: RESULT.OK, cost: spec.cost };
+  }
+  #structureAt(x, y) {
+    return this.#structures.find((s) => x >= s.x && x < s.x + s.width && y >= s.y && y < s.y + s.height);
+  }
+  // Int32Array [code, cost] like tool_preview; [0, 0] while the rule is off.
+  structure_preview(genre, x, y) {
+    const v = this.#structVerdict(genre, x, y);
+    return Int32Array.of(v.result, v.result === RESULT.FAILED ? 0 : v.cost);
+  }
+  place_structure(genre, x, y) {
+    const v = this.#structVerdict(genre, x, y);
+    if (v.result === RESULT.OK) {
+      const spec = MOCK_STRUCTURES.find((s) => s.genre === genre);
+      this.#funds -= v.cost;
+      this.#structures.push({ genre, x, y, width: spec.width, height: spec.height });
+    }
+    return v.result;
+  }
+  // Takes up the building holding tile (x, y): 1 when one was removed, else 0. No refund.
+  remove_structure(x, y) {
+    if (!this.#structRules) return RESULT.FAILED;
+    const hit = this.#structureAt(x, y);
+    if (!hit) return RESULT.FAILED;
+    this.#structures = this.#structures.filter((s) => s !== hit);
+    return RESULT.OK;
+  }
+  // Monthly upkeep of the placed buildings, in dollars.
+  structures_upkeep() {
+    return this.#structures.reduce((sum, s) => sum + MOCK_STRUCTURES.find((m) => m.genre === s.genre).upkeep, 0);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -404,6 +495,8 @@ export class MockCity {
   load_cty() {
     this.#rules = false;
     this.#agentRules = false;
+    this.#structRules = false;
+    this.#structures = [];
   }
   take_events() {
     return 0;
