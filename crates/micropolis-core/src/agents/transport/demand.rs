@@ -1,6 +1,7 @@
 //! Where riders come from and where taxis go: one attempt per tick to create a rider, one
 //! taxi dispatch per tick, and the riders who give up waiting.
 
+use super::step::settle;
 use super::taxi::Taxi;
 use super::{zone_rider_cap, Rider, Transport, MAX_RIDERS, MAX_TAXIS_PER_DEPOT, MAX_TAXI_FAILURES};
 use super::{MAX_TAXI_REQUESTS, MAX_WAITING_PER_STOP, MAX_WAIT_TICKS};
@@ -128,6 +129,12 @@ impl Transport {
             self.counters.abandoned += 1;
             return;
         };
+        if home == job {
+            // the roads changed since the rider was created: nowhere to drive to
+            self.requests.remove(0);
+            self.counters.abandoned += 1;
+            return;
+        }
         let ids: Vec<u32> = self.net.taxi_depots.iter().map(|d| d.id).collect();
         let out = per_depot(&ids, self.taxis.iter().map(|t| t.depot));
         let depot = (0..ids.len())
@@ -167,7 +174,7 @@ impl Transport {
         };
         self.next_vehicle += 1;
         // a home on the depot's own road: the rider gets in at once
-        let _ = taxi.event();
+        settle(&mut taxi, &mut self.counters);
         self.taxis.push(taxi);
     }
 

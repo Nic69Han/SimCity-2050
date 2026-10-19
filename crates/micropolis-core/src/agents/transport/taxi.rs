@@ -65,7 +65,9 @@ impl Taxi {
         self.rider.as_ref()?;
         if !self.picked && self.at == self.pickup_at {
             self.picked = true;
-            return Some(Event::PickedUp);
+            if self.at != self.dropoff_at {
+                return Some(Event::PickedUp);
+            }
         }
         if self.picked && self.at == self.dropoff_at {
             return Some(Event::DroppedOff((self.dropoff_at - self.pickup_at) as i32));

@@ -370,3 +370,67 @@ fn a_changed_network_withdraws_the_vehicles_and_keeps_waiting_riders_at_survivin
     assert!(rig.t.audit().balanced());
     assert_eq!(stop_ids(&rig).len(), 2);
 }
+
+#[test]
+fn a_rider_whose_home_and_job_share_a_road_is_never_lost() {
+    let mut s = town(2..68, 1);
+    put(&mut s, GENRE_TAXI_DEPOT, 20, ROAD_Y + 1);
+    let mut rig = Rig::new(&s);
+    let mut r = rig.rider(0, 0);
+    r.job = r.home; // the roads changed while it waited: same road at both ends
+    rig.t.requests.push(r);
+    for tick in 0..200 {
+        rig.t.dispatch_taxi(&rig.g, &mut rig.finder, &rig.load);
+        rig.t.drive_taxis(&rig.load);
+        assert!(rig.t.audit().balanced(), "tick {tick}");
+    }
+    let a = rig.t.audit();
+    assert_eq!((a.waiting, a.on_board, a.abandoned + a.arrived), (0, 0, 1));
+    assert!(rig.t.taxis.is_empty());
+}
+
+#[test]
+fn a_taxi_picks_up_and_drops_off_on_one_tile() {
+    let rider = Rider {
+        id: 1,
+        home: 0,
+        job: 0,
+        stop: 0,
+        born: 0,
+        failed: 0,
+    };
+    let mut t = Taxi {
+        id: 1,
+        depot: 0,
+        path: vec![7, 8, 7],
+        at: 1,
+        progress: 0,
+        pickup_at: 1,
+        dropoff_at: 1,
+        rider: Some(rider),
+        picked: false,
+    };
+    assert_eq!(t.event(), Some(taxi::Event::DroppedOff(0)));
+    assert!(t.picked);
+}
+
+#[test]
+fn a_taxi_home_with_a_rider_aboard_counts_the_rider_as_abandoned() {
+    let s = busy_town(1);
+    let mut rig = Rig::new(&s);
+    let r = rig.rider(0, 0);
+    rig.t.taxis.push(Taxi {
+        id: 1,
+        depot: 0,
+        path: vec![7],
+        at: 0,
+        progress: 0,
+        pickup_at: 5,
+        dropoff_at: 6,
+        rider: Some(r),
+        picked: true,
+    });
+    rig.step(1);
+    assert!(rig.t.taxis.is_empty());
+    assert_eq!(rig.t.counters.abandoned, 1);
+}
