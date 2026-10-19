@@ -22,6 +22,10 @@
 //     10 dollars per moved tile. Water is refused (0), a building or rubble needs a bulldozer
 //     (-1), a tile at 0 or 63 cannot move past it (0), funds below the cost give -2. Building
 //     tools do not add a levelling surcharge in the mock.
+//   - zoning by density (`densities: true`, rules in mock-zoning.mjs and the City methods below):
+//     density_rules() is off by default and after a new city or a load. Off, zone_preview is [0, 0]
+//     and place_zone is Failed, and every zone counts as dense. On, a 3x3 zone is placed (80, 100 or
+//     150 dollars for light, medium, dense); density_layer and density_stats report each zone's density.
 //   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
 //   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
 //     so tool_preview's cost differs from the catalog price (the page must show the preview's)
@@ -38,6 +42,10 @@
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
+
+import {
+  isZone, zoneCost, zoneTile, zoneLayer, zoneStats, ZONE_HALF,
+} from "./mock-zoning.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -106,6 +114,12 @@ export const MOCK_STRUCTURES = Object.freeze([
   { genre: 3, width: 3, height: 3, cost: 1000, upkeep: 20 },
 ]);
 
+// The methods of the zoning by density API (docs/game-design-v07.md), hidden unless the constructor
+// asks for them with `densities: true`.
+const DENSITY_METHODS = Object.freeze([
+  "density_rules", "set_density_rules", "zone_preview", "place_zone", "density_layer", "density_stats",
+]);
+
 // Transport genres (the `transit` option of the mock): bus stop, bus depot, taxi depot.
 export const MOCK_TRANSIT_STRUCTURES = Object.freeze([
   { genre: 10, width: 1, height: 1, cost: 50, upkeep: 1 },
@@ -153,6 +167,8 @@ export class MockCity {
   #structRules = false; // extended buildings switch (City.structure_rules)
   #structures = []; // placed buildings: { genre, x, y, width, height }
   #specs = MOCK_STRUCTURES; // the catalog of this mock (MOCK_STRUCTURES, plus the transit genres if asked)
+  #densRules = false; // zoning by density switch (City.density_rules)
+  #zones = []; // placed zones by density: { genre, density, x, y }, in placing order
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -160,7 +176,10 @@ export class MockCity {
 
   // `structures: true` gives the extended buildings API (docs/game-design-v04.md). Without it the
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
-  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false } = {}) {
+  constructor(seed = 1, {
+    width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
+    densities = false,
+  } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
@@ -169,6 +188,7 @@ export class MockCity {
     if (structures && rail) this.#specs = [...this.#specs, ...MOCK_RAIL_STRUCTURES];
     this.#generate(seed);
     if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
+    if (!densities) for (const name of DENSITY_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -196,6 +216,8 @@ export class MockCity {
     this.#agentRules = false;
     this.#structRules = false;
     this.#structures = [];
+    this.#densRules = false;
+    this.#zones = [];
   }
 
   #inside(x, y) {
@@ -501,6 +523,64 @@ export class MockCity {
     return this.#structures.reduce((sum, s) => sum + this.#specOf(s.genre).upkeep, 0);
   }
 
+  // --- zoning by density (docs/game-design-v07.md, contract of crates/micropolis-wasm/src/densities.rs);
+  // present only with the constructor option `densities: true` ---
+  // Mock rules: off by default and after a new city or a load. Off: zone_preview is [0, 0] and place_zone
+  // is Failed (0), and every zone counts as dense in density_layer and density_stats (the cap is lifted,
+  // the zones are kept). On: a zone is a 3x3 square centred on (x, y), with every tile dirt; rubble gives
+  // NeedBulldoze (-1), anything else Failed (0); funds below the price give NoMoney (-2). Prices: 80, 100
+  // and 150 dollars for light, medium and dense (MOCK_ZONE_COST x a percentage). The classic zone tool
+  // writes its tiles but records no density, so it is not in the layer nor in the statistics.
+  density_rules() {
+    return this.#densRules;
+  }
+  set_density_rules(on) {
+    this.#densRules = Boolean(on);
+  }
+  // Dry run of place_zone: { result, cost }, as the engine would decide, without changing state.
+  #zoneVerdict(genre, density, x, y) {
+    const none = { result: RESULT.FAILED, cost: 0 };
+    if (!this.#densRules || !isZone(genre, density)) return none;
+    if (!this.#inside(x - ZONE_HALF, y - ZONE_HALF) || !this.#inside(x + ZONE_HALF, y + ZONE_HALF)) return none;
+    let rubble = false;
+    for (let i = x - ZONE_HALF; i <= x + ZONE_HALF; i++) {
+      for (let j = y - ZONE_HALF; j <= y + ZONE_HALF; j++) {
+        const tile = this.#get(i, j);
+        if (tile === RUBBLE) rubble = true;
+        else if (tile !== DIRT) return none;
+      }
+    }
+    const cost = zoneCost(density);
+    if (rubble) return { result: RESULT.NEED_BULLDOZE, cost };
+    if (this.#funds < cost) return { result: RESULT.NO_MONEY, cost };
+    return { result: RESULT.OK, cost };
+  }
+  // Int32Array [code, cost] like tool_preview: the cost is 0 unless the result is Ok (the real engine
+  // gives 0 for a refused tile, rubble or no money too); [0, 0] while the rule is off.
+  zone_preview(genre, density, x, y) {
+    const v = this.#zoneVerdict(genre, density, x, y);
+    return Int32Array.of(v.result, v.result === RESULT.OK ? v.cost : 0);
+  }
+  place_zone(genre, density, x, y) {
+    const v = this.#zoneVerdict(genre, density, x, y);
+    if (v.result === RESULT.OK) {
+      this.#funds -= v.cost;
+      for (let i = x - ZONE_HALF; i <= x + ZONE_HALF; i++) {
+        for (let j = y - ZONE_HALF; j <= y + ZONE_HALF; j++) this.#set(i, j, zoneTile(genre));
+      }
+      this.#zones.push({ genre, density, x, y });
+    }
+    return v.result;
+  }
+  // One value per tile, index x * height + y like tiles(): 0 nothing, the zone's density (dense while off).
+  density_layer() {
+    return zoneLayer(this.#zones, this.#width, this.#height, this.#densRules);
+  }
+  // [light, medium, dense, farms, farm jobs]: dense only while the rule is off; no farms in the mock.
+  density_stats() {
+    return zoneStats(this.#zones, this.#densRules);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -538,6 +618,8 @@ export class MockCity {
     this.#agentRules = false;
     this.#structRules = false;
     this.#structures = [];
+    this.#densRules = false;
+    this.#zones = [];
   }
   take_events() {
     return 0;
