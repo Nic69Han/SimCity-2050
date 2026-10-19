@@ -50,7 +50,7 @@ export function calls(city, entry) {
 // Hover label of a zone: a refused tile says so (its preview has no cost to show); otherwise
 // undefined keeps the default (tools.js costLabel), which shows the preview's cost.
 export function label(preview) {
-  return preview[0] === FAILED ? "Impossible ici" : undefined;
+  return preview?.[0] === FAILED ? "Impossible ici" : undefined;
 }
 
 // Why the zoning tools cannot be used now, in French; "" when they can (or the engine has none).

@@ -128,6 +128,11 @@ describe("labels and the blocked reason", () => {
     assert.equal(tools.label(Int32Array.of(RESULT.FAILED, 0)), "Impossible ici");
   });
 
+  test("no preview at all keeps the default label instead of failing", () => {
+    assert.equal(tools.label(undefined), undefined);
+    assert.equal(tools.label(null), undefined);
+  });
+
   test("an allowed or charged tile keeps the default label (the preview's cost)", () => {
     assert.equal(tools.label(Int32Array.of(RESULT.OK, 80)), undefined);
     assert.equal(tools.label(Int32Array.of(RESULT.NO_MONEY, 150)), undefined);

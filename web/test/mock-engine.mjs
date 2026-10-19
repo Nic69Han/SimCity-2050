@@ -22,6 +22,10 @@
 //     10 dollars per moved tile. Water is refused (0), a building or rubble needs a bulldozer
 //     (-1), a tile at 0 or 63 cannot move past it (0), funds below the cost give -2. Building
 //     tools do not add a levelling surcharge in the mock.
+//   - zoning by density (`densities: true`, rules in mock-zoning.mjs and the City methods below):
+//     density_rules() is off by default and after a new city or a load. Off, zone_preview is [0, 0]
+//     and place_zone is Failed, and every zone counts as dense. On, a 3x3 zone is placed (80, 100 or
+//     150 dollars for light, medium, dense); density_layer and density_stats report each zone's density.
 //   - tiles are C++ tile character numbers (micropolis.h), so the page draws them in colour
 //   - terrain adds cost: every tree tile under a building-type tool costs TREE_CLEAR more,
 //     so tool_preview's cost differs from the catalog price (the page must show the preview's)
@@ -160,7 +164,9 @@ export class MockCity {
 
   // `structures: true` gives the extended buildings API (docs/game-design-v04.md). Without it the
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
-  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, densities = false } = {}) {
+  constructor(seed = 1, {
+    width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, densities = false,
+  } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
