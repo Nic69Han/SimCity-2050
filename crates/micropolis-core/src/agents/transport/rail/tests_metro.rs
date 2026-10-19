@@ -146,7 +146,7 @@ fn at_most_max_metro_lines_exist() {
     s.set_transit_rules(true);
     // MAX_METRO_LINES + 2 separate pairs of stations, one row of tunnels each
     for row in 0..(MAX_METRO_LINES as i32 + 2) {
-        let y = 1 + row;
+        let y = 1 + 2 * row;
         for x in 0..=4 {
             s.place_tunnel(x, y);
         }
@@ -154,6 +154,27 @@ fn at_most_max_metro_lines_exist() {
         s.place_station(4, y);
     }
     let rig = Rig::new(&s);
-    assert!(rig.t.rail.line_count(LineKind::Metro) <= MAX_METRO_LINES);
-    assert!(rig.t.rail.line_count(LineKind::Metro) >= 1);
+    // rows two apart, so no tunnel joins two pairs: the cap alone stops the lines
+    assert_eq!(rig.t.rail.line_count(LineKind::Metro), MAX_METRO_LINES);
+}
+
+#[test]
+fn at_most_max_line_searches_are_made_per_metro_tour() {
+    // 64 open tiles, none next to another: no tunnel joins them, every search fails
+    let (w, h) = (70, 24);
+    let mut open = vec![false; (w * h) as usize];
+    let stations: Vec<u32> = (0..64)
+        .map(|i| {
+            let tile = ((2 * (i / 8)) * h + 2 * (i % 8)) as u32;
+            open[tile as usize] = true;
+            tile
+        })
+        .collect();
+    let g = Grid::new(w, h, open);
+    let mut finder = GridFinder::default();
+    assert!(lines::metro_lines(&g, &stations, &mut finder).is_empty());
+    assert_eq!(
+        finder.searches,
+        (MAX_METRO_LINES * MAX_LINE_SEARCHES) as u64
+    );
 }
