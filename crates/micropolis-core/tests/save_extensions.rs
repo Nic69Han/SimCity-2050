@@ -226,7 +226,7 @@ fn a_bad_block_is_cty_bad_extension() {
             "repeated",
             [chunk(CHUNK_RULES, &[1]), chunk(CHUNK_RULES, &[1])].concat(),
         ),
-        ("unknown flag", chunk(CHUNK_RULES, &[0b1_0000])),
+        ("unknown flag", chunk(CHUNK_RULES, &[0b10_0000])),
         ("rules too long", chunk(CHUNK_RULES, &[1, 1])),
         ("ordinances length", chunk(2, &[1, 2, 3])),
         ("water size", chunk(CHUNK_WATER, &[1, 2, 3])),

@@ -60,3 +60,58 @@ Points d'extension posés par la relecture avant les chantiers : modules vides e
 Comparaisons C++ identiques ; règle éteinte = moteur d'origine ; sauvegarde/chargement aller-retour ; fichier sans
 bâtiment identique octet pour octet ; plafonds testés ; e2e : poser un parc, le voir en 2D et en 3D, le démolir ;
 tous les tests verts ; relecture.
+
+## Cœur des bâtiments (chantier livré)
+Livré dans `crates/micropolis-core/src/structures.rs` (catalogue, liste, codec, crochets) et
+`structures/rules.rs` (règles sur `Simulation`), `crates/micropolis-wasm/src/structures.rs` (API du tableau ci-dessus,
+à l'identique), tests `tests/structures_rules.rs`, `tests/structures_save.rs`, `web/test/wasm-structures.test.mjs`.
+
+**Constantes (toutes nommées, dans `structures.rs`).** `MAX_STRUCTURES = 256`, `LAND_VALUE_CAP = 40`,
+`SURFACE_BASE = 1019`, `SURFACE_BITS = BURNBIT | BULLBIT | CONDBIT`, `RECORD_SIZE = 5`.
+
+| Genre | Taille | Coût | Entretien/mois | Besoins | Rayon | Bonus de valeur au pied |
+|---|---|---|---|---|---|---|
+| 1 parc urbain | 2×2 | 300 | 5 | aucun | 6 | 12 |
+| 2 place publique | 1×1 | 100 | 2 | électricité | 4 | 6 |
+| 3 monument | 3×3 | 2000 | 40 | électricité, eau | 12 | 30 |
+
+**Tuile de surface inerte.** Chaque tuile d'une empreinte porte le caractère `1019 + genre - 1` (1019, 1020, 1021 :
+caractères libres après la dernière église, `CHURCH7LAST = 1018`) avec les bits brûlable, bulldozable, conducteur. Ces
+caractères sont hors de toute plage que le moteur teste (pas zone, route, rail, fil, feu, inondation ; les plages
+2..=63 déclenchent du feu, de l'inondation ou de la radioactivité, d'où le choix du haut de la table). Conséquences,
+testées : les zones n'y poussent pas ; tous les outils de construction classiques (zones, routes, fils, rails, parc,
+centrales, stade, port, aéroport, réseau) répondent `NeedBulldoze` et ne changent rien ; le bulldozer retire une tuile
+(1 $) ; un feu transforme une tuile en feu. Les outils eau/terre/forêt passent d'abord par le bulldozer.
+
+**Cohérence liste/carte.** Un bâtiment est *intact* si toutes les tuiles de son empreinte portent sa tuile de surface.
+`repair_structures` retire les bâtiments cassés de la liste et remet à terre nue leurs tuiles de surface restantes ;
+elle tourne à chaque passage de `ext_valves`, à chaque pose/démolition et à chaque bilan mensuel, qui nettoie aussi
+(parcours borné par la carte) les tuiles de surface qu'aucun bâtiment de la liste ne possède ; au chargement d'un
+fichier avec bloc d'extensions, même nettoyage complet (règle éteinte : tout part). Les lecteurs (`structures()`,
+entretien, bonus) ignorent tout de suite un bâtiment cassé, sans attendre la réparation.
+
+**Pose.** Codes : `0` règle éteinte, genre inconnu, empreinte hors carte ou sur l'eau, `MAX_STRUCTURES` atteint ;
+`-1` une tuile de l'empreinte n'est pas de la terre nue (arbres, gravats, route, autre bâtiment : pas d'auto-bulldozer) ;
+`-2` pas assez d'argent ; `1` sinon. L'aperçu rend `[code, coût]` (coût 0 sauf si `1`). Démolition gratuite, depuis
+n'importe quelle tuile ; éteindre la règle retire tout sans remboursement.
+
+**Électricité.** Chaque tuile est conductrice (comme une zone, et comme elle compte pour une tuile de la capacité des
+centrales). `état` bit 0 = une tuile de l'empreinte a le bit d'alimentation (mis par le balayage du réseau classique,
+donc avec le retard habituel d'un cycle). **Eau.** `état` bit 1 = une tuile est couverte par le réseau de l'eau v0.2 ;
+toujours 0 si la règle de l'eau est éteinte. Un besoin d'eau n'est exigé que si la règle de l'eau est active.
+
+**Effet « valeur du terrain ».** Par le crochet `ext_land_value`, appelé en dernier de la chaîne : pour chaque
+bâtiment intact dont les besoins sont satisfaits (alimenté s'il a besoin d'électricité, arrosé s'il a besoin d'eau et que
+la règle de l'eau est active), `bonus × (rayon + 1 − d) / (rayon + 1)` avec `d` la distance de Manhattan du bloc à
+l'empreinte, nul au-delà du rayon ; somme plafonnée à `LAND_VALUE_CAP`, puis le plafond habituel 1..=250. Entretien :
+somme des entretiens des bâtiments intacts, prélevée dans `ext_monthly_balance`.
+
+**Sauvegarde.** Bit 4 (`0b1_0000`) du morceau 1 = l'interrupteur ; morceau 6 (`CHUNK_STRUCTURES`, nouveau
+`CHUNK_MAX_TAG`) = enregistrements de 5 octets `[genre u8, x u16, y u16]` (grand-boutiste), vide (donc absent) sans
+bâtiment. Refusé (`cty_bad_extension`) : longueur non multiple de 5, plus de `MAX_STRUCTURES`, genre inconnu, empreinte
+hors carte, chevauchement. Les tests « drapeau inconnu » utilisent désormais `0b10_0000`. Règle éteinte et aucun
+bâtiment : fichier identique octet pour octet (test).
+
+Le bulldozer classique (et les outils eau, terrain, forêt) retire le bâtiment entier : le crochet vit dans `do_tool`
+(`tool.rs`), juste après `modify_world`, et appelle `repair_structures` si les extensions et la règle des structures sont
+actives. Règle coupée, rien ne change (moteur classique identique).

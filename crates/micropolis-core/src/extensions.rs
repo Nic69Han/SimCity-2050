@@ -18,10 +18,11 @@ use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::position::Position;
 use crate::simulation::Simulation;
+use crate::structures::StructureList;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::water::WaterNetwork;
-use crate::{deals, ordinances, transit, water};
+use crate::{deals, ordinances, structures, transit, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
 pub const CHUNK_RULES: u8 = 1;
@@ -33,8 +34,10 @@ pub const CHUNK_WATER: u8 = 3;
 pub const CHUNK_TRANSIT: u8 = 4;
 /// Chunk tag: the signed deals with the neighbours ([`DealList::encode`]).
 pub const CHUNK_DEALS: u8 = 5;
+/// Chunk tag: the placed extended buildings ([`StructureList::encode`]).
+pub const CHUNK_STRUCTURES: u8 = 6;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_DEALS;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_STRUCTURES;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -46,6 +49,10 @@ const RULES_DEALS: u8 = 0b100;
 /// Bit 3 of the rules chunk: the simulated cars (`Extensions::agents`). The cars themselves
 /// are not saved; a loaded city restarts them from the map.
 const RULES_AGENTS: u8 = 0b1000;
+/// Bit 4 of the rules chunk: the extended buildings (`Extensions::structures`).
+const RULES_STRUCTURES: u8 = 0b1_0000;
+
+const RULES_KNOWN: u8 = RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS | RULES_STRUCTURES;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -64,12 +71,21 @@ pub struct Extensions {
     pub agents: bool,
     /// The cars on the road: runtime state, never saved, ignored when comparing.
     pub fleet: Fleet,
+    /// The extended buildings (docs/game-design-v04.md).
+    pub structures: bool,
+    /// The placed buildings (kept only while `structures` is on; see [`structures`]).
+    pub structure_list: StructureList,
 }
 
 impl Extensions {
     /// Whether any extended rule is on.
     pub fn is_active(&self) -> bool {
-        self.ordinances != 0 || self.water_rules || self.transit_rules || self.deals || self.agents
+        self.ordinances != 0
+            || self.water_rules
+            || self.transit_rules
+            || self.deals
+            || self.agents
+            || self.structures
     }
 
     fn rules_flags(&self) -> u8 {
@@ -85,6 +101,9 @@ impl Extensions {
         }
         if self.agents {
             flags |= RULES_AGENTS;
+        }
+        if self.structures {
+            flags |= RULES_STRUCTURES;
         }
         flags
     }
@@ -104,12 +123,13 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
     let flags = ext.rules_flags();
     let rules = if flags == 0 { Vec::new() } else { vec![flags] };
-    let chunks: [(u8, Vec<u8>); 5] = [
+    let chunks: [(u8, Vec<u8>); 6] = [
         (CHUNK_RULES, rules),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
         (CHUNK_TRANSIT, sim.transit().encode()),
         (CHUNK_DEALS, ext.deal_list.encode()),
+        (CHUNK_STRUCTURES, ext.structure_list.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -172,6 +192,9 @@ pub(crate) fn decode_chunks(
             CHUNK_ORDINANCES => loaded.extensions.ordinances = ordinances::decode(bytes)?,
             CHUNK_WATER => loaded.water = WaterNetwork::decode(bytes, width, height)?,
             CHUNK_DEALS => loaded.extensions.deal_list = DealList::decode(bytes)?,
+            CHUNK_STRUCTURES => {
+                loaded.extensions.structure_list = StructureList::decode(bytes, width, height)?
+            }
             _ => loaded.transit = TransitNetwork::decode(bytes, width, height)?,
         }
     }
@@ -185,11 +208,12 @@ pub(crate) fn decode_chunks(
 fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> {
     match bytes {
         [] => Ok(()),
-        [flags] if flags & !(RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS) == 0 => {
+        [flags] if flags & !RULES_KNOWN == 0 => {
             ext.water_rules = flags & RULES_WATER != 0;
             ext.transit_rules = flags & RULES_TRANSIT != 0;
             ext.deals = flags & RULES_DEALS != 0;
             ext.agents = flags & RULES_AGENTS != 0;
+            ext.structures = flags & RULES_STRUCTURES != 0;
             Ok(())
         }
         [_] => Err("unknown rules flag"),
@@ -240,6 +264,7 @@ impl Simulation {
             || !self.water.is_empty()
             || !self.transit.is_empty()
             || self.extensions.has_deals()
+            || !self.extensions.structure_list.is_empty()
     }
 
     /// Applies a checked block (a loaded file).
@@ -247,6 +272,7 @@ impl Simulation {
         self.extensions = loaded.extensions;
         self.water = loaded.water;
         self.transit = loaded.transit;
+        self.repair_structures_fully();
     }
 
     /// Empties the networks, which belong to the map being replaced. The switches stay.
@@ -255,6 +281,7 @@ impl Simulation {
         self.water = WaterNetwork::new(w, h);
         self.transit = TransitNetwork::new(w, h);
         self.extensions.deal_list = DealList::default();
+        self.extensions.structure_list = StructureList::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -264,10 +291,14 @@ impl Simulation {
         if !self.extensions_active() {
             return;
         }
+        if self.structure_rules() {
+            self.repair_structures_fully();
+        }
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
             .saturating_add(transit::monthly_balance(self))
-            .saturating_add(deals::monthly_balance(self));
+            .saturating_add(deals::monthly_balance(self))
+            .saturating_add(structures::monthly_balance(self));
         if net != 0 {
             self.spend(net);
         }
@@ -300,7 +331,12 @@ impl Simulation {
         if !self.extensions_active() {
             return v;
         }
-        transit::land_value(self, x, y, ordinances::land_value(self, x, y, v))
+        structures::land_value(
+            self,
+            x,
+            y,
+            transit::land_value(self, x, y, ordinances::land_value(self, x, y, v)),
+        )
     }
 
     /// Hook: traffic density `t` (0..=255) of the block at world tile `(x, y)`. Called by
@@ -339,6 +375,9 @@ impl Simulation {
         ordinances::valves(self);
         water::valves(self);
         transit::valves(self);
+        if self.structure_rules() {
+            self.repair_structures();
+        }
     }
 
     /// Hook: whether a zone of `kind` at `pos` may grow (immigration). Called at the top of
@@ -493,10 +532,10 @@ mod tests {
         let cat = |parts: &[Vec<u8>]| parts.concat();
         let refused = [
             chunk(0, &[]),
-            chunk(6, &[]),
+            chunk(7, &[]),
             cat(&[chunk(2, &[0, 0, 0, 1]), chunk(1, &[1])]),
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
-            chunk(1, &[0b1_0000]),
+            chunk(1, &[0b10_0000]),
             chunk(1, &[1, 1]),
             chunk(2, &[1, 2, 3]),
             chunk(3, &[1, 2, 3]),
