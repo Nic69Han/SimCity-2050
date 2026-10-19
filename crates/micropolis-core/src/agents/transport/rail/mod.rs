@@ -17,6 +17,8 @@ mod step;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_metro;
 
 pub use grid::{is_rail, Grid, GridFinder, MAX_RAIL_EXPANSIONS, MAX_RAIL_PATH_LEN};
 pub use lines::{Line, LineKind, LineStop};
@@ -139,7 +141,10 @@ fn metro_inputs(sim: &Simulation) -> (Grid, Vec<u32>) {
         (b == TUNNEL || b == STATION) && net.is_working(x, y)
     });
     let grid = Grid::new(w, h, open.collect());
-    let stations = net.stations().iter().filter(|&&(x, y)| net.is_working(x, y));
+    let stations = net
+        .stations()
+        .iter()
+        .filter(|&&(x, y)| net.is_working(x, y));
     (grid, stations.map(|&(x, y)| (x * h + y) as u32).collect())
 }
 
@@ -148,7 +153,11 @@ impl Rail {
     /// changed since the last time.
     pub fn refresh(&mut self, sim: &Simulation, counters: &mut TransportCounters, now: u64) {
         let (w, h) = sim.world_size();
-        let gares: Vec<_> = sim.structures().into_iter().filter(|v| v.genre == GENRE_STATION).collect();
+        let gares: Vec<_> = sim
+            .structures()
+            .into_iter()
+            .filter(|v| v.genre == GENRE_STATION)
+            .collect();
         let rails = if gares.is_empty() {
             Grid::default()
         } else {
@@ -156,7 +165,9 @@ impl Rail {
         };
         let sites = lines::gare_sites(&rails, &gares);
         let (tunnels, stations) = metro_inputs(sim);
-        if (&rails, &sites, &tunnels, &stations) == (&self.rails, &self.gares, &self.tunnels, &self.stations) {
+        if (&rails, &sites, &tunnels, &stations)
+            == (&self.rails, &self.gares, &self.tunnels, &self.stations)
+        {
             return;
         }
         let mut all = lines::train_lines(&rails, &sites, &mut self.finder);
@@ -173,7 +184,11 @@ impl Rail {
             .iter()
             .map(|o| self.lines.iter().position(|n| n == o))
             .collect();
-        let mut queues: Vec<Vec<Vec<Rider>>> = self.lines.iter().map(|l| vec![Vec::new(); l.stops.len()]).collect();
+        let mut queues: Vec<Vec<Vec<Rider>>> = self
+            .lines
+            .iter()
+            .map(|l| vec![Vec::new(); l.stops.len()])
+            .collect();
         let mut spawn = vec![now; self.lines.len()];
         for (o, q) in std::mem::take(&mut self.queues).into_iter().enumerate() {
             match keep[o] {
@@ -244,7 +259,14 @@ impl Rail {
             mix(r.born);
         }
         for s in &self.shuttles {
-            for v in [s.id, s.line as u32, s.at as u32, u32::from(s.forward), s.progress, s.dwell] {
+            for v in [
+                s.id,
+                s.line as u32,
+                s.at as u32,
+                u32::from(s.forward),
+                s.progress,
+                s.dwell,
+            ] {
                 mix(u64::from(v));
             }
         }

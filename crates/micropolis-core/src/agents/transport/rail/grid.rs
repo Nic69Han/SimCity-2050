@@ -75,6 +75,8 @@ pub struct GridFinder {
     open: BinaryHeap<Reverse<(u32, u32, u32)>>,
     /// Pops of the last search (for the cap tests).
     pub last_expansions: usize,
+    /// Searches made since the finder exists (for the cap tests).
+    pub searches: u64,
 }
 
 impl GridFinder {
@@ -104,6 +106,7 @@ impl GridFinder {
         if !g.is_open(from) || !g.is_open(to) {
             return None;
         }
+        self.searches += 1;
         self.reset(g.tile_count());
         self.stamp[from as usize] = self.generation;
         self.cost[from as usize] = 0;

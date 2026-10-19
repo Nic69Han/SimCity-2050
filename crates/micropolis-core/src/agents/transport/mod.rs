@@ -253,10 +253,7 @@ impl Transport {
             let next = t.path[t.at + 1];
             super::vehicle_record(g, t.id, 2, t.tile(), next, t.progress)
         });
-        buses
-            .chain(taxis)
-            .chain(self.rail.vehicles(g))
-            .collect()
+        buses.chain(taxis).chain(self.rail.vehicles(g)).collect()
     }
 
     /// The tiles the buses and taxis stand on (they load the road like cars).

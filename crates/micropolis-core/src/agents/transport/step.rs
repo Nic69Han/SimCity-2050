@@ -19,7 +19,8 @@ impl Transport {
             self.try_rider(g, now);
         }
         self.dispatch_taxi(g, finder, load);
-        self.rail.step(now, &mut self.next_vehicle, &mut self.counters);
+        self.rail
+            .step(now, &mut self.next_vehicle, &mut self.counters);
         self.spawn_buses(now);
         self.drive_buses(load);
         self.drive_taxis(load);

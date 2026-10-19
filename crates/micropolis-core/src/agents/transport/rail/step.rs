@@ -11,7 +11,10 @@ impl Rail {
     pub fn expire(&mut self, now: u64, counters: &mut TransportCounters) {
         let alive = |r: &Rider| now - r.born <= MAX_WAIT_TICKS;
         let before = self.waiting();
-        self.queues.iter_mut().flatten().for_each(|q| q.retain(alive));
+        self.queues
+            .iter_mut()
+            .flatten()
+            .for_each(|q| q.retain(alive));
         counters.abandoned += (before - self.waiting()) as u64;
     }
 
@@ -32,7 +35,12 @@ impl Rail {
             }
             let mut s = Shuttle::new(*next_id, l);
             *next_id += 1;
-            s.serve(line, &mut queues[l], counters, (p.capacity, p.dwell, p.fare));
+            s.serve(
+                line,
+                &mut queues[l],
+                counters,
+                (p.capacity, p.dwell, p.fare),
+            );
             shuttles.push(s);
             next_spawn[l] = now + p.spawn_interval;
         }
@@ -40,7 +48,12 @@ impl Rail {
             let line = &lines[s.line];
             let p = line.kind.params();
             if s.advance(line, p.speed) {
-                s.serve(line, &mut queues[s.line], counters, (p.capacity, p.dwell, p.fare));
+                s.serve(
+                    line,
+                    &mut queues[s.line],
+                    counters,
+                    (p.capacity, p.dwell, p.fare),
+                );
             }
         }
     }

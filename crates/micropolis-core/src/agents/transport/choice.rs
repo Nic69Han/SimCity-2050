@@ -72,19 +72,41 @@ fn nearest_stop(g: &RoadGraph, stops: &[super::rail::LineStop], tile: u32) -> Op
 
 /// The cheapest trip by a line of `kind` that serves both ends, if any.
 fn rail_offer(rail: &Rail, g: &RoadGraph, kind: LineKind, home: u32, job: u32) -> Option<Offer> {
-    let mode = if kind == LineKind::Train { Mode::Train } else { Mode::Metro };
+    let mode = if kind == LineKind::Train {
+        Mode::Train
+    } else {
+        Mode::Metro
+    };
     let mut best: Option<Offer> = None;
-    for (line, l) in rail.lines.iter().enumerate().filter(|(_, l)| l.kind == kind) {
-        let (Some(from), Some(to)) = (nearest_stop(g, &l.stops, home), nearest_stop(g, &l.stops, job)) else {
+    for (line, l) in rail
+        .lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.kind == kind)
+    {
+        let (Some(from), Some(to)) = (
+            nearest_stop(g, &l.stops, home),
+            nearest_stop(g, &l.stops, job),
+        ) else {
             continue;
         };
         if from == to {
             continue;
         }
         let (a, b) = (l.stops[from].tile, l.stops[to].tile);
-        let cost = trip_cost(mode, g.distance(home, a) + g.distance(job, b), g.distance(a, b));
+        let cost = trip_cost(
+            mode,
+            g.distance(home, a) + g.distance(job, b),
+            g.distance(a, b),
+        );
         if best.is_none_or(|o| cost < o.cost) {
-            best = Some(Offer { mode, cost, line, from, to });
+            best = Some(Offer {
+                mode,
+                cost,
+                line,
+                from,
+                to,
+            });
         }
     }
     best
@@ -93,18 +115,38 @@ fn rail_offer(rail: &Rail, g: &RoadGraph, kind: LineKind, home: u32, job: u32) -
 impl Transport {
     pub(super) fn bus_offer(&self, g: &RoadGraph, home: u32, job: u32) -> Option<Offer> {
         let (a, b) = (self.net.stop_near(g, home)?, self.net.stop_near(g, job)?);
-        let served = self.routes.iter().flatten().any(|r| r.serves(a) && r.serves(b));
+        let served = self
+            .routes
+            .iter()
+            .flatten()
+            .any(|r| r.serves(a) && r.serves(b));
         if a == b || !served {
             return None;
         }
         let (sa, sb) = (self.net.stops[a].id, self.net.stops[b].id);
-        let cost = trip_cost(Mode::Bus, g.distance(home, sa) + g.distance(job, sb), g.distance(sa, sb));
-        Some(Offer { mode: Mode::Bus, cost, line: 0, from: a, to: b })
+        let cost = trip_cost(
+            Mode::Bus,
+            g.distance(home, sa) + g.distance(job, sb),
+            g.distance(sa, sb),
+        );
+        Some(Offer {
+            mode: Mode::Bus,
+            cost,
+            line: 0,
+            from: a,
+            to: b,
+        })
     }
 
     /// Every way the resident of the home zone `home` can reach the job zone `job` (zone
     /// centres); `from` and `to` are their access roads, which a taxi needs to differ.
-    pub(super) fn offers(&self, g: &RoadGraph, home: u32, job: u32, (from, to): (u32, u32)) -> Vec<Offer> {
+    pub(super) fn offers(
+        &self,
+        g: &RoadGraph,
+        home: u32,
+        job: u32,
+        (from, to): (u32, u32),
+    ) -> Vec<Offer> {
         let mut offers = Vec::with_capacity(4);
         offers.extend(self.bus_offer(g, home, job));
         offers.extend(rail_offer(&self.rail, g, LineKind::Metro, home, job));
@@ -112,7 +154,13 @@ impl Transport {
         if !self.net.taxi_depots.is_empty() && from != to {
             let ride = g.distance(home, job);
             let cost = trip_cost(Mode::Taxi, 0, ride);
-            offers.push(Offer { mode: Mode::Taxi, cost, line: 0, from: 0, to: 0 });
+            offers.push(Offer {
+                mode: Mode::Taxi,
+                cost,
+                line: 0,
+                from: 0,
+                to: 0,
+            });
         }
         offers
     }

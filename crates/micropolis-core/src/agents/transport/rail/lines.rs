@@ -33,7 +33,8 @@ pub struct Line {
 /// The first open tile touching the footprint of `v` (footprint tiles in order, then north,
 /// east, south, west of each).
 fn access_of(g: &Grid, v: &StructureView) -> Option<u32> {
-    let inside = |x: i32, y: i32| (v.x..v.x + v.width).contains(&x) && (v.y..v.y + v.height).contains(&y);
+    let inside =
+        |x: i32, y: i32| (v.x..v.x + v.width).contains(&x) && (v.y..v.y + v.height).contains(&y);
     (0..v.height)
         .flat_map(|dy| (0..v.width).map(move |dx| (v.x + dx, v.y + dy)))
         .flat_map(|(x, y)| STEPS.map(|(sx, sy)| (x + sx, y + sy)))
@@ -69,10 +70,20 @@ pub fn train_lines(g: &Grid, gares: &[Site], finder: &mut GridFinder) -> Vec<Lin
                 continue;
             };
             let stops = vec![
-                LineStop { site: a.id, tile: a.access },
-                LineStop { site: b.id, tile: b.access },
+                LineStop {
+                    site: a.id,
+                    tile: a.access,
+                },
+                LineStop {
+                    site: b.id,
+                    tile: b.access,
+                },
             ];
-            lines.push(Line { kind: LineKind::Train, path, stops });
+            lines.push(Line {
+                kind: LineKind::Train,
+                path,
+                stops,
+            });
         }
     }
     lines
@@ -100,7 +111,10 @@ pub fn metro_lines(g: &Grid, stations: &[u32], finder: &mut GridFinder) -> Vec<L
         let mut line = Line {
             kind: LineKind::Metro,
             path: vec![first],
-            stops: vec![LineStop { site: first, tile: first }],
+            stops: vec![LineStop {
+                site: first,
+                tile: first,
+            }],
         };
         let (mut here, mut skipped) = (first, Vec::new());
         for _ in 0..MAX_LINE_SEARCHES {
@@ -111,7 +125,10 @@ pub fn metro_lines(g: &Grid, stations: &[u32], finder: &mut GridFinder) -> Vec<L
             match finder.find(g, here, next) {
                 Some(leg) if line.path.len() + leg.len() - 1 <= MAX_LINE_PATH_LEN => {
                     line.path.extend_from_slice(&leg[1..]);
-                    line.stops.push(LineStop { site: next, tile: next });
+                    line.stops.push(LineStop {
+                        site: next,
+                        tile: next,
+                    });
                     here = next;
                 }
                 _ => skipped.push(next),

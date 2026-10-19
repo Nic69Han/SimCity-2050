@@ -42,7 +42,11 @@ impl Shuttle {
     /// The tile it drives to next (paths have two tiles at least, and the direction turns at
     /// both ends, so it exists).
     pub fn next_tile(&self, l: &Line) -> u32 {
-        let next = if self.forward { self.at + 1 } else { self.at.saturating_sub(1) };
+        let next = if self.forward {
+            self.at + 1
+        } else {
+            self.at.saturating_sub(1)
+        };
         l.path[next.min(l.path.len() - 1)]
     }
 
@@ -57,7 +61,11 @@ impl Shuttle {
             return false;
         }
         self.progress -= TILE_16;
-        self.at = if self.forward { self.at + 1 } else { self.at - 1 };
+        self.at = if self.forward {
+            self.at + 1
+        } else {
+            self.at - 1
+        };
         if self.at + 1 >= l.path.len() {
             self.forward = false;
         } else if self.at == 0 {
