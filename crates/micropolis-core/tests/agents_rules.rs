@@ -84,7 +84,10 @@ fn no_car_is_lost_or_duplicated() {
         run(&mut s, 25);
         let c = s.agent_counters();
         let active = s.agent_stats()[0] as u64;
-        assert_eq!(c.spawned, active + c.finished + c.abandoned);
+        assert_eq!(
+            c.spawned,
+            active + c.parked as u64 + c.round_trips + c.abandoned
+        );
         let mut ids: Vec<i32> = s
             .agent_vehicles(MAX_VEHICLES)
             .iter()
@@ -102,7 +105,7 @@ fn caps_hold() {
     let mut s = haight(true);
     run(&mut s, 1500);
     let c = s.agent_counters();
-    assert!(c.max_cars <= MAX_VEHICLES);
+    assert!(c.max_cars <= MAX_VEHICLES && c.max_present <= MAX_VEHICLES);
     assert!(c.max_searches_in_tick <= MAX_PATH_SEARCHES_PER_TICK);
     assert!(c.max_expansions <= MAX_EXPANSIONS + 1);
     assert!(c.max_path_len <= MAX_PATH_LEN);
@@ -198,8 +201,9 @@ fn a_cut_road_removes_the_cars_that_needed_it() {
     assert!(c.abandoned > before);
     assert_eq!(
         c.spawned,
-        s.agent_stats()[0] as u64 + c.finished + c.abandoned
+        s.agent_stats()[0] as u64 + c.parked as u64 + c.round_trips + c.abandoned
     );
+    assert_eq!(c.parked, 0, "parked cars lost their zones' roads too");
     assert_eq!(s.agent_stats()[0], 0);
     // a tile that is no longer a road reports no load (the 2D layer would tint it)
     let g = RoadGraph::scan(&s);
