@@ -32,6 +32,9 @@
 //   - transport_stats() (docs/game-design-v05.md): six zeros while the agents rule is off, else the fixed
 //     numbers TRANSPORT_FIXED. The transit genres 10-12 (MOCK_TRANSIT_STRUCTURES) join the catalog only with
 //     the structures option AND the `transit` option, so the v0.4 catalog stays the same for the other tests.
+//   - rail_stats() (docs/game-design-v06.md): seven zeros while the agents rule is off, else the fixed numbers
+//     RAIL_FIXED. The rail genre 13 (MOCK_RAIL_STRUCTURES, a station) joins the catalog only with the structures
+//     option AND the `rail` option, for the same reason as the transit genres.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -114,6 +117,15 @@ export const MOCK_TRANSIT_STRUCTURES = Object.freeze([
 // taxi_rides_month, income_month].
 export const TRANSPORT_FIXED = Object.freeze([2, 1, 25, 340, 60, 1200]);
 
+// Rail genre of the mock (the `rail` option): a station, 2x2.
+export const MOCK_RAIL_STRUCTURES = Object.freeze([
+  { genre: 13, width: 2, height: 2, cost: 500, upkeep: 12 },
+]);
+
+// rail_stats() while the agents rule is on: [trains, rames, train_riders_month, metro_riders_month,
+// rail_income_month, train_lines, metro_lines].
+export const RAIL_FIXED = Object.freeze([2, 1, 340, 120, 900, 1, 1]);
+
 function lcg(seed) {
   let s = (seed >>> 0) || 1;
   return () => {
@@ -148,12 +160,13 @@ export class MockCity {
 
   // `structures: true` gives the extended buildings API (docs/game-design-v04.md). Without it the
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
-  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false } = {}) {
+  constructor(seed = 1, { width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false } = {}) {
     this.#width = width;
     this.#height = height;
     this.#funds = funds;
     this.#rubble = rubble;
     if (structures && transit) this.#specs = [...MOCK_STRUCTURES, ...MOCK_TRANSIT_STRUCTURES];
+    if (structures && rail) this.#specs = [...this.#specs, ...MOCK_RAIL_STRUCTURES];
     this.#generate(seed);
     if (!structures) for (const name of STRUCTURE_METHODS) this[name] = undefined;
   }
@@ -384,6 +397,11 @@ export class MockCity {
   // [buses, taxis, waiting, bus_trips_month, taxi_rides_month, income_month]; zeros while the rule is off.
   transport_stats() {
     return this.#agentRules ? Int32Array.from(TRANSPORT_FIXED) : Int32Array.of(0, 0, 0, 0, 0, 0);
+  }
+  // seven numbers [trains, rames, train_riders_month, metro_riders_month, rail_income_month, train_lines,
+  // metro_lines]; zeros while the rule is off (docs/game-design-v06.md).
+  rail_stats() {
+    return this.#agentRules ? Int32Array.from(RAIL_FIXED) : Int32Array.of(0, 0, 0, 0, 0, 0, 0);
   }
   // [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
   agent_stats() {
