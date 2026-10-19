@@ -87,6 +87,9 @@ export function readSnapshot(city) {
   // agent_stats: [active_cars, finished_trips, mean_trip_ticks, saturated_tiles, motorised_residents]
   const a = rules.agents ? ints(call(city, "agent_stats")) : null;
   if (a && a.length >= 5) s.agents = { cars: a[0], finished: a[1], meanTicks: a[2], saturated: a[3], motorised: a[4] };
+  // transport_stats: [buses, taxis, waiting, bus_trips_month, taxi_rides_month, income_month], read with the rule only
+  const tr = rules.agents ? ints(call(city, "transport_stats")) : null;
+  if (tr && tr.length >= 3) s.transport = { waiting: tr[2] };
   if (hasOrdinances(city)) {
     s.ordinances = readOrdinances(city).map((o) => ({
       key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
@@ -113,7 +116,7 @@ export function cheapKey(city) {
   }
   if (rules.water) parts.push(ints(call(city, "water_stats"))?.join());
   if (rules.transit) parts.push(ints(call(city, "transit_stats"))?.join());
-  if (rules.agents) parts.push(ints(call(city, "agent_stats"))?.[3] ?? null);
+  if (rules.agents) parts.push(ints(call(city, "agent_stats"))?.[3] ?? null, ints(call(city, "transport_stats"))?.[2] ?? null);
   if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
   return parts.join("/");
 }

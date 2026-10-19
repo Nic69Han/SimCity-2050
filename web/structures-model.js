@@ -10,7 +10,11 @@ export const RECORD_LENGTH = 8;
 export const MAX_CATALOG_RECORDS = 32;
 
 // French names of the genres of the milestone; the engine only knows numbers.
-export const NAMES = Object.freeze({ 1: "Parc urbain", 2: "Place publique", 3: "Monument" });
+// The transport genres (docs/game-design-v05.md) are named here too.
+export const NAMES = Object.freeze({
+  1: "Parc urbain", 2: "Place publique", 3: "Monument",
+  10: "Arrêt de bus", 11: "Dépôt de bus", 12: "Dépôt de taxis",
+});
 
 // Why the buildings cannot be placed now (the page shows it as the button's reason).
 export const RULE_OFF_MESSAGE = "Activez les bâtiments étendus pour construire.";
