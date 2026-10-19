@@ -16,13 +16,14 @@
 
 use crate::agents::{self, Fleet};
 use crate::deals::DealList;
+use crate::densities::{DensityList, Farms};
 use crate::position::Position;
 use crate::simulation::Simulation;
 use crate::structures::StructureList;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::water::WaterNetwork;
-use crate::{deals, ordinances, structures, transit, water};
+use crate::{deals, densities, ordinances, structures, transit, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
 pub const CHUNK_RULES: u8 = 1;
@@ -36,8 +37,10 @@ pub const CHUNK_TRANSIT: u8 = 4;
 pub const CHUNK_DEALS: u8 = 5;
 /// Chunk tag: the placed extended buildings ([`StructureList::encode`]).
 pub const CHUNK_STRUCTURES: u8 = 6;
+/// Chunk tag: the light and medium zones ([`DensityList::encode`]).
+pub const CHUNK_DENSITIES: u8 = 7;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_STRUCTURES;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_DENSITIES;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -52,7 +55,11 @@ const RULES_AGENTS: u8 = 0b1000;
 /// Bit 4 of the rules chunk: the extended buildings (`Extensions::structures`).
 const RULES_STRUCTURES: u8 = 0b1_0000;
 
-const RULES_KNOWN: u8 = RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS | RULES_STRUCTURES;
+/// Bit 5 of the rules chunk: the zoning densities (`Extensions::densities`).
+const RULES_DENSITIES: u8 = 0b10_0000;
+
+const RULES_KNOWN: u8 =
+    RULES_WATER | RULES_TRANSIT | RULES_DEALS | RULES_AGENTS | RULES_STRUCTURES | RULES_DENSITIES;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -75,6 +82,12 @@ pub struct Extensions {
     pub structures: bool,
     /// The placed buildings (kept only while `structures` is on; see [`structures`]).
     pub structure_list: StructureList,
+    /// The zoning densities (docs/game-design-v07.md).
+    pub densities: bool,
+    /// The light and medium zones; the other zones are dense (see [`densities`]).
+    pub density_zones: DensityList,
+    /// The farms: derived runtime state, never saved, ignored when comparing.
+    pub farms: Farms,
 }
 
 impl Extensions {
@@ -86,6 +99,7 @@ impl Extensions {
             || self.deals
             || self.agents
             || self.structures
+            || self.densities
     }
 
     fn rules_flags(&self) -> u8 {
@@ -105,6 +119,9 @@ impl Extensions {
         if self.structures {
             flags |= RULES_STRUCTURES;
         }
+        if self.densities {
+            flags |= RULES_DENSITIES;
+        }
         flags
     }
 }
@@ -123,13 +140,14 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
     let flags = ext.rules_flags();
     let rules = if flags == 0 { Vec::new() } else { vec![flags] };
-    let chunks: [(u8, Vec<u8>); 6] = [
+    let chunks: [(u8, Vec<u8>); 7] = [
         (CHUNK_RULES, rules),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
         (CHUNK_TRANSIT, sim.transit().encode()),
         (CHUNK_DEALS, ext.deal_list.encode()),
         (CHUNK_STRUCTURES, ext.structure_list.encode()),
+        (CHUNK_DENSITIES, ext.density_zones.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -195,6 +213,9 @@ pub(crate) fn decode_chunks(
             CHUNK_STRUCTURES => {
                 loaded.extensions.structure_list = StructureList::decode(bytes, width, height)?
             }
+            CHUNK_DENSITIES => {
+                loaded.extensions.density_zones = DensityList::decode(bytes, width, height)?
+            }
             _ => loaded.transit = TransitNetwork::decode(bytes, width, height)?,
         }
     }
@@ -214,6 +235,7 @@ fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> 
             ext.deals = flags & RULES_DEALS != 0;
             ext.agents = flags & RULES_AGENTS != 0;
             ext.structures = flags & RULES_STRUCTURES != 0;
+            ext.densities = flags & RULES_DENSITIES != 0;
             Ok(())
         }
         [_] => Err("unknown rules flag"),
@@ -265,6 +287,7 @@ impl Simulation {
             || !self.transit.is_empty()
             || self.extensions.has_deals()
             || !self.extensions.structure_list.is_empty()
+            || !self.extensions.density_zones.is_empty()
     }
 
     /// Applies a checked block (a loaded file).
@@ -273,6 +296,8 @@ impl Simulation {
         self.water = loaded.water;
         self.transit = loaded.transit;
         self.repair_structures_fully();
+        self.repair_densities();
+        self.recompute_farms();
     }
 
     /// Empties the networks, which belong to the map being replaced. The switches stay.
@@ -282,6 +307,8 @@ impl Simulation {
         self.transit = TransitNetwork::new(w, h);
         self.extensions.deal_list = DealList::default();
         self.extensions.structure_list = StructureList::default();
+        self.extensions.density_zones = DensityList::default();
+        self.extensions.farms = Farms::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -293,6 +320,10 @@ impl Simulation {
         }
         if self.structure_rules() {
             self.repair_structures_fully();
+        }
+        if self.density_rules() {
+            self.repair_densities();
+            self.recompute_farms();
         }
         let fares = self.take_transport_income();
         let net = ordinances::monthly_balance(self)
@@ -323,7 +354,7 @@ impl Simulation {
         if !self.extensions_active() {
             return p;
         }
-        ordinances::pollution(self, x, y, p)
+        densities::pollution(self, x, y, ordinances::pollution(self, x, y, p))
     }
 
     /// Hook: land value `v` (1..=250) of the block at world tile `(x, y)`. Called by
@@ -380,6 +411,9 @@ impl Simulation {
         if self.structure_rules() {
             self.repair_structures();
         }
+        if self.density_rules() {
+            self.repair_densities();
+        }
     }
 
     /// Hook: whether a zone of `kind` at `pos` may grow (immigration). Called at the top of
@@ -389,7 +423,9 @@ impl Simulation {
         if !self.extensions_active() {
             return true;
         }
-        ordinances::zone_can_grow(self, pos, kind) && water::zone_can_grow(self, pos, kind)
+        ordinances::zone_can_grow(self, pos, kind)
+            && water::zone_can_grow(self, pos, kind)
+            && densities::zone_can_grow(self, pos, kind)
     }
 }
 
@@ -534,10 +570,10 @@ mod tests {
         let cat = |parts: &[Vec<u8>]| parts.concat();
         let refused = [
             chunk(0, &[]),
-            chunk(7, &[]),
+            chunk(8, &[]),
             cat(&[chunk(2, &[0, 0, 0, 1]), chunk(1, &[1])]),
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
-            chunk(1, &[0b10_0000]),
+            chunk(1, &[0b100_0000]),
             chunk(1, &[1, 1]),
             chunk(2, &[1, 2, 3]),
             chunk(3, &[1, 2, 3]),
