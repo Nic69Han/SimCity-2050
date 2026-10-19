@@ -78,6 +78,3 @@ Tests : `tests/densities_rules.rs`, `densities_farms.rs`, `densities_save.rs`.
   denses, fermes, emplois agricoles ; une ferme est aussi comptée parmi les zones légères.
 * **Cohérence** (`repair_densities`) : une entrée dont le centre n'est plus un centre de zone est supprimée (passage des
   valves, bilan mensuel, chargement, avant chaque pose) ; règle éteinte, toutes les entrées disparaissent.
-* **Limite connue** : une zone rasée puis reconstruite au même centre avec un outil classique *avant* le passage suivant
-  des valves hérite de l'ancienne entrée (le bulldozer ne passe pas par la réparation). Remède d'une ligne : appeler
-  `repair_densities()` dans `do_tool` à côté de `repair_structures()` (`tool.rs`, hors du périmètre de ce chantier).

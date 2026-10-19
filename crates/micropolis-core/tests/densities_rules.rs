@@ -256,7 +256,7 @@ fn a_destroyed_zone_loses_its_record() {
     }
     // bulldozer
     s.tool_down(EditingTool::Bulldozer, 20, 20);
-    assert!(s.repair_densities());
+    assert!(!s.repair_densities(), "the bulldozer already repaired it");
     assert_eq!(s.extensions().density_zones.len(), 2);
     // a disaster that wipes the centre tile, seen by the valves hook
     s.set_tile(30, 20, DIRT);
@@ -277,6 +277,20 @@ fn placing_over_a_cleared_zone_does_not_inherit_the_old_density() {
     assert_eq!(s.place_zone(1, DENSITY_DENSE, 30, 30), ToolResult::Ok);
     assert_eq!(s.zone_density(30, 30), DENSITY_DENSE);
     assert!(s.extensions().density_zones.is_empty());
+}
+
+#[test]
+fn a_classic_zone_built_after_a_bulldozed_one_is_dense() {
+    let mut s = bare();
+    assert_eq!(s.place_zone(3, DENSITY_LIGHT, 30, 30), ToolResult::Ok);
+    s.tool_down(EditingTool::Bulldozer, 30, 30);
+    assert!(s.extensions().density_zones.is_empty());
+    assert_eq!(s.tool_down(EditingTool::Commercial, 30, 30), ToolResult::Ok);
+    assert_eq!(s.zone_density(30, 30), DENSITY_DENSE);
+    assert!(s.extensions().density_zones.is_empty());
+    s.ext_valves();
+    assert_eq!(s.zone_density(30, 30), DENSITY_DENSE);
+    assert_eq!(s.density_stats(), [0, 0, 1, 0, 0]);
 }
 
 #[test]

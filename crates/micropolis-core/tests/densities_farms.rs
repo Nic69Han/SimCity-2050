@@ -185,7 +185,7 @@ fn a_destroyed_farm_stops_being_one_at_once() {
     month(&mut s);
     assert_eq!(farms(&s), 1);
     s.tool_down(EditingTool::Bulldozer, AT.0, AT.1);
-    assert!(s.repair_densities());
+    assert!(!s.repair_densities(), "the bulldozer already repaired it");
     assert!(s.extensions().farms.is_empty());
     assert_eq!(s.density_stats(), [0; 5]);
 }
