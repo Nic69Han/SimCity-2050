@@ -536,10 +536,11 @@ export class MockCity {
     if (this.#funds < cost) return { result: RESULT.NO_MONEY, cost };
     return { result: RESULT.OK, cost };
   }
-  // Int32Array [code, cost] like tool_preview; [0, 0] while the rule is off or the tile is refused.
+  // Int32Array [code, cost] like tool_preview: the cost is 0 unless the result is Ok (the real engine
+  // gives 0 for a refused tile, rubble or no money too); [0, 0] while the rule is off.
   zone_preview(genre, density, x, y) {
     const v = this.#zoneVerdict(genre, density, x, y);
-    return Int32Array.of(v.result, v.result === RESULT.FAILED ? 0 : v.cost);
+    return Int32Array.of(v.result, v.result === RESULT.OK ? v.cost : 0);
   }
   place_zone(genre, density, x, y) {
     const v = this.#zoneVerdict(genre, density, x, y);

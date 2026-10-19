@@ -4,7 +4,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import * as tools from "../tools-zoning.js";
 import { extraCatalog, extraCalls, extraLabel, extraBlockedReason, isExtraTool } from "../extra-tools.js";
-import { readCatalog, callsFor, groupCatalog, TOOL_GROUPS, strokeEngineOf } from "../tools.js";
+import { readCatalog, callsFor, groupCatalog, TOOL_GROUPS, strokeEngineOf, costLabel } from "../tools.js";
 import { MockCity, RESULT, START_FUNDS } from "./mock-engine.mjs";
 
 const withZones = (seed = 1, options = {}) => new MockCity(seed, { ...options, densities: true });
@@ -135,8 +135,45 @@ describe("labels and the blocked reason", () => {
 
   test("an allowed or charged tile keeps the default label (the preview's cost)", () => {
     assert.equal(tools.label(Int32Array.of(RESULT.OK, 80)), undefined);
+    assert.equal(tools.label(Int32Array.of(RESULT.OK, 0)), undefined, "Ok is never a refusal");
     assert.equal(tools.label(Int32Array.of(RESULT.NO_MONEY, 150)), undefined);
     assert.equal(tools.label(Int32Array.of(RESULT.NEED_BULLDOZE, 100)), undefined);
+  });
+
+  test("the real engine's refused previews (cost 0) get a reason, never «gratuit»", () => {
+    const bulldoze = tools.label(Int32Array.of(RESULT.NEED_BULLDOZE, 0));
+    const money = tools.label(Int32Array.of(RESULT.NO_MONEY, 0));
+    assert.equal(bulldoze, "Terrain à dégager");
+    assert.equal(money, "Fonds insuffisants");
+    assert.equal(tools.label(Int32Array.of(RESULT.FAILED, 0)), "Impossible ici");
+  });
+
+  test("every refused code with cost 0 gets a reason, and costLabel never says «gratuit» for it", () => {
+    for (const code of [RESULT.FAILED, RESULT.NEED_BULLDOZE, RESULT.NO_MONEY]) {
+      const preview = Int32Array.of(code, 0);
+      const text = tools.label(preview);
+      assert.notEqual(text, undefined, `code ${code}`);
+      assert.notEqual(text, "gratuit");
+      assert.notEqual(costLabel(preview, 80), "gratuit", `costLabel with a catalog price, code ${code}`);
+    }
+  });
+
+  test("an unknown refusal code with no cost falls back to «Impossible ici»", () => {
+    assert.equal(tools.label(Int32Array.of(-7, 0)), "Impossible ici");
+  });
+
+  test("a refused preview from the real mock engine is labelled, never free", () => {
+    const city = on(1);
+    const [entry] = tools.catalog(city);
+    const preview = tools.calls(city, entry).preview(0, 0);
+    assert.equal(preview[0], RESULT.FAILED);
+    assert.equal(tools.label(preview), "Impossible ici");
+    const rubble = new MockCity(1, { densities: true, rubble: 2000 });
+    rubble.set_density_rules(true);
+    const rubbleEntry = tools.catalog(rubble)[0];
+    const refused = tools.calls(rubble, rubbleEntry).preview(20, 20);
+    assert.deepEqual([...refused], [RESULT.NEED_BULLDOZE, 0]);
+    assert.equal(tools.label(refused), "Terrain à dégager");
   });
 
   test("the rule off gives the rule message, in 2D or 3D", () => {

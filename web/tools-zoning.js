@@ -10,7 +10,18 @@ import {
 export const KIND = "zoning";
 export const SIZE = 3; // a zone's side, in tiles
 const HALF = (SIZE - 1) / 2; // tiles from the centre to the edge of a zone
-const FAILED = 0; // ToolResult Failed (docs/tools-contract.md)
+// ToolResult codes (docs/tools-contract.md, the same values as RESULT in tools.js; not imported, to
+// keep this module free of the palette's cycle).
+const OK = 1;
+const FAILED = 0;
+const NEED_BULLDOZE = -1;
+const NO_MONEY = -2;
+// French hover reasons for a refused tile, by code. The engine gives a refused preview a cost of 0.
+const REFUSAL = Object.freeze({
+  [FAILED]: "Impossible ici",
+  [NEED_BULLDOZE]: "Terrain à dégager",
+  [NO_MONEY]: "Fonds insuffisants",
+});
 
 // Catalog entries of the zones, when the engine has the zoning by density; [] otherwise. The price
 // depends on the tile (the engine's preview gives it), so the catalog shows «au survol».
@@ -47,10 +58,12 @@ export function calls(city, entry) {
   };
 }
 
-// Hover label of a zone: a refused tile says so (its preview has no cost to show); otherwise
-// undefined keeps the default (tools.js costLabel), which shows the preview's cost.
+// Hover label of a zone. A placeable tile (Ok, or a preview that charges) keeps the default
+// (tools.js costLabel), which shows the preview's cost. Otherwise the tile is refused and the engine
+// reports a cost of 0, so the label gives the reason: never the catalog price («gratuit»).
 export function label(preview) {
-  return preview?.[0] === FAILED ? "Impossible ici" : undefined;
+  if (!preview || preview[0] === OK || preview[1] > 0) return undefined;
+  return REFUSAL[preview[0]] ?? REFUSAL[FAILED];
 }
 
 // Why the zoning tools cannot be used now, in French; "" when they can (or the engine has none).

@@ -141,21 +141,21 @@ describe("the mock engine: placing a zone", () => {
     assert.equal(city.funds(), START_FUNDS - 80 - 100);
   });
 
-  test("rubble under the square: NeedBulldoze with the price, nothing placed", () => {
+  test("rubble under the square: NeedBulldoze with a cost of 0, nothing placed", () => {
     const city = new MockCity(1, { densities: true, rubble: 2000 });
     city.set_density_rules(true);
     assert.equal(city.tiles()[20 * city.height() + 20], RUBBLE, "seed 1 has rubble on the origin");
-    assert.deepEqual([...city.zone_preview(1, 1, 20, 20)], [RESULT.NEED_BULLDOZE, 80]);
+    assert.deepEqual([...city.zone_preview(1, 1, 20, 20)], [RESULT.NEED_BULLDOZE, 0], "a refused preview costs 0");
     assert.equal(city.place_zone(1, 1, 20, 20), RESULT.NEED_BULLDOZE);
     assert.equal(city.funds(), START_FUNDS);
     assert.deepEqual([...city.density_stats()], [0, 0, 0, 0, 0]);
     assert.notEqual(DIRT, RUBBLE);
   });
 
-  test("a poor city gets NoMoney with the price", () => {
+  test("a poor city gets NoMoney with a cost of 0", () => {
     const city = new MockCity(1, { densities: true, rubble: 0, funds: 100 });
     city.set_density_rules(true);
-    assert.deepEqual([...city.zone_preview(3, 3, 20, 20)], [RESULT.NO_MONEY, 150]);
+    assert.deepEqual([...city.zone_preview(3, 3, 20, 20)], [RESULT.NO_MONEY, 0], "a refused preview costs 0");
     assert.equal(city.place_zone(3, 3, 20, 20), RESULT.NO_MONEY);
     assert.equal(city.funds(), 100);
     assert.deepEqual([...city.zone_preview(1, 1, 20, 20)], [RESULT.OK, 80], "light fits");
