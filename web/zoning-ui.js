@@ -3,6 +3,7 @@
 // the engine owns the rule and the zones; update() reads them again after a load.
 // setup(api) runs once after the engine exists; update(api) runs after every redraw.
 import { supportsZoning, decodeStats, statsText, noteText } from "./zoning-model.js";
+import { setDensityView } from "./map-layer-densities-model.js";
 
 let panel = null;
 let ui = null;
@@ -26,11 +27,19 @@ function build(api) {
   };
   const label = el("label", { for: "zoning-rules", class: "zoning-switch" });
   label.append(box, el("span", {}, "Activer les densités de zonage"));
+  // «Voir les densités»: the 2D layer (map-layer-densities.js) tints the zones by density and the farms
+  const view = el("input", { type: "checkbox", id: "zoning-view" });
+  view.onchange = () => {
+    setDensityView(view.checked);
+    api.redraw();
+  };
+  const viewLabel = el("label", { for: "zoning-view", class: "zoning-switch" });
+  viewLabel.append(view, el("span", {}, "Voir les densités sur la carte"));
   const state = el("p", { id: "zoning-state", class: "zoning-state" });
   const note = el("p", { id: "zoning-note", class: "zoning-note" });
-  panel.replaceChildren(el("h2", { id: "zoning-heading" }, "Densités de zonage"), label, state, note);
+  panel.replaceChildren(el("h2", { id: "zoning-heading" }, "Densités de zonage"), label, viewLabel, state, note);
   panel.setAttribute("aria-labelledby", "zoning-heading");
-  return { box, state, note };
+  return { box, view, viewLabel, state, note };
 }
 
 export function setup(api) {
@@ -49,6 +58,11 @@ export function update(api) {
   if (!ui) ui = build(api);
   const on = Boolean(city.density_rules());
   if (ui.box.checked !== on) ui.box.checked = on;
+  ui.viewLabel.hidden = !on;
+  if (!on && ui.view.checked) {
+    ui.view.checked = false;
+    setDensityView(false);
+  }
   const text = statsText(decodeStats(city.density_stats()));
   if (ui.state.textContent !== text) ui.state.textContent = text;
   const note = noteText(on);

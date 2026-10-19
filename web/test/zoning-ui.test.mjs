@@ -136,3 +136,37 @@ describe("the panel", () => {
     assert.equal(writes, 0, "the same text is not set again");
   });
 });
+
+describe("the «Voir les densités» view", () => {
+  test("shown with the rule on; it drives the 2D layer view and is dropped with the rule", async () => {
+    const { densityViewState, setDensityView } = await import("../map-layer-densities-model.js");
+    const { MockCity } = await import("./mock-engine.mjs");
+    const ui = await import("../zoning-ui.js");
+    const nodes = {};
+    globalThis.document = {
+      createElement: (tag) => {
+        const n = { tagName: tag, children: [], attributes: {}, hidden: false, checked: false, textContent: "",
+          setAttribute(k, v) { this.attributes[k] = v; if (k === "id") nodes[v] = this; },
+          append(...c) { this.children.push(...c); }, replaceChildren(...c) { this.children = c; } };
+        return n;
+      },
+    };
+    const panel = { hidden: true, replaceChildren() {}, setAttribute() {} };
+    const city = new MockCity(1, { densities: true });
+    let redraws = 0;
+    const api = { city: () => city, $: (id) => (id === "zoning-panel" ? panel : null), redraw: () => redraws++, isReady: () => true };
+    setDensityView(false);
+    ui.setup(api);
+    ui.update(api);
+    assert.equal(nodes["zoning-view"] !== undefined, true);
+    city.set_density_rules(true);
+    ui.update(api);
+    nodes["zoning-view"].checked = true;
+    nodes["zoning-view"].onchange();
+    assert.equal(densityViewState().show, true);
+    assert.equal(redraws, 1);
+    city.set_density_rules(false);
+    ui.update(api);
+    assert.equal(densityViewState().show, false, "the view goes with the rule");
+  });
+});
