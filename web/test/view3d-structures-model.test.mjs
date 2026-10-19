@@ -17,7 +17,9 @@ const close = (a, b) => Math.abs(a - b) < 1e-9;
 
 test("the record layout and the kinds are the ones of the contract", () => {
   assert.equal(RECORD, 6);
-  assert.deepEqual(GENRE, { PARK: 1, SQUARE: 2, MONUMENT: 3 });
+  assert.deepEqual(GENRE, {
+    PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
+  });
   assert.deepEqual(KINDS, ["slab", "tree", "fountain", "obelisk", "block"]);
   assert.equal(Object.keys(CAPACITY).length, KINDS.length);
 });
