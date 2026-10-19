@@ -11,8 +11,15 @@ export const MAX_VEHICLES_3D = 4000; // vehicles read per call, and instances of
 export const READ_INTERVAL = 0.25; // seconds between two reads of the engine
 export const RECORD = 5;
 
-// Size of a box in tiles: length along the way, height, width.
-export const CAR_SIZE = Object.freeze({ length: 0.35, height: 0.2, width: 0.18 });
+// Size of the box of each kind in tiles: length along the way, height, width. An unknown kind is drawn
+// with the car's size (sizeOf).
+export const SIZES = Object.freeze({
+  0: Object.freeze({ length: 0.35, height: 0.2, width: 0.18 }), // car
+  1: Object.freeze({ length: 0.8, height: 0.3, width: 0.22 }), // bus
+  2: Object.freeze({ length: 0.33, height: 0.2, width: 0.18 }), // taxi
+  3: Object.freeze({ length: 0.9, height: 0.3, width: 0.25 }), // train
+  4: Object.freeze({ length: 0.9, height: 0.3, width: 0.25 }), // metro
+});
 
 // Colour of each kind (0 car, 1 bus, 2 taxi, 3 train, 4 metro), as #rrggbb.
 export const KIND_COLORS = Object.freeze(["#d8dde6", "#f0a030", "#ffd23f", "#8e44ad", "#2ecc71"]);
@@ -72,13 +79,19 @@ export function kindColor(kind) {
   return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+// Size of the box of a kind ({ length, height, width } in tiles); an unknown kind has the car's size.
+export function sizeOf(kind) {
+  return Object.hasOwn(SIZES, kind) ? SIZES[kind] : SIZES[0];
+}
+
 // Whether the engine is due a read, given the seconds since the last one (Infinity before the first).
 export function shouldRead(elapsed) {
   return elapsed >= READ_INTERVAL;
 }
 
-// Where each vehicle's box goes: { x, y, z, yaw, rgb } per vehicle, the box standing on the ground of
-// its tile (tileCentreY of the tile holding it). Past `capacity` vehicles are dropped and counted.
+// Where each vehicle's box goes: { x, y, z, yaw, rgb, size } per vehicle, the box standing on the ground
+// of its tile (tileCentreY of the tile holding it), on half its height. `size` is the box of its kind
+// (sizeOf). Past `capacity` vehicles are dropped and counted.
 export function buildPlacements({ w, h, vehicles, corners, capacity = MAX_VEHICLES_3D }) {
   const items = [];
   let dropped = 0;
@@ -90,21 +103,24 @@ export function buildPlacements({ w, h, vehicles, corners, capacity = MAX_VEHICL
     const v = vehicles[i];
     const tx = clamp(Math.floor(v.x), 0, Math.max(0, w - 1));
     const ty = clamp(Math.floor(v.y), 0, Math.max(0, h - 1));
+    const size = sizeOf(v.kind);
     items.push({
       x: v.x,
-      y: tileCentreY(corners, h, tx, ty) + CAR_SIZE.height / 2,
+      y: tileCentreY(corners, h, tx, ty) + size.height / 2,
       z: v.y,
       yaw: yawFor(v.dir),
       rgb: kindColor(v.kind),
+      size,
     });
   }
   return { items, dropped };
 }
 
-// Writes the column-major matrix (rotation around Y, scale, translation) of a placement at out[offset].
-export function writeVehicleMatrix(out, offset, p) {
+// Writes the column-major matrix (rotation around Y, scale to the box `size`, translation) of a
+// placement at out[offset]. The mesh is a unit box, so the scale in the matrix gives each kind its size.
+export function writeVehicleMatrix(out, offset, p, size) {
   const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
-  const { length, height, width } = CAR_SIZE;
+  const { length, height, width } = size;
   out[offset] = c * length;
   out[offset + 1] = 0;
   out[offset + 2] = -s * length;

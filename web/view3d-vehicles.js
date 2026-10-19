@@ -1,5 +1,6 @@
-// 3D view layer: the simulated vehicles (docs/game-design-v03.md). One InstancedMesh of small boxes,
-// one instance per vehicle, coloured by kind (view3d-vehicles-model.js holds the maths).
+// 3D view layer: the simulated vehicles (docs/game-design-v03.md, v0.5 sizes per kind). One InstancedMesh
+// of unit boxes, one instance per vehicle, coloured and scaled by kind (view3d-vehicles-model.js holds
+// the maths).
 //
 // City.vehicles(MAX_VEHICLES_3D) is read at most every READ_INTERVAL seconds, and only while
 // city.agent_rules() is true; between two reads each vehicle moves from its previous place to its new
@@ -39,7 +40,7 @@ export function createLayer() {
     const vehicles = interpolate(m.prev, m.next, t);
     const { items, dropped } = buildPlacements({ w: g.w, h: g.h, vehicles, corners });
     items.forEach((p, i) => {
-      writeVehicleMatrix(mesh.instanceMatrix.array, i * 16, p);
+      writeVehicleMatrix(mesh.instanceMatrix.array, i * 16, p, p.size);
       mesh.instanceColor.array.set(p.rgb, i * 3);
     });
     mesh.count = items.length;
