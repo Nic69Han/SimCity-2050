@@ -96,10 +96,11 @@ describe("the 3D view", () => {
 
       // a residential zone built by a click in the 3D view
       const shadow = await shadowCity({ cty: await readSample("haight") });
+      // the tool first: clicking its button may scroll the page, and the tile is found on the scrolled canvas
+      await selectTool(page, "residential");
       const spot = await pickVisibleTile(page, shadow);
       assert.ok(spot, "a visible bare tile with room for a zone");
       const before = await readFunds(page);
-      await selectTool(page, "residential");
       await page.mouse.click(spot.p.x, spot.p.y);
       shadow.down("residential", spot.x, spot.y);
       await pollUntil(async () => (await readFunds(page)) !== before, "the funds to change after the 3D click");
