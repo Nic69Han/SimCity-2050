@@ -1,0 +1,35 @@
+# Plan : de SimCity 2050 v0.3b à une ville 3D au niveau de SimCity 3000
+
+Plan d'exécution (ordre fixé) qui prolonge docs/roadmap.md et docs/ia-simulation.md. Chaque jalon suit la même
+méthode : document de conception `docs/game-design-<jalon>.md` écrit par la relecture (Opus) avec le contrat
+moteur ↔ page, chantiers confiés à des agents (Sonnet pour le moteur et les concepts complexes, Haiku pour la page,
+fichiers listés, docs/regles-de-code.md), relecture adversariale, vérifications complètes (Rust, wasm, page, e2e,
+comparaisons C++), PR, fusion, publication Netlify. Chaque règle nouvelle reste désactivée par défaut : le mode
+classique reste identique au moteur C++.
+
+## Déjà livré
+v0.1 (3D, conseillers, tutoriel, sons), v0.2 (eau, ordonnances, métro, relief jouable), v0.2b (sous-sol 3D, accords
+avec les voisins), v0.3 (voitures simulées), v0.3b (aller-retour, conseiller de la circulation).
+
+## Jalons à venir (dans l'ordre)
+
+| Jalon | Contenu | Fonctionnalités SimCity 3000 couvertes |
+|---|---|---|
+| **v0.4 Bâtiments étendus** | Plateforme générique : catalogue de bâtiments (taille, coût, entretien, besoins électricité/eau, rayon d'effet), placement/démolition, sauvegarde, entretien au budget, calques 2D et 3D, outils. Trois premiers bâtiments : parc urbain, place publique, monument. | Parcs et loisirs, base de tous les bâtiments ci-dessous |
+| **v0.5 Bus et taxis** | Arrêts de bus et dépôt de taxis (bâtiments v0.4) ; habitants sans voiture qui prennent le bus ou le taxi ; recettes et coûts au budget ; véhicules genre 1 et 2 visibles en 2D/3D. | Bus, transport en commun de surface |
+| **v0.6 Trains et métro animés** | Gares sur les rails, rames sur les rails et dans les tunnels, horaires, capacité, correspondances, choix du mode au moindre coût. | Trains de voyageurs, métro |
+| **v0.7 Densités de zonage et fermes** | Zonage léger / moyen / dense pour R, C, I (plafond de croissance par densité), fermes sur l'industrie légère à faible valeur. | Densités de zones, agriculture |
+| **v0.8 Déchets** | Production de déchets par zone, décharge, incinérateur, centre de recyclage, usine de valorisation ; ordures non ramassées → plaintes et pollution ; accords d'export de déchets avec les voisins. | Gestion des déchets |
+| **v0.9 Éducation, santé, justice** | École, collège, bibliothèque, musée → niveau d'éducation (EQ) ; clinique, hôpital → espérance de vie ; prison → criminalité ; effets sur la croissance et l'industrie propre. | Éducation, santé, prisons |
+| **v0.10 Énergie** | Centrales gaz, pétrole, éolienne, solaire, hydroélectrique, micro-ondes, fusion ; usure et fin de vie des centrales ; pollution propre à chacune ; achat d'électricité aux voisins. | Centrales variées, vieillissement |
+| **v0.11 Économie** | Impôts par zone et par classe de richesse, emprunts et obligations, marchandises et chaînes de production (étape D de l'IA, Megapolis), commerce avec les voisins. | Budget détaillé, emprunts, industrie |
+| **v0.12 Récompenses et accords spéciaux** | Bâtiments-récompenses débloqués par la population et la satisfaction ; accords spéciaux (casino, prison d'État, décharge toxique, base de missiles) ; pétitionnaires ; journal et bandeau d'actualités. | Récompenses, accords d'affaires, pétitionnaires, actualités |
+| **v0.13 Catastrophes et grands transports** | Émeutes, OVNI, météorite, sécheresse ; autoroutes et bretelles ; port et aéroport animés. | Catastrophes SC3000, autoroutes, ports, aéroports |
+| **v0.14 Rendu 3D final** | Modèles 3D de tous les nouveaux bâtiments et des densités, variantes par valeur du terrain, éclairage de nuit, performance. | Ville 3D complète |
+| **v1.0 Finition** | Musique, scénarios et défis, mobile, accessibilité, traductions, sauvegarde partagée, documentation de contribution. | Jeu complet |
+
+## Règles communes
+* Une règle étendue par domaine (interrupteur dans `Extensions`, sauvegardé dans le bloc d'extensions MCTY v3).
+* Entiers, déterminisme, boucles bornées par des constantes nommées, tests de chaque plafond.
+* Contrat moteur ↔ page écrit avant les chantiers ; la page détecte les méthodes absentes et ne casse jamais.
+* Rien de nouveau sans tests ; un jalon n'est fusionné que vert partout.

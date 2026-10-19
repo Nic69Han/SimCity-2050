@@ -18,8 +18,9 @@
 import * as relief from "./tools-relief.js";
 import * as water from "./tools-water.js";
 import * as transit from "./tools-transit.js";
+import * as structures from "./tools-structures.js";
 
-export const EXTRA_TOOL_MODULES = Object.freeze([relief, water, transit]);
+export const EXTRA_TOOL_MODULES = Object.freeze([relief, water, transit, structures]);
 
 // The module whose tools `entry` belongs to, or null (an engine tool).
 function moduleOf(entry) {
