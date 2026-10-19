@@ -240,14 +240,14 @@ mod tests {
     #[test]
     fn the_catalog_is_in_increasing_genre_order_and_all_genres_share_one_surface() {
         let genres: Vec<u8> = CATALOG.iter().map(|k| k.genre).collect();
-        assert_eq!(genres, [1, 2, 3, 10, 11, 12]);
+        assert_eq!(genres, [1, 2, 3, 10, 11, 12, 13]);
         for k in &CATALOG {
             assert_eq!(kind_of(k.genre), Some(k));
             assert_eq!(k.surface(), SURFACE_TILE);
             assert!(k.width > 0 && k.height > 0 && k.cost > 0 && k.upkeep >= 0);
             assert!(k.bonus <= LAND_VALUE_CAP && k.radius >= 0);
         }
-        for g in [0, 4, 9, 13, 255] {
+        for g in [0, 4, 9, 14, 255] {
             assert_eq!(kind_of(g), None);
         }
         let needing_a_road: Vec<u8> = CATALOG
@@ -256,6 +256,12 @@ mod tests {
             .map(|k| k.genre)
             .collect();
         assert_eq!(needing_a_road, [GENRE_BUS_STOP]);
+        let needing_a_rail: Vec<u8> = CATALOG
+            .iter()
+            .filter(|k| k.needs_rail)
+            .map(|k| k.genre)
+            .collect();
+        assert_eq!(needing_a_rail, [GENRE_STATION]);
     }
 
     #[test]

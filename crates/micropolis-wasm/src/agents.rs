@@ -12,6 +12,9 @@
 //! * `transport_stats() -> Int32Array`: `[buses, taxis, waiting_riders, bus_trips_month,
 //!   taxi_rides_month, income_month]` (docs/game-design-v05.md; zeros unless both this rule and
 //!   the extended buildings are on). Buses are vehicles of kind 1, taxis of kind 2.
+//! * `rail_stats() -> Int32Array`: `[trains, metro_cars, train_riders_month, metro_riders_month,
+//!   rail_income_month, train_lines, metro_lines]` (docs/game-design-v06.md; zeros unless the
+//!   transport runs). Trains are vehicles of kind 3, metro cars (underground) of kind 4.
 //! * `traffic_load() -> Uint8Array`: measured load 0..=255 per tile, tile order `x * height + y`.
 
 use crate::City;
@@ -45,6 +48,12 @@ impl City {
         self.sim.transport_stats().to_vec()
     }
 
+    /// `[trains, metro_cars, train_riders_month, metro_riders_month, rail_income_month,
+    /// train_lines, metro_lines]`.
+    pub fn rail_stats(&self) -> Vec<i32> {
+        self.sim.rail_stats().to_vec()
+    }
+
     /// Measured load of every tile (tile order), 0..=255.
     pub fn traffic_load(&self) -> Vec<u8> {
         self.sim.agent_traffic_load()
@@ -61,6 +70,7 @@ mod tests {
         assert!(!city.agent_rules());
         assert_eq!(city.agent_stats(), vec![0; 5]);
         assert_eq!(city.transport_stats(), vec![0; 6]);
+        assert_eq!(city.rail_stats(), vec![0; 7]);
         assert!(city.vehicles(10).is_empty());
         assert_eq!(city.traffic_load().len(), 120 * 100);
         city.set_agent_rules(true);

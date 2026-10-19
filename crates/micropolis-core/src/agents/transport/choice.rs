@@ -91,7 +91,7 @@ fn rail_offer(rail: &Rail, g: &RoadGraph, kind: LineKind, home: u32, job: u32) -
 }
 
 impl Transport {
-    fn bus_offer(&self, g: &RoadGraph, home: u32, job: u32) -> Option<Offer> {
+    pub(super) fn bus_offer(&self, g: &RoadGraph, home: u32, job: u32) -> Option<Offer> {
         let (a, b) = (self.net.stop_near(g, home)?, self.net.stop_near(g, job)?);
         let served = self.routes.iter().flatten().any(|r| r.serves(a) && r.serves(b));
         if a == b || !served {
