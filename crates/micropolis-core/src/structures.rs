@@ -52,6 +52,8 @@ pub const GENRE_BUS_STOP: u8 = 10;
 pub const GENRE_BUS_DEPOT: u8 = 11;
 /// Genre of the taxi depot (2 x 2).
 pub const GENRE_TAXI_DEPOT: u8 = 12;
+/// Genre of the train station, the "gare" (2 x 2, next to a classic rail tile).
+pub const GENRE_STATION: u8 = 13;
 /// Need flag: the building needs electricity to have its effect.
 pub const FLAG_POWER: i32 = 1;
 /// Need flag: the building needs water (only while the water rules are on).

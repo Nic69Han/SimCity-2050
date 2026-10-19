@@ -14,10 +14,12 @@ impl Transport {
     pub fn step(&mut self, g: &RoadGraph, finder: &mut PathFinder, load: &[u8], now: u64) {
         self.counters.searches_in_last_tick = 0;
         self.expire(now);
+        self.rail.expire(now, &mut self.counters);
         for _ in 0..RIDER_SPAWNS_PER_TICK {
             self.try_rider(g, now);
         }
         self.dispatch_taxi(g, finder, load);
+        self.rail.step(now, &mut self.next_vehicle, &mut self.counters);
         self.spawn_buses(now);
         self.drive_buses(load);
         self.drive_taxis(load);

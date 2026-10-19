@@ -17,8 +17,10 @@
 
 mod api;
 mod bus;
+pub mod choice;
 mod demand;
 pub mod net;
+pub mod rail;
 pub mod riders;
 pub mod route;
 mod step;
@@ -38,6 +40,7 @@ use super::rng::AgentRng;
 use super::MOTORISED_PCT;
 use crate::simulation::Simulation;
 use net::Net;
+use rail::Rail;
 use route::Route;
 
 /// Tiles from a zone centre within which a stop can be walked to.
@@ -103,6 +106,8 @@ pub struct Transport {
     pub requests: Vec<Rider>,
     pub buses: Vec<Bus>,
     pub taxis: Vec<Taxi>,
+    /// Trains and metro cars.
+    pub rail: Rail,
     /// Transport tick from which each bus depot may send its next bus.
     next_spawn: Vec<u64>,
     rng: AgentRng,
@@ -121,6 +126,7 @@ impl Transport {
             requests: Vec::new(),
             buses: Vec::new(),
             taxis: Vec::new(),
+            rail: Rail::default(),
             next_spawn: Vec::new(),
             rng: AgentRng::seeded(seed, time, 0x5452_414E),
             next_vehicle: VEHICLE_ID_BASE,
@@ -138,6 +144,7 @@ impl Transport {
         load: &[u8],
         now: u64,
     ) {
+        self.rail.refresh(sim, &mut self.counters, now);
         let net = Net::build(sim, g);
         if net == self.net && g.roads == self.roads {
             return;
@@ -186,8 +193,10 @@ impl Transport {
             )
         });
         let queued: usize = self.queues.iter().map(Vec::len).sum();
-        let waiting = queued + self.requests.len() + fetching;
-        let on_board = self.buses.iter().map(|b| b.riders.len()).sum::<usize>() + riding;
+        let waiting = queued + self.requests.len() + fetching + self.rail.waiting();
+        let on_board = self.buses.iter().map(|b| b.riders.len()).sum::<usize>()
+            + riding
+            + self.rail.on_board();
         let c = &self.counters;
         Audit {
             waiting,
@@ -211,7 +220,23 @@ impl Transport {
         ]
     }
 
-    /// The buses then the taxis as `[id, kind, x16, y16, direction]` (kind 1 bus, 2 taxi).
+    /// `[trains, metro_cars, train_riders_month, metro_riders_month, rail_income_month,
+    /// train_lines, metro_lines]`.
+    pub fn rail_stats(&self) -> [i32; 7] {
+        let c = &self.counters;
+        [
+            self.rail.count(rail::LineKind::Train) as i32,
+            self.rail.count(rail::LineKind::Metro) as i32,
+            c.month_train_trips,
+            c.month_metro_trips,
+            c.month_rail_income,
+            self.rail.line_count(rail::LineKind::Train) as i32,
+            self.rail.line_count(rail::LineKind::Metro) as i32,
+        ]
+    }
+
+    /// The buses, the taxis, then the trains and the metro cars as `[id, kind, x16, y16,
+    /// direction]` (kind 1 bus, 2 taxi, 3 train, 4 metro car).
     pub fn vehicles(&self, g: &RoadGraph) -> Vec<[i32; 5]> {
         let buses = self.buses.iter().filter_map(|b| {
             let r = self.routes.get(b.route)?.as_ref()?;
@@ -228,7 +253,10 @@ impl Transport {
             let next = t.path[t.at + 1];
             super::vehicle_record(g, t.id, 2, t.tile(), next, t.progress)
         });
-        buses.chain(taxis).collect()
+        buses
+            .chain(taxis)
+            .chain(self.rail.vehicles(g))
+            .collect()
     }
 
     /// The tiles the buses and taxis stand on (they load the road like cars).
@@ -274,6 +302,10 @@ impl Transport {
                 mix(u64::from(v));
             }
         }
+        for v in [c.train_trips, c.metro_trips] {
+            mix(v);
+        }
+        self.rail.fingerprint(mix);
         for t in &self.taxis {
             for v in [t.id, t.depot, t.at as u32, t.progress, u32::from(t.picked)] {
                 mix(u64::from(v));

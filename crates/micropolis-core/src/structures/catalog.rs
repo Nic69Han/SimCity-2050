@@ -2,7 +2,7 @@
 
 use super::{EFFECT_LAND_VALUE, EFFECT_NONE, FLAG_POWER, FLAG_WATER, SURFACE_TILE};
 use super::{GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_MONUMENT, GENRE_PARK, GENRE_PLAZA};
-use super::{GENRE_TAXI_DEPOT, LAND_VALUE_CAP};
+use super::{GENRE_STATION, GENRE_TAXI_DEPOT, LAND_VALUE_CAP};
 use crate::agents::transport::WALK_RADIUS;
 use crate::tile::Tile;
 
@@ -26,6 +26,8 @@ pub struct Kind {
     pub bonus: i32,
     /// Placement rule: a road must touch the footprint (one of the tiles next to its sides).
     pub needs_road: bool,
+    /// Placement rule: a classic rail tile must touch the footprint (same neighbours).
+    pub needs_rail: bool,
 }
 
 impl Kind {
@@ -47,6 +49,7 @@ const fn kind(genre: u8, size: (i32, i32), cost: i32, upkeep: i32) -> Kind {
         effect: EFFECT_NONE,
         bonus: 0,
         needs_road: false,
+        needs_rail: false,
     }
 }
 
@@ -60,8 +63,8 @@ const fn amenity(k: Kind, flags: i32, radius: i32, bonus: i32) -> Kind {
     }
 }
 
-/// The buildings, in genre order (genres 1-3 of v0.4, then 10-12 of v0.5).
-pub const CATALOG: [Kind; 6] = [
+/// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6).
+pub const CATALOG: [Kind; 7] = [
     amenity(kind(GENRE_PARK, (2, 2), 300, 5), 0, 6, 12),
     amenity(kind(GENRE_PLAZA, (1, 1), 100, 2), FLAG_POWER, 4, 6),
     amenity(
@@ -77,6 +80,10 @@ pub const CATALOG: [Kind; 6] = [
     },
     kind(GENRE_BUS_DEPOT, (2, 2), 600, 25),
     kind(GENRE_TAXI_DEPOT, (2, 2), 400, 15),
+    Kind {
+        needs_rail: true,
+        ..kind(GENRE_STATION, (2, 2), 800, 30)
+    },
 ];
 
 /// The catalog entry of `genre`, if it exists.
