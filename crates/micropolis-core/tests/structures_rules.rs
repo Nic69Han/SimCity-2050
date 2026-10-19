@@ -143,7 +143,10 @@ fn a_placed_building_is_listed_costs_money_and_covers_its_footprint() {
     );
     assert_eq!(
         s.structures_upkeep(),
-        CATALOG.iter().map(|k| k.upkeep).sum::<i32>()
+        [GENRE_PARK, GENRE_PLAZA, GENRE_MONUMENT]
+            .iter()
+            .map(|&g| kind(g).upkeep)
+            .sum::<i32>()
     );
 }
 

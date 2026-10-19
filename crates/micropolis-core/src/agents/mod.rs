@@ -18,6 +18,7 @@ pub mod load;
 pub mod path;
 pub mod rng;
 mod run;
+pub mod transport;
 mod trips;
 pub mod vehicles;
 
@@ -83,12 +84,47 @@ pub struct Fleet {
     run: Option<Box<Run>>,
 }
 
+impl Fleet {
+    fn run_mut(&mut self) -> Option<&mut Run> {
+        self.run.as_deref_mut()
+    }
+}
+
 impl PartialEq for Fleet {
     fn eq(&self, _: &Fleet) -> bool {
         true
     }
 }
 impl Eq for Fleet {}
+
+/// The record `[id, kind, x16, y16, direction]` of a vehicle of `kind` on tile `from` driving to
+/// the adjacent tile `to`, `progress` sixteenths of the way.
+pub(crate) fn vehicle_record(
+    g: &graph::RoadGraph,
+    id: u32,
+    kind: i32,
+    from: u32,
+    to: u32,
+    progress: u32,
+) -> [i32; 5] {
+    let (x, y) = g.xy(from);
+    let (nx, ny) = g.xy(to);
+    let (dx, dy) = (nx - x, ny - y);
+    let dir = match (dx, dy) {
+        (0, -1) => 0,
+        (1, 0) => 1,
+        (0, 1) => 2,
+        _ => 3,
+    };
+    let p = progress as i32;
+    [
+        id as i32,
+        kind,
+        x * 16 + 8 + dx * p,
+        y * 16 + 8 + dy * p,
+        dir,
+    ]
+}
 
 /// Cars a zone of `pop` residents may have out (driving or parked) at once.
 pub fn zone_car_cap(pop: i32) -> usize {
@@ -139,11 +175,14 @@ impl Simulation {
     }
 
     /// At most `max` cars as `[id, kind, x16, y16, direction]` (centre of the car in sixteenths of
-    /// a tile from the top-left corner of the map; kind 0 = car; direction 0 N, 1 E, 2 S, 3 W).
+    /// a tile from the top-left corner of the map; kind 0 = car, 1 = bus, 2 = taxi; direction 0 N, 1 E, 2 S, 3 W).
     pub fn agent_vehicles(&self, max: usize) -> Vec<[i32; 5]> {
-        self.agent_run()
-            .map(|r| r.cars.iter().take(max).map(|c| r.vehicle(c)).collect())
-            .unwrap_or_default()
+        let Some(r) = self.agent_run() else {
+            return Vec::new();
+        };
+        let cars = r.cars.iter().map(|c| r.vehicle(c));
+        let others = r.transport.iter().flat_map(|t| t.vehicles(&r.graph));
+        cars.chain(others).take(max).collect()
     }
 
     /// Measured load (0..=255) of every tile, in tile order (`x * height + y`); zeros when the

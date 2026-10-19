@@ -5,9 +5,12 @@
 //! every call is refused with [`ToolResult::Failed`](crate::tool::ToolResult) and a cost of 0,
 //! the hooks answer their input, and the engine is the original.
 //!
-//! * **Surface tiles.** Every tile of a footprint holds an inert tile character, one per genre
-//!   ([`SURFACE_BASE`] + genre - 1: 1019, 1020, 1021, the unused characters after the last
-//!   church), with the bits [`SURFACE_BITS`] (burnable, bulldozable, conductive). Nothing in
+//! * **Surface tile.** Every tile of a footprint holds one inert tile character shared by all the
+//!   genres ([`SURFACE_TILE`], 1019, an unused character after the last church), with the bits
+//!   [`SURFACE_BITS`] (burnable, bulldozable, conductive). Which building owns a tile is read from
+//!   the list, never from the character, so new genres need no new tile. v0.4 wrote one character
+//!   per genre (1019, 1020, 1021): those still count as surface ([`is_surface`]) and load as they
+//!   are. Nothing in
 //!   the engine looks at them: they are not zones, roads, rails, wires, fire or flood, so the
 //!   zones never grow on them and the classic tools refuse them (`NeedBulldoze`), except the
 //!   bulldozer, which clears a tile. A fire turns a tile into fire. Being conductive, a building
@@ -26,11 +29,13 @@
 //! No random number is drawn anywhere. Every loop is bounded by [`MAX_STRUCTURES`], by the
 //! 3 x 3 footprints or by the map size.
 
+mod catalog;
 mod rules;
 
 use crate::simulation::Simulation;
 use crate::tile::{Tile, BULLBIT, BURNBIT, CONDBIT};
 
+pub use catalog::{kind_of, Kind, CATALOG};
 pub use rules::StructureView;
 
 /// Largest number of buildings in a city.
@@ -41,6 +46,12 @@ pub const GENRE_PARK: u8 = 1;
 pub const GENRE_PLAZA: u8 = 2;
 /// Genre of the monument (3 x 3).
 pub const GENRE_MONUMENT: u8 = 3;
+/// Genre of the bus stop (1 x 1, next to a road).
+pub const GENRE_BUS_STOP: u8 = 10;
+/// Genre of the bus depot (2 x 2).
+pub const GENRE_BUS_DEPOT: u8 = 11;
+/// Genre of the taxi depot (2 x 2).
+pub const GENRE_TAXI_DEPOT: u8 = 12;
 /// Need flag: the building needs electricity to have its effect.
 pub const FLAG_POWER: i32 = 1;
 /// Need flag: the building needs water (only while the water rules are on).
@@ -51,85 +62,18 @@ pub const EFFECT_NONE: i32 = 0;
 pub const EFFECT_LAND_VALUE: i32 = 1;
 /// Largest land value bonus the buildings give a block together.
 pub const LAND_VALUE_CAP: i32 = 40;
-/// Tile character of the surface of genre 1; genre `g` uses `SURFACE_BASE + g - 1`.
-pub const SURFACE_BASE: Tile = 1019;
+/// Tile character every new building leaves on its footprint.
+pub const SURFACE_TILE: Tile = 1019;
+/// Last of the characters v0.4 used as surface (one per genre: 1019, 1020, 1021).
+pub const LEGACY_SURFACE_LAST: Tile = 1021;
 /// Status bits of a surface tile.
 pub const SURFACE_BITS: Tile = BURNBIT | BULLBIT | CONDBIT;
 /// Bytes of a saved building: genre (1), x (2, big-endian), y (2, big-endian).
 pub const RECORD_SIZE: usize = 5;
 
-/// One entry of the catalog.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Kind {
-    pub genre: u8,
-    pub width: i32,
-    pub height: i32,
-    /// Dollars to build.
-    pub cost: i32,
-    /// Dollars per month.
-    pub upkeep: i32,
-    /// [`FLAG_POWER`] | [`FLAG_WATER`].
-    pub flags: i32,
-    /// Tiles from the footprint up to which the effect reaches.
-    pub radius: i32,
-    /// [`EFFECT_NONE`] or [`EFFECT_LAND_VALUE`].
-    pub effect: i32,
-    /// Land value points at the footprint (falls off to 0 past the radius).
-    pub bonus: i32,
-}
-
-impl Kind {
-    /// The surface tile character of this genre.
-    pub fn surface(&self) -> Tile {
-        SURFACE_BASE + Tile::from(self.genre) - 1
-    }
-}
-
-/// The buildings of the milestone, in genre order.
-pub const CATALOG: [Kind; 3] = [
-    Kind {
-        genre: GENRE_PARK,
-        width: 2,
-        height: 2,
-        cost: 300,
-        upkeep: 5,
-        flags: 0,
-        radius: 6,
-        effect: EFFECT_LAND_VALUE,
-        bonus: 12,
-    },
-    Kind {
-        genre: GENRE_PLAZA,
-        width: 1,
-        height: 1,
-        cost: 100,
-        upkeep: 2,
-        flags: FLAG_POWER,
-        radius: 4,
-        effect: EFFECT_LAND_VALUE,
-        bonus: 6,
-    },
-    Kind {
-        genre: GENRE_MONUMENT,
-        width: 3,
-        height: 3,
-        cost: 2000,
-        upkeep: 40,
-        flags: FLAG_POWER | FLAG_WATER,
-        radius: 12,
-        effect: EFFECT_LAND_VALUE,
-        bonus: 30,
-    },
-];
-
-/// The catalog entry of `genre`, if it exists.
-pub fn kind_of(genre: u8) -> Option<&'static Kind> {
-    CATALOG.iter().find(|k| k.genre == genre)
-}
-
-/// Whether the tile character `c` is the surface of some genre.
+/// Whether the tile character `c` is a building surface (the shared one, or a v0.4 per-genre one).
 pub fn is_surface(c: Tile) -> bool {
-    (SURFACE_BASE..SURFACE_BASE + CATALOG.len() as Tile).contains(&c)
+    (SURFACE_TILE..=LEGACY_SURFACE_LAST).contains(&c)
 }
 
 /// A placed building: its genre and the top-left tile of its footprint.
@@ -292,17 +236,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_catalog_is_in_genre_order_with_distinct_surfaces() {
-        for (i, k) in CATALOG.iter().enumerate() {
-            assert_eq!(usize::from(k.genre), i + 1);
+    fn the_catalog_is_in_increasing_genre_order_and_all_genres_share_one_surface() {
+        let genres: Vec<u8> = CATALOG.iter().map(|k| k.genre).collect();
+        assert_eq!(genres, [1, 2, 3, 10, 11, 12]);
+        for k in &CATALOG {
             assert_eq!(kind_of(k.genre), Some(k));
-            assert!(is_surface(k.surface()));
+            assert_eq!(k.surface(), SURFACE_TILE);
             assert!(k.width > 0 && k.height > 0 && k.cost > 0 && k.upkeep >= 0);
-            assert!(k.bonus <= LAND_VALUE_CAP);
+            assert!(k.bonus <= LAND_VALUE_CAP && k.radius >= 0);
         }
-        assert_eq!(kind_of(0), None);
-        assert_eq!(kind_of(4), None);
-        assert!(!is_surface(SURFACE_BASE - 1) && !is_surface(SURFACE_BASE + 3));
+        for g in [0, 4, 9, 13, 255] {
+            assert_eq!(kind_of(g), None);
+        }
+        let needing_a_road: Vec<u8> = CATALOG
+            .iter()
+            .filter(|k| k.needs_road)
+            .map(|k| k.genre)
+            .collect();
+        assert_eq!(needing_a_road, [GENRE_BUS_STOP]);
+    }
+
+    #[test]
+    fn the_surface_family_stays_inside_the_free_characters() {
+        assert!(SURFACE_TILE <= LEGACY_SURFACE_LAST && LEGACY_SURFACE_LAST <= 1023);
+        assert!(is_surface(SURFACE_TILE) && is_surface(LEGACY_SURFACE_LAST));
+        assert!(!is_surface(SURFACE_TILE - 1) && !is_surface(LEGACY_SURFACE_LAST + 1));
     }
 
     #[test]

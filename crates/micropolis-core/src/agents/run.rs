@@ -5,7 +5,9 @@ use super::graph::{RoadGraph, CLASS_RES};
 use super::load::LoadMap;
 use super::path::PathFinder;
 use super::rng::AgentRng;
+use super::transport::Transport;
 use super::trips::land;
+use super::vehicle_record;
 use super::vehicles::{Car, Parked};
 use super::{Counters, MOTORISED_PCT, REFRESH_INTERVAL};
 use crate::map::Map;
@@ -25,6 +27,8 @@ pub(super) struct Run {
     pub next_id: u32,
     pub motorised: i32,
     pub counters: Counters,
+    /// Buses and taxis, while the structures rule is on too.
+    pub transport: Option<Box<Transport>>,
 }
 
 /// Whether tile `tile` is still a zone of the wanted side (`home`: residential, else a job zone)
@@ -58,6 +62,7 @@ impl Run {
             next_id: 1,
             motorised: 0,
             counters: Counters::default(),
+            transport: None,
         };
         run.motorised = run.count_motorised();
         run
@@ -73,14 +78,42 @@ impl Run {
         if self.ticks.is_multiple_of(REFRESH_INTERVAL) {
             self.refresh(sim);
         }
+        self.sync_transport(sim);
         self.plan();
         self.drive();
+        if let Some(t) = self.transport.as_deref_mut() {
+            t.step(&self.graph, &mut self.finder, &self.load.tile, self.ticks);
+        }
         let tiles = self.cars.iter().map(Car::tile);
-        self.load.update(&self.graph, tiles);
+        let others = self.transport.iter().flat_map(|t| t.tiles());
+        self.load.update(&self.graph, tiles.chain(others));
         let c = &mut self.counters;
         c.max_cars = c.max_cars.max(self.cars.len());
         c.max_present = c.max_present.max(self.cars.len() + self.parked.len());
         c.max_parked = c.max_parked.max(self.parked.len());
+    }
+
+    /// Starts the transport when the structures rule is on (dropping it when off) and reads the
+    /// stops and depots at the start and every [`REFRESH_INTERVAL`] ticks.
+    fn sync_transport(&mut self, sim: &Simulation) {
+        if !sim.structure_rules() {
+            self.transport = None;
+            return;
+        }
+        if self.transport.is_some() && !self.ticks.is_multiple_of(REFRESH_INTERVAL) {
+            return;
+        }
+        let seed = (self.graph.w as u64) << 32 | self.graph.h as u64;
+        let t = self
+            .transport
+            .get_or_insert_with(|| Box::new(Transport::new(seed, sim.city_time as u64)));
+        t.refresh(
+            sim,
+            &self.graph,
+            &mut self.finder,
+            &self.load.tile,
+            self.ticks,
+        );
     }
 
     /// Adopts a new graph when the map changed. Cars whose road is gone, or whose home or job
@@ -130,23 +163,7 @@ impl Run {
     }
 
     pub fn vehicle(&self, c: &Car) -> [i32; 5] {
-        let (x, y) = self.graph.xy(c.tile());
-        let (nx, ny) = self.graph.xy(c.path[c.at + 1]);
-        let (dx, dy) = (nx - x, ny - y);
-        let p = c.progress as i32;
-        let dir = match (dx, dy) {
-            (0, -1) => 0,
-            (1, 0) => 1,
-            (0, 1) => 2,
-            _ => 3,
-        };
-        [
-            c.id as i32,
-            0,
-            x * 16 + 8 + dx * p,
-            y * 16 + 8 + dy * p,
-            dir,
-        ]
+        vehicle_record(&self.graph, c.id, 0, c.tile(), c.path[c.at + 1], c.progress)
     }
 
     pub fn fingerprint(&self) -> u64 {
@@ -170,6 +187,9 @@ impl Run {
         }
         for &l in &self.load.tile {
             mix(u64::from(l));
+        }
+        if let Some(t) = &self.transport {
+            t.fingerprint(&mut mix);
         }
         let c = &self.counters;
         for v in [

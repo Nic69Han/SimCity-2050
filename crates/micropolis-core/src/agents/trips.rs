@@ -2,14 +2,9 @@
 //! all inside [`MAX_PATH_SEARCHES_PER_TICK`]; and what happens when a leg arrives.
 
 use super::vehicles::{Car, Leg, Parked};
-use super::{graph::RoadGraph, WORK_TICKS};
+use super::WORK_TICKS;
 use super::{run::Run, zone_car_cap, Counters};
 use super::{DEST_SAMPLES, MAX_PATH_SEARCHES_PER_TICK, MAX_RETURN_FAILURES, MAX_VEHICLES};
-
-fn manhattan(g: &RoadGraph, a: u32, b: u32) -> u32 {
-    let ((ax, ay), (bx, by)) = (g.xy(a), g.xy(b));
-    (ax - bx).unsigned_abs() + (ay - by).unsigned_abs()
-}
 
 /// What became of a parked car whose time is up.
 enum Return {
@@ -143,7 +138,7 @@ impl Run {
         for _ in 0..DEST_SAMPLES {
             let job = &g.zones[g.jobs[self.rng.below(g.jobs.len() as u32) as usize] as usize];
             let Some(to) = job.access else { continue };
-            let d = manhattan(g, from, to);
+            let d = g.distance(from, to);
             if best.is_none_or(|(bd, ..)| d < bd) {
                 best = Some((d, to, job.tile));
             }

@@ -5,6 +5,7 @@
 use super::{
     is_surface, kind_of, Kind, Structure, FLAG_POWER, FLAG_WATER, MAX_STRUCTURES, SURFACE_BITS,
 };
+use crate::agents::graph::{classify, CLASS_ROAD};
 use crate::relief::is_water;
 use crate::simulation::Simulation;
 use crate::tile::{Tile, LOMASK, PWRBIT};
@@ -160,9 +161,7 @@ impl Simulation {
     /// water and the water rules are on. A broken building has none.
     pub(crate) fn structure_works(&self, s: &Structure) -> bool {
         let k = s.kind();
-        let anchor_ok = self
-            .tile(s.x, s.y)
-            .is_some_and(|t| t & LOMASK == k.surface());
+        let anchor_ok = self.tile(s.x, s.y).is_some_and(|t| is_surface(t & LOMASK));
         let state = self.structure_state(s);
         anchor_ok
             && (k.flags & FLAG_POWER == 0 || state & STATE_POWERED != 0)
@@ -178,12 +177,11 @@ impl Simulation {
         (if powered { STATE_POWERED } else { 0 }) | (if watered { STATE_WATERED } else { 0 })
     }
 
-    /// Every tile of the footprint still holds the surface tile of the genre.
+    /// Every tile of the footprint still holds a surface tile (the list says whose it is).
     fn is_intact(&self, s: &Structure) -> bool {
-        let surface: Tile = s.kind().surface();
         s.tiles()
             .iter()
-            .all(|&(x, y)| self.tile(x, y).is_some_and(|t| t & LOMASK == surface))
+            .all(|&(x, y)| self.tile(x, y).is_some_and(|t| is_surface(t & LOMASK)))
     }
 
     /// Drops the `doomed` buildings from the list, clearing their surface tiles.
@@ -202,9 +200,8 @@ impl Simulation {
 
     /// Bare land under every footprint tile that still holds the building's surface.
     fn clear_surface(&mut self, s: &Structure) {
-        let surface = s.kind().surface();
         for (x, y) in s.tiles() {
-            if self.tile(x, y).is_some_and(|t| t & LOMASK == surface) {
+            if self.tile(x, y).is_some_and(|t| is_surface(t & LOMASK)) {
                 self.set_tile(x, y, DIRT);
             }
         }
@@ -225,7 +222,7 @@ impl Simulation {
             .iter()
             .filter_map(|&(tx, ty)| self.tile(tx, ty))
             .collect();
-        if tiles.iter().any(|&t| is_water(t)) {
+        if tiles.iter().any(|&t| is_water(t)) || (kind.needs_road && !self.touches_road(&site)) {
             return ToolResult::Failed;
         }
         if tiles.iter().any(|&t| t & LOMASK != DIRT) {
@@ -235,6 +232,17 @@ impl Simulation {
             return ToolResult::NoMoney;
         }
         ToolResult::Ok
+    }
+
+    /// Whether a road tile lies next to a side of the footprint (the four neighbours of a 1 x 1).
+    fn touches_road(&self, site: &Structure) -> bool {
+        let k = site.kind();
+        let ring = (-1..=k.width)
+            .flat_map(|dx| (-1..=k.height).map(move |dy| (dx, dy)))
+            .filter(|&(dx, dy)| (dx < 0 || dx >= k.width) != (dy < 0 || dy >= k.height))
+            .map(|(dx, dy)| (site.x + dx, site.y + dy));
+        ring.filter_map(|(x, y)| self.tile(x, y))
+            .any(|t| classify(t) == CLASS_ROAD)
     }
 
     fn fits_on_map(&self, kind: &Kind, x: i32, y: i32) -> bool {

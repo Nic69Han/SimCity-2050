@@ -8,7 +8,9 @@ mod support;
 use micropolis_core::extensions::{CHUNK_MAX_TAG, CHUNK_RULES, CHUNK_STRUCTURES};
 use micropolis_core::fileio::{CITY_FILE_HEADER_SIZE, RELIEF_BLOCK_OVERHEAD};
 use micropolis_core::simulation::Simulation;
-use micropolis_core::structures::{GENRE_MONUMENT, GENRE_PARK, GENRE_PLAZA, RECORD_SIZE};
+use micropolis_core::structures::{
+    GENRE_MONUMENT, GENRE_PARK, GENRE_PLAZA, RECORD_SIZE, SURFACE_TILE,
+};
 use micropolis_core::tile_chars::DIRT;
 use micropolis_core::tool::ToolResult;
 use support::{file_of, run};
@@ -133,7 +135,7 @@ fn buildings_round_trip() {
         for dx in 0..v.width {
             for dy in 0..v.height {
                 let t = back.tile(v.x + dx, v.y + dy).unwrap();
-                assert_eq!(t & 0x3ff, 1018 + u16::from(v.genre));
+                assert_eq!(t & 0x3ff, SURFACE_TILE);
             }
         }
     }
