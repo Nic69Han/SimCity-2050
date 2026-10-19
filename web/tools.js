@@ -111,6 +111,8 @@ export const TOOL_GROUPS = Object.freeze([
   { id: "reseaux", label: "Réseaux", keys: ["road", "railroad", "rail", "wire", "network"] },
   { id: "zones", label: "Zones", keys: ["residential", "commercial", "industrial"] },
   { id: "services", label: "Services", keys: ["fire_station", "police_station", "stadium", "park"] },
+  // Extended buildings (extra-tools.js): their entries carry this group id, not engine keys.
+  { id: "batiments", label: "Bâtiments", keys: [] },
   { id: "energie", label: "Énergie et transport", keys: ["coal_power", "nuclear_power", "seaport", "airport"] },
   { id: "terrain", label: "Terrain", keys: ["bulldozer", "water", "land", "forest"] },
   { id: "requete", label: "Information", keys: ["query"] },

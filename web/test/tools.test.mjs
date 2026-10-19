@@ -6,6 +6,7 @@ import {
   resultMessage, supportsTools, readCatalog, groupCatalog, groupOf, shortcutFor,
   toolIdForShortcut, formatCost, outlineRect, hoverVerdict, shortcutRows, costLabel,
 } from "../tools.js";
+import { extraCatalog } from "../extra-tools.js";
 import { MockCity, MOCK_TOOLS } from "./mock-engine.mjs";
 
 describe("result -> message (aria-live status, French)", () => {
@@ -227,5 +228,29 @@ describe("cost on the hover label", () => {
     const before = city.funds();
     assert.equal(city.tool_down(res, 21, 21), 1);
     assert.equal(before - city.funds(), cost);
+  });
+});
+
+describe("the buildings group (extended buildings, extra tools)", () => {
+  // extraCatalog also carries the water, relief and transit tools (terrain and other groups).
+  const buildingsOf = (city) => groupCatalog(extraCatalog(city)).find((g) => g.id === "batiments");
+
+  test("groupCatalog keeps the batiments group, with its three building tools", () => {
+    const group = buildingsOf(new MockCity(1, { structures: true }));
+    assert.ok(group, "the group is not dropped");
+    assert.equal(group.label, "Bâtiments");
+    assert.equal(group.tools.length, 3);
+    assert.deepEqual(group.tools.map((t) => t.genre), [1, 2, 3]);
+  });
+
+  test("the group sits after services and is listed once", () => {
+    const ids = TOOL_GROUPS.map((g) => g.id);
+    assert.equal(ids.filter((id) => id === "batiments").length, 1);
+    assert.equal(ids.indexOf("batiments"), ids.indexOf("services") + 1);
+    assert.equal(groupOf("park").id, "services", "engine keys keep their groups");
+  });
+
+  test("without the buildings there is no batiments group", () => {
+    assert.equal(buildingsOf(new MockCity(1)), undefined);
   });
 });

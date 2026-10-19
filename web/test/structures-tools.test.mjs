@@ -266,6 +266,21 @@ describe("the mock engine's buildings", () => {
     assert.equal(city.remove_structure(12, 11), RESULT.FAILED, "nothing left there");
   });
 
+  test("turning the rule off removes every building, with no refund (and on again starts empty)", () => {
+    const city = withBuildings(1, { rubble: 0 });
+    city.set_structure_rules(true);
+    assert.equal(city.place_structure(1, 10, 10), RESULT.OK);
+    assert.equal(city.place_structure(3, 20, 20), RESULT.OK);
+    const funds = city.funds();
+    assert.equal(city.structures().length, 12, "two buildings (6 numbers each) listed before the switch-off");
+    city.set_structure_rules(false);
+    assert.equal(city.structures().length, 0, "no building left");
+    assert.equal(city.structures_upkeep(), 0, "no upkeep left");
+    assert.equal(city.funds(), funds, "no refund");
+    city.set_structure_rules(true);
+    assert.equal(city.structures().length, 0, "the rule back on does not bring them back");
+  });
+
   test("the upkeep is the sum of the monthly upkeep of the placed buildings", () => {
     const city = withBuildings(1);
     city.set_structure_rules(true);

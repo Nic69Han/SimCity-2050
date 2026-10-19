@@ -391,16 +391,18 @@ export class MockCity {
   }
   // --- extended buildings (docs/game-design-v04.md, contract of crates/micropolis-wasm/src/structures.rs);
   // present only with the constructor option `structures: true` ---
-  // Mock rules: off by default and after a new city or a load. Catalog: genre 1 (2x2, 200 $, upkeep 5),
-  // genre 2 (1x1, 100 $, upkeep 2), genre 3 (3x3, 1000 $, upkeep 20). A building needs every tile of its
-  // footprint to be dirt on the map and free of buildings: rubble gives NeedBulldoze (-1), anything else
-  // Failed (0); funds below the price give NoMoney (-2). The tiles stay dirt (the inert tile is not
-  // modelled). structures() states are 0 (no power or water is modelled).
+  // Mock rules: off by default and after a new city or a load. Turning the rule off (set_structure_rules
+  // (false)) removes every placed building, with no refund (docs/game-design-v04.md). Catalog: genre 1
+  // (2x2, 200 $, upkeep 5), genre 2 (1x1, 100 $, upkeep 2), genre 3 (3x3, 1000 $, upkeep 20). A building
+  // needs every tile of its footprint to be dirt on the map and free of buildings: rubble gives
+  // NeedBulldoze (-1), anything else Failed (0); funds below the price give NoMoney (-2). The tiles stay
+  // dirt (the inert tile is not modelled). structures() states are 0 (no power or water is modelled).
   structure_rules() {
     return this.#structRules;
   }
   set_structure_rules(on) {
     this.#structRules = Boolean(on);
+    if (!this.#structRules) this.#structures = [];
   }
   // Records of 8 [genre, width, height, cost, upkeep, flags, radius, effect].
   structure_catalog() {
