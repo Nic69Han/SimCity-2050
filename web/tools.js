@@ -110,6 +110,8 @@ export const TOOL_LABELS = Object.freeze({
 export const TOOL_GROUPS = Object.freeze([
   { id: "reseaux", label: "Réseaux", keys: ["road", "railroad", "rail", "wire", "network"] },
   { id: "zones", label: "Zones", keys: ["residential", "commercial", "industrial"] },
+  // Zoning by density (extra-tools.js): its entries carry this group id, not engine keys.
+  { id: "zonage", label: "Zonage", keys: [] },
   { id: "services", label: "Services", keys: ["fire_station", "police_station", "stadium", "park"] },
   // Extended buildings (extra-tools.js): their entries carry this group id, not engine keys.
   { id: "batiments", label: "Bâtiments", keys: [] },

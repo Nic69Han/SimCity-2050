@@ -1,0 +1,5 @@
+/* zoning: styles of web/zoning-ui.js (docs/game-design-v07.md). */
+#zoning-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#zoning-panel .zoning-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#zoning-panel .zoning-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#zoning-panel .zoning-state, #zoning-panel .zoning-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
