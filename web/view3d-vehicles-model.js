@@ -5,11 +5,16 @@
 // A record is 5 integers [id, kind, x16, y16, direction]: x16, y16 are sixteenths of a tile, kind 0
 // car (1 bus, 2 taxi, 3 train, 4 metro), direction 0 north, 1 east, 2 south, 3 west.
 // World X = tile x, Z = tile y, Y = height (as in view3d-model.js).
+// A metro rame (kind 4) runs in a tunnel: its box is centred at the tunnel depth below the ground
+// (METRO_DEPTH, the depth of the tunnels of view3d-underground-model.js). Other kinds stand on the ground.
 import { tileCentreY } from "./view3d-model.js";
+import { TUNNEL_DEPTH } from "./view3d-underground-model.js";
 
 export const MAX_VEHICLES_3D = 4000; // vehicles read per call, and instances of the mesh
 export const READ_INTERVAL = 0.25; // seconds between two reads of the engine
 export const RECORD = 5;
+export const METRO_KIND = 4;
+export const METRO_DEPTH = TUNNEL_DEPTH; // a rame lies as deep as a tunnel (same rule as the 3D underground)
 
 // Size of the box of each kind in tiles: length along the way, height, width. An unknown kind is drawn
 // with the car's size (sizeOf).
@@ -89,9 +94,15 @@ export function shouldRead(elapsed) {
   return elapsed >= READ_INTERVAL;
 }
 
+// Height of the centre of a box of `kind` on a tile whose ground is at `ground`: a metro rame is centred
+// METRO_DEPTH under the ground, any other kind stands on the ground (its centre is half its height up).
+export function centreYOf(kind, ground, size) {
+  return kind === METRO_KIND ? ground - METRO_DEPTH : ground + size.height / 2;
+}
+
 // Where each vehicle's box goes: { x, y, z, yaw, rgb, size } per vehicle, the box standing on the ground
-// of its tile (tileCentreY of the tile holding it), on half its height. `size` is the box of its kind
-// (sizeOf). Past `capacity` vehicles are dropped and counted.
+// of its tile (tileCentreY of the tile holding it), on half its height; a metro rame is underground
+// (centreYOf). `size` is the box of its kind (sizeOf). Past `capacity` vehicles are dropped and counted.
 export function buildPlacements({ w, h, vehicles, corners, capacity = MAX_VEHICLES_3D }) {
   const items = [];
   let dropped = 0;
@@ -106,7 +117,7 @@ export function buildPlacements({ w, h, vehicles, corners, capacity = MAX_VEHICL
     const size = sizeOf(v.kind);
     items.push({
       x: v.x,
-      y: tileCentreY(corners, h, tx, ty) + size.height / 2,
+      y: centreYOf(v.kind, tileCentreY(corners, h, tx, ty), size),
       z: v.y,
       yaw: yawFor(v.dir),
       rgb: kindColor(v.kind),
