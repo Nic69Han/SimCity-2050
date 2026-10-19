@@ -185,14 +185,17 @@ fn the_bulldozer_removes_the_whole_building() {
     let mut s = bare();
     assert_eq!(s.place_structure(GENRE_MONUMENT, 40, 30), ToolResult::Ok);
     assert_eq!(s.do_tool(EditingTool::Bulldozer, 41, 31), ToolResult::Ok);
-    // the list no longer shows it at once; the repair clears the rest of the footprint
+    // the whole footprint is bare land at once, with no manual repair
     assert!(s.structures().is_empty() && s.structures_upkeep() == 0);
-    assert!(s.repair_structures());
     for x in 40..43 {
         for y in 30..33 {
             assert_eq!(s.tile(x, y), Some(DIRT));
         }
     }
+    assert_eq!(
+        s.structure_preview(GENRE_MONUMENT, 40, 30).result,
+        ToolResult::Ok
+    );
     assert!(!s.repair_structures());
     assert_eq!(s.place_structure(GENRE_MONUMENT, 40, 30), ToolResult::Ok);
 }
@@ -382,7 +385,31 @@ fn the_water_tool_dozes_a_tile_and_the_repair_removes_the_rest() {
     s.place_structure(GENRE_MONUMENT, 40, 30);
     assert_eq!(s.do_tool(EditingTool::Water, 41, 31), ToolResult::Ok);
     assert!(s.structures().is_empty());
-    assert!(s.repair_structures());
+    for x in 40..43 {
+        for y in 30..33 {
+            if (x, y) != (41, 31) {
+                assert_eq!(s.tile(x, y), Some(DIRT), "{x},{y}");
+            }
+        }
+    }
+    assert!(!s.repair_structures());
+}
+
+#[test]
+fn the_bulldozer_hook_is_off_with_the_rule_off() {
+    let mut s = bare();
+    s.place_structure(GENRE_MONUMENT, 40, 30);
+    s.set_structure_rules(false);
+    let before = s.tile(40, 30);
+    let _ = s.do_tool(EditingTool::Bulldozer, 41, 31);
+    assert_eq!(s.tile(40, 30), before);
+}
+
+#[test]
+fn tool_drag_with_the_bulldozer_removes_the_building_at_once() {
+    let mut s = bare();
+    s.place_structure(GENRE_MONUMENT, 40, 30);
+    assert_eq!(s.do_tool(EditingTool::Bulldozer, 42, 32), ToolResult::Ok);
     assert_eq!(s.tile(40, 30), Some(DIRT));
 }
 

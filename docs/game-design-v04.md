@@ -112,8 +112,6 @@ bâtiment. Refusé (`cty_bad_extension`) : longueur non multiple de 5, plus de `
 hors carte, chevauchement. Les tests « drapeau inconnu » utilisent désormais `0b10_0000`. Règle éteinte et aucun
 bâtiment : fichier identique octet pour octet (test).
 
-**Limite connue (question ouverte).** Le bulldozer classique ne retire qu'une tuile ; le bâtiment entier disparaît de
-`structures()` aussitôt (lecteur filtrant) mais les autres tuiles de surface ne redeviennent terre nue qu'à la
-prochaine réparation (passage de `ext_valves`, pose, démolition ou bilan mensuel). Une réparation immédiate demande un
-appel de `repair_structures` à la fin de `tool_down`/`do_tool` (`tool.rs`, hors du périmètre de ce chantier) ou de la
-page (appeler `structures()` puis une pose/démolition).
+Le bulldozer classique (et les outils eau, terrain, forêt) retire le bâtiment entier : le crochet vit dans `do_tool`
+(`tool.rs`), juste après `modify_world`, et appelle `repair_structures` si les extensions et la règle des structures sont
+actives. Règle coupée, rien ne change (moteur classique identique).
