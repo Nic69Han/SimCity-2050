@@ -242,3 +242,91 @@ describe("snapshot reader and cheap key", () => {
     assert.notEqual(cheapKey(city), k2);
   });
 });
+
+describe("traffic of the agents rule", () => {
+  const ag = (saturated, meanTicks = 0, cars = 0, transit = false) => ({
+    ...calm(), rules: { agents: true, transit },
+    agents: { cars, finished: 3, meanTicks, saturated, motorised: 0 },
+  });
+  const trafficOf = (s) => get(s, "planning");
+  test("thresholds on saturated tiles: 0 is fine, 1 attention, 9 attention, 10 urgent", () => {
+    assert.equal(trafficOf(ag(0)).severity, "ok");
+    assert.equal(trafficOf(ag(1)).severity, "attention");
+    assert.equal(trafficOf(ag(9)).severity, "attention");
+    assert.equal(trafficOf(ag(10)).severity, "urgent");
+    assert.equal(M.TRAFFIC_SAT_ATTENTION, 1);
+    assert.equal(M.TRAFFIC_SAT_URGENT, 10);
+  });
+  test("wording counts the saturated tiles", () => {
+    assert.match(trafficOf(ag(1)).diagnosis, /Les routes sont saturées sur 1 case\./);
+    assert.match(trafficOf(ag(10)).diagnosis, /Les routes sont saturées sur 10 cases\./);
+  });
+  test("a long mean trip is attention even without saturation", () => {
+    assert.equal(M.TRAFFIC_TRIP_LONG, 120);
+    const long = trafficOf(ag(0, M.TRAFFIC_TRIP_LONG));
+    assert.equal(long.severity, "attention");
+    assert.match(long.diagnosis, /Les trajets durent en moyenne 120 tours\./);
+    assert.equal(trafficOf(ag(0, M.TRAFFIC_TRIP_LONG - 1)).severity, "ok");
+  });
+  test("remedy: a metro line when the metro rule is on, else parallel roads or another access", () => {
+    assert.match(trafficOf(ag(1, 0, 0, true)).action, /Ajoutez une ligne de métro pour désengorger les routes\./);
+    const roads = trafficOf(ag(1, 0, 0, false)).action;
+    assert.match(roads, /routes parallèles ou un autre accès vers les zones d'emploi/);
+    assert.doesNotMatch(roads, /métro/);
+  });
+  test("the OK fallback cites the cars on the road", () => {
+    const one = trafficOf(ag(0, 0, 1));
+    assert.equal(one.severity, "ok");
+    assert.match(one.diagnosis, /, 1 voiture circule sur les routes\.$/);
+    assert.match(trafficOf(ag(0, 0, 5)).diagnosis, /, 5 voitures circulent sur les routes\.$/);
+    assert.doesNotMatch(trafficOf(ag(0, 0, 0)).diagnosis, /voiture/);
+  });
+  test("rule off: no traffic line and agent_stats is never called", () => {
+    const calls = [];
+    const city = fakeCity({
+      agent_rules: () => false,
+      agent_stats: () => { calls.push("a"); return Int32Array.of(9, 9, 999, 99, 9); },
+    });
+    const s = readSnapshot(city);
+    cheapKey(city);
+    assert.equal(s.agents, undefined);
+    assert.deepEqual(calls, []);
+    const s2 = { ...ag(50, 500, 9), rules: { agents: false } };
+    assert.equal(trafficOf(s2).severity, "ok");
+    assert.doesNotMatch(trafficOf(s2).diagnosis, /saturées|trajets/);
+  });
+  test("API missing: nothing is read and no traffic line", () => {
+    assert.equal(readSnapshot(fakeCity({ agent_rules: () => true })).agents, undefined);
+    assert.equal(readSnapshot(fakeCity({ agent_stats: () => Int32Array.of(1, 1, 1, 50, 1) })).agents, undefined);
+    assert.equal(readSnapshot(fakeCity({ agent_rules: () => true, agent_stats: () => Int32Array.of(1, 1) })).agents, undefined,
+      "a short answer is left out");
+    assert.doesNotMatch(trafficOf({ ...calm(), rules: { agents: true } }).diagnosis, /saturées|trajets|voiture/);
+    assert.equal(trafficOf({ ...calm(), rules: { agents: true }, agents: { saturated: "x" } }).severity, "ok");
+  });
+  test("the snapshot reader fills agents in the engine order", () => {
+    const city = fakeCity({ agent_rules: () => true, agent_stats: () => Int32Array.of(4, 10, 150, 2, 30) });
+    assert.deepEqual(readSnapshot(city).agents, { cars: 4, finished: 10, meanTicks: 150, saturated: 2, motorised: 30 });
+  });
+  test("cheapKey changes with the switch and with the saturated count", () => {
+    let on = false; let sat = 0;
+    const city = fakeCity({ agent_rules: () => on, agent_stats: () => Int32Array.of(0, 0, 0, sat, 0) });
+    const k0 = cheapKey(city);
+    assert.equal(cheapKey(city), k0, "stable when nothing changes");
+    sat = 3;
+    assert.equal(cheapKey(city), k0, "saturation is not read while the rule is off");
+    on = true;
+    const k1 = cheapKey(city);
+    assert.notEqual(k1, k0);
+    sat = 4;
+    const k2 = cheapKey(city);
+    assert.notEqual(k2, k1);
+    on = false;
+    assert.notEqual(cheapKey(city), k2);
+  });
+  test("garbage in agents never throws", () => {
+    for (const bad of [null, 5, "x", [], { saturated: NaN }, { cars: {}, saturated: "x" }]) {
+      const s = { ...calm(), rules: { agents: true }, agents: bad };
+      assert.ok(Array.isArray(M.advise(s)));
+    }
+  });
+});
