@@ -23,6 +23,14 @@ voyageurs repartent de la ville au chargement.
   voyages_bus_du_mois, courses_taxi_du_mois, recettes_du_mois]` (zéros si inactif).
 * Recettes ajoutées au bilan mensuel (crochet `ext_monthly_balance`).
 
+## Contrainte technique relevée à la relecture du v0.4
+Le v0.4 donne à chaque genre sa propre tuile de surface (`SURFACE_BASE + genre - 1`, caractères 1019-1021) ; il ne
+reste que les caractères 1022 et 1023 sous `LOMASK`. Le cœur v0.5 doit donc **découpler la tuile de surface du
+genre** : une seule tuile de surface (ou une par grande famille, au plus 5 caractères 1019-1023) partagée par tous
+les genres, l'appartenance d'une tuile à un bâtiment se lisant dans la liste des bâtiments ; `is_surface` et les
+règles de cohérence du v0.4 restent vraies, et les fichiers v0.4 se rechargent à l'identique (tests). Les jalons
+suivants ajouteront des dizaines de genres sans nouvelle tuile.
+
 ## Chantiers
 | Chantier | Rôle | Fichiers |
 |---|---|---|
