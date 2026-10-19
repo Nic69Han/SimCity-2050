@@ -4,6 +4,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import * as M from "../advisors-model.js";
 import { readSnapshot, cheapKey } from "../advisors.js";
+import * as rail from "../advisors-rail.js";
+import { MockCity, RAIL_FIXED } from "./mock-engine.mjs";
 
 const calm = () => ({
   funds: 50000, cashFlow: 500, taxRate: 7,
@@ -328,5 +330,149 @@ describe("traffic of the agents rule", () => {
       const s = { ...calm(), rules: { agents: true }, agents: bad };
       assert.ok(Array.isArray(M.advise(s)));
     }
+  });
+});
+
+// ---- rail (docs/game-design-v06.md): an idle train or metro line is worth a word in Urbanisme ----
+
+const ZERO_RAIL = Object.freeze({ trains: 0, rames: 0, trainRiders: 0, metroRiders: 0, railIncome: 0, trainLines: 0, metroLines: 0 });
+const TRAIN_ACTION = "Placez les gares près des quartiers résidentiels et des zones d'emploi.";
+const METRO_ACTION = "Rapprochez les stations des quartiers sans voiture.";
+// A calm city with the agents rule on (or off) and the given rail counts; nothing else in Urbanisme to say.
+const railSnap = (r, agents = true) => ({ ...calm(), rules: { agents }, rail: { ...ZERO_RAIL, ...r } });
+const planning = (s) => get(s, "planning");
+
+describe("rail advice findings", () => {
+  test("a train line with no train rider this month: attention, with the French words", () => {
+    const a = planning(railSnap({ trainLines: 1, trainRiders: 0 }));
+    assert.equal(a.severity, "attention");
+    assert.equal(a.diagnosis, "Les trains roulent à vide.");
+    assert.equal(a.action, TRAIN_ACTION);
+  });
+
+  test("a metro line with no metro rider this month: attention, with the French words", () => {
+    const a = planning(railSnap({ metroLines: 2, metroRiders: 0 }));
+    assert.equal(a.severity, "attention");
+    assert.equal(a.diagnosis, "Le métro roule à vide.");
+    assert.equal(a.action, METRO_ACTION);
+  });
+
+  test("a train line with riders, or no line at all, gives no rail finding", () => {
+    assert.deepEqual(rail.railFindings(railSnap({ trainLines: 1, trainRiders: 1 })), []);
+    assert.deepEqual(rail.railFindings(railSnap({ trainLines: 0, trainRiders: 0 })), []);
+    assert.deepEqual(rail.railFindings(railSnap({ metroLines: 0, metroRiders: 0 })), []);
+    assert.notEqual(planning(railSnap({ trainLines: 1, trainRiders: 1 })).action, TRAIN_ACTION);
+  });
+
+  test("a metro line with riders gives no metro finding", () => {
+    assert.deepEqual(rail.railFindings(railSnap({ metroLines: 1, metroRiders: 5 })), []);
+  });
+
+  test("both idle lines give two findings, the train one first", () => {
+    const list = rail.railFindings(railSnap({ trainLines: 1, metroLines: 1 }));
+    assert.deepEqual(list.map((f) => f.diagnosis), ["Les trains roulent à vide.", "Le métro roule à vide."]);
+    assert.equal(planning(railSnap({ trainLines: 1, metroLines: 1 })).action, TRAIN_ACTION);
+  });
+
+  test("a rail finding alone keeps Urbanisme visible at attention", () => {
+    const only = { rules: { agents: true }, rail: { ...ZERO_RAIL, metroLines: 1 } };
+    assert.equal(planning(only).severity, "attention");
+  });
+
+  test("rule off: the rail block is ignored, even with idle lines", () => {
+    assert.deepEqual(rail.railFindings(railSnap({ trainLines: 1 }, false)), []);
+    assert.equal(planning(railSnap({ trainLines: 1 }, false)).severity, "ok");
+  });
+
+  test("garbage in the rail block never throws and gives no finding", () => {
+    for (const bad of [null, 5, "x", [], { trainLines: NaN }, { trainLines: {} }]) {
+      const s = { ...railSnap({}), rail: bad };
+      assert.ok(Array.isArray(M.advise(s)));
+      assert.deepEqual(rail.railFindings(s), []);
+    }
+    assert.deepEqual(rail.railFindings(null), []);
+  });
+});
+
+/** A fake engine for the reader: the agents rule, the rail answer and a log of the calls made to it. */
+function railCity({ agents = true, rail = [0, 0, 340, 0, 0, 1, 0], withRail = true } = {}) {
+  const calls = [];
+  const city = {
+    agents,
+    agent_rules: () => (calls.push("agent_rules"), city.agents),
+    rail_stats: () => (calls.push("rail_stats"), Int32Array.from(rail)),
+  };
+  if (!withRail) delete city.rail_stats;
+  return { city, calls };
+}
+
+describe("snapshot reader and cheap key for the rail", () => {
+  test("rule on: rail_stats is read and decoded into the snapshot", () => {
+    const { city, calls } = railCity();
+    const s = readSnapshot(city);
+    assert.equal(s.rail.trainRiders, 340);
+    assert.equal(s.rail.trainLines, 1);
+    assert.ok(calls.includes("rail_stats"));
+  });
+
+  test("rule off: rail_stats is never called and nothing is in the snapshot", () => {
+    const { city, calls } = railCity({ agents: false });
+    assert.equal(readSnapshot(city).rail, undefined);
+    cheapKey(city);
+    assert.equal(calls.includes("rail_stats"), false);
+  });
+
+  test("no rail_stats method: no rail block", () => {
+    const { city } = railCity({ withRail: false });
+    assert.equal(readSnapshot(city).rail, undefined);
+  });
+
+  test("cheapKey changes when the train riders (index 2) or the metro riders (index 3) change", () => {
+    const base = cheapKey(railCity({ rail: [0, 0, 340, 120, 0, 1, 1] }).city);
+    assert.notEqual(base, cheapKey(railCity({ rail: [0, 0, 341, 120, 0, 1, 1] }).city));
+    assert.notEqual(base, cheapKey(railCity({ rail: [0, 0, 340, 121, 0, 1, 1] }).city));
+    assert.equal(base, cheapKey(railCity({ rail: [0, 0, 340, 120, 0, 1, 1] }).city), "stable when nothing changes");
+  });
+
+  test("cheapKey ignores the rail with the rule off", () => {
+    const a = cheapKey(railCity({ agents: false, rail: [0, 0, 1, 0, 0, 0, 0] }).city);
+    const b = cheapKey(railCity({ agents: false, rail: [0, 0, 9, 0, 0, 0, 0] }).city);
+    assert.equal(a, b);
+  });
+});
+
+describe("the mock engine feeds the rail rows and the advisor", () => {
+  test("rail_stats: seven zeros with the rule off, the fixed numbers with it on", () => {
+    const city = new MockCity(1);
+    assert.deepEqual(Array.from(city.rail_stats()), [0, 0, 0, 0, 0, 0, 0]);
+    city.set_agent_rules(true);
+    assert.deepEqual(Array.from(city.rail_stats()), Array.from(RAIL_FIXED));
+    city.set_agent_rules(false);
+    assert.deepEqual(Array.from(city.rail_stats()), [0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  test("the mock's rail riders keep the advisor quiet (no idle line)", () => {
+    const city = new MockCity(1);
+    city.set_agent_rules(true);
+    const s = readSnapshot(city);
+    assert.equal(s.rail.trainLines, 1);
+    assert.deepEqual(rail.railFindings(s), []);
+  });
+
+  test("the mock's rail numbers, idle: the advisor warns about the train line", () => {
+    const city = new MockCity(1);
+    city.set_agent_rules(true);
+    const s = readSnapshot(city);
+    // quiet the jam and the waiting riders (earlier findings of Urbanisme), as the transport test does
+    const quiet = { ...s, agents: { ...s.agents, saturated: 0, meanTicks: 0 }, transport: { waiting: 0 }, rail: { ...s.rail, trainRiders: 0 } };
+    assert.equal(planning(quiet).action, TRAIN_ACTION);
+  });
+
+  test("rail_stats is in the cheap key: the mock's rail riders change the key", () => {
+    const city = new MockCity(1);
+    city.set_agent_rules(true);
+    const before = cheapKey(city);
+    city.rail_stats = () => Int32Array.of(2, 1, 0, 120, 900, 1, 1);
+    assert.notEqual(cheapKey(city), before);
   });
 });

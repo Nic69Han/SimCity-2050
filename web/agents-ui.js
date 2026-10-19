@@ -5,8 +5,8 @@
 // setup(api) runs once after the engine exists; update(api) runs after every redraw.
 // api = { city(): the engine, $(id): getElementById, redraw(), isReady(), game(), describe() }.
 import {
-  NOTE, SWITCH_LABEL, TITLE, decodeStats, decodeTransport, statsLines, stateText, supports, supportsTransport,
-  transportLines,
+  NOTE, SWITCH_LABEL, TITLE, decodeRail, decodeStats, decodeTransport, railLines, statsLines, stateText, supports,
+  supportsRail, supportsTransport, transportLines,
 } from "./agents-model.js";
 
 /** update() reads agent_stats() once in this many calls (a scan of the traffic is not free). */
@@ -54,11 +54,12 @@ function statRow([label, value]) {
   return li;
 }
 
-/** The rows while the rule is on: the traffic ones, then the transport ones when the engine has them. */
+/** The rows while the rule is on: the traffic ones, then the transport and rail ones when the engine has them. */
 function trafficLines(city) {
   const traffic = statsLines(decodeStats(city.agent_stats()));
-  if (!supportsTransport(city)) return traffic;
-  return [...traffic, ...transportLines(decodeTransport(city.transport_stats()))];
+  const transport = supportsTransport(city) ? transportLines(decodeTransport(city.transport_stats())) : [];
+  const rail = supportsRail(city) ? railLines(decodeRail(city.rail_stats())) : [];
+  return [...traffic, ...transport, ...rail];
 }
 
 export function setup(api) {

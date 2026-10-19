@@ -90,6 +90,43 @@ export function transportLines(t) {
   ];
 }
 
+/** Records of rail_stats (the trains and metro of docs/game-design-v06.md), in this order. */
+export const RAIL_LEN = 7;
+
+/** Whether `city` has rail_stats(); a build without it simply has no rail rows. */
+export function supportsRail(city) {
+  return typeof city?.rail_stats === "function";
+}
+
+/**
+ * rail_stats() as a named record. A missing or short array gives zeros for the missing values.
+ * [trains, rames, train_riders_month, metro_riders_month, rail_income_month, train_lines, metro_lines]
+ */
+export function decodeRail(arr) {
+  const a = arr ?? [];
+  return {
+    trains: int(a[0]),
+    rames: int(a[1]),
+    trainRiders: int(a[2]),
+    metroRiders: int(a[3]),
+    railIncome: int(a[4]),
+    trainLines: int(a[5]),
+    metroLines: int(a[6]),
+  };
+}
+
+/** The rail rows shown after the transport rows: [[label, value], ...]. The income is in dollars. */
+export function railLines(r) {
+  const s = r ?? decodeRail();
+  return [
+    ["Trains", formatCount(s.trains)],
+    ["Rames de métro", formatCount(s.rames)],
+    ["Voyageurs en train ce mois", formatCount(s.trainRiders)],
+    ["Voyageurs en métro ce mois", formatCount(s.metroRiders)],
+    ["Recettes du rail", `${formatCount(s.railIncome)} $`],
+  ];
+}
+
 /** The state under the switch. */
 export function stateText(on) {
   return on
