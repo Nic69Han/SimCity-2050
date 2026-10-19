@@ -6,6 +6,7 @@ use super::{
     is_surface, kind_of, Kind, Structure, FLAG_POWER, FLAG_WATER, MAX_STRUCTURES, SURFACE_BITS,
 };
 use crate::agents::graph::{classify, CLASS_ROAD};
+use crate::agents::transport::rail::is_rail;
 use crate::relief::is_water;
 use crate::simulation::Simulation;
 use crate::tile::{Tile, LOMASK, PWRBIT};
@@ -222,7 +223,9 @@ impl Simulation {
             .iter()
             .filter_map(|&(tx, ty)| self.tile(tx, ty))
             .collect();
-        if tiles.iter().any(|&t| is_water(t)) || (kind.needs_road && !self.touches_road(&site)) {
+        let no_road = kind.needs_road && !self.touches(&site, |t| classify(t) == CLASS_ROAD);
+        let no_rail = kind.needs_rail && !self.touches(&site, is_rail);
+        if tiles.iter().any(|&t| is_water(t)) || no_road || no_rail {
             return ToolResult::Failed;
         }
         if tiles.iter().any(|&t| t & LOMASK != DIRT) {
@@ -234,15 +237,15 @@ impl Simulation {
         ToolResult::Ok
     }
 
-    /// Whether a road tile lies next to a side of the footprint (the four neighbours of a 1 x 1).
-    fn touches_road(&self, site: &Structure) -> bool {
+    /// Whether a tile accepted by `wanted` lies next to a side of the footprint (the four
+    /// neighbours of a 1 x 1).
+    fn touches(&self, site: &Structure, wanted: fn(Tile) -> bool) -> bool {
         let k = site.kind();
         let ring = (-1..=k.width)
             .flat_map(|dx| (-1..=k.height).map(move |dy| (dx, dy)))
             .filter(|&(dx, dy)| (dx < 0 || dx >= k.width) != (dy < 0 || dy >= k.height))
             .map(|(dx, dy)| (site.x + dx, site.y + dy));
-        ring.filter_map(|(x, y)| self.tile(x, y))
-            .any(|t| classify(t) == CLASS_ROAD)
+        ring.filter_map(|(x, y)| self.tile(x, y)).any(wanted)
     }
 
     fn fits_on_map(&self, kind: &Kind, x: i32, y: i32) -> bool {

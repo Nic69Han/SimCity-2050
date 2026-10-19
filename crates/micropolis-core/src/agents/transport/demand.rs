@@ -1,6 +1,7 @@
 //! Where riders come from and where taxis go: one attempt per tick to create a rider, one
 //! taxi dispatch per tick, and the riders who give up waiting.
 
+use super::choice::{self, Mode};
 use super::step::settle;
 use super::taxi::Taxi;
 use super::{zone_rider_cap, Rider, Transport, MAX_RIDERS, MAX_TAXIS_PER_DEPOT, MAX_TAXI_FAILURES};
@@ -37,6 +38,7 @@ impl Transport {
             .chain(self.requests.iter())
             .chain(buses)
             .chain(taxis)
+            .chain(self.rail.riders())
             .filter(|r| r.home == home)
             .count()
     }
@@ -52,10 +54,12 @@ impl Transport {
     }
 
     /// One attempt to create a rider: a random home zone with residents without a car and room
-    /// in its share, the nearest of a few random job zones, then by bus (a stop near each,
-    /// served by a common loop) or else by taxi.
+    /// in its share, the nearest of a few random job zones, then by the cheapest mode
+    /// (bus, metro, train or taxi: see `choice`).
     pub(super) fn try_rider(&mut self, g: &RoadGraph, now: u64) {
-        let none = self.net.stops.is_empty() && self.net.taxi_depots.is_empty();
+        let none = self.net.stops.is_empty()
+            && self.net.taxi_depots.is_empty()
+            && self.rail.lines.is_empty();
         if g.residential.is_empty() || g.jobs.is_empty() || none {
             return;
         }
@@ -76,30 +80,25 @@ impl Transport {
         let (Some((_, job, to)), true) = (job, cap > 0) else {
             return;
         };
-        let stops = (self.net.stop_near(g, home.tile), self.net.stop_near(g, job));
-        let by_bus = match stops {
-            (Some(a), Some(b)) if a != b => self
-                .routes
-                .iter()
-                .flatten()
-                .any(|r| r.serves(a) && r.serves(b)),
-            _ => false,
-        };
-        let by_taxi = !by_bus && !self.net.taxi_depots.is_empty() && from != to;
-        if !by_bus && !by_taxi {
+        let offers = self.offers(g, home.tile, job, (from, to));
+        let Some(offer) = choice::cheapest(&offers) else {
             return;
-        }
-        let full = match stops {
-            (Some(a), _) if by_bus => self.queues[a].len() >= MAX_WAITING_PER_STOP,
-            _ => self.requests.len() >= MAX_TAXI_REQUESTS,
+        };
+        let full = match offer.mode {
+            Mode::Bus => self.queues[offer.from].len() >= MAX_WAITING_PER_STOP,
+            Mode::Taxi => self.requests.len() >= MAX_TAXI_REQUESTS,
+            Mode::Metro | Mode::Train => {
+                self.rail.queues[offer.line][offer.from].len() >= MAX_WAITING_PER_STOP
+            }
         };
         if full || self.total_riders() >= MAX_RIDERS || self.riders_of_home(home.tile) >= cap {
             self.counters.refused += 1;
             return;
         }
-        let stop = match stops {
-            (_, Some(b)) if by_bus => self.net.stops[b].id,
-            _ => 0,
+        let stop = match offer.mode {
+            Mode::Bus => self.net.stops[offer.to].id,
+            Mode::Taxi => 0,
+            Mode::Metro | Mode::Train => self.rail.lines[offer.line].stops[offer.to].site,
         };
         let rider = Rider {
             id: self.next_rider,
@@ -111,9 +110,10 @@ impl Transport {
         };
         self.next_rider += 1;
         self.counters.created += 1;
-        match stops {
-            (Some(a), _) if by_bus => self.queues[a].push(rider),
-            _ => self.requests.push(rider),
+        match offer.mode {
+            Mode::Bus => self.queues[offer.from].push(rider),
+            Mode::Taxi => self.requests.push(rider),
+            Mode::Metro | Mode::Train => self.rail.queues[offer.line][offer.from].push(rider),
         }
     }
 

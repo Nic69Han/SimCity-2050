@@ -15,6 +15,13 @@ impl Simulation {
         self.transport().map_or([0; 6], Transport::stats)
     }
 
+    /// `[trains, metro_cars, train_riders_month, metro_riders_month, rail_income_month,
+    /// train_lines, metro_lines]`; zeros unless the transport runs. The `_month` values count
+    /// from the last monthly balance.
+    pub fn rail_stats(&self) -> [i32; 7] {
+        self.transport().map_or([0; 7], Transport::rail_stats)
+    }
+
     /// Everything the transport counted since it started (all zero while it is off).
     pub fn transport_counters(&self) -> TransportCounters {
         self.transport()
