@@ -1,0 +1,5 @@
+/* structures: styles of web/structures-ui.js (docs/game-design-v04.md). */
+#structures-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#structures-panel .structures-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#structures-panel .structures-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#structures-panel .structures-state, #structures-panel .structures-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
