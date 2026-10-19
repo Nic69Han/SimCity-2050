@@ -49,6 +49,12 @@ export const WATER_DRY_URGENT_SHARE = 50;
 export const WATER_REACH = 3;
 /** Deals (only when the rule is on): a surplus of at least this many units is worth selling. */
 export const DEAL_SURPLUS_MIN = 1;
+/** Traffic (only when the agents rule is on): saturated road tiles from which the jams are worth a word
+ *  (attention) and from which they are urgent; a mean trip of TRAFFIC_TRIP_LONG ticks or more is attention
+ *  even without saturation. */
+export const TRAFFIC_SAT_ATTENTION = 1;
+export const TRAFFIC_SAT_URGENT = 10;
+export const TRAFFIC_TRIP_LONG = 120;
 
 const TITLES = { finances: "Finances", security: "Sécurité", planning: "Urbanisme", environment: "Environnement" };
 /** Display order on equal severity. */
@@ -250,6 +256,34 @@ function transitFindings(s, trafficSeverity) {
   return { traffic, idle, lines };
 }
 
+/** Traffic of the agents rule (rule on, snapshot.agents = { cars, finished, meanTicks, saturated, motorised }),
+ *  reduced to what the advice reads; null when absent. */
+function agentsOf(s) {
+  const a = flag(s, "agents") && s.agents && typeof s.agents === "object" ? s.agents : null;
+  const saturated = num(a?.saturated);
+  if (saturated === null) return null;
+  return { cars: num(a.cars) ?? 0, meanTicks: num(a.meanTicks) ?? 0, saturated };
+}
+
+/** Jam finding from the measured traffic, or null while the roads flow. The remedy is a metro line when the
+ *  metro rule is on, else parallel roads or another access to the job zones. */
+function agentsFinding(s) {
+  const a = agentsOf(s);
+  if (!a) return null;
+  const long = a.meanTicks >= TRAFFIC_TRIP_LONG;
+  let severity = null;
+  if (a.saturated >= TRAFFIC_SAT_URGENT) severity = SEVERITY.URGENT;
+  else if (a.saturated >= TRAFFIC_SAT_ATTENTION || long) severity = SEVERITY.ATTENTION;
+  if (!severity) return null;
+  const parts = [];
+  if (a.saturated >= TRAFFIC_SAT_ATTENTION) parts.push(`Les routes sont saturées sur ${formatInt(a.saturated)} ${plural(a.saturated, "case", "cases")}.`);
+  if (long) parts.push(`Les trajets durent en moyenne ${formatInt(a.meanTicks)} tours.`);
+  const action = flag(s, "transit")
+    ? "Ajoutez une ligne de métro pour désengorger les routes."
+    : "Ajoutez des routes parallèles ou un autre accès vers les zones d'emploi.";
+  return finding(severity, parts.join(" "), action);
+}
+
 function planningAdvice(s) {
   const rate = num(s.taxRate);
   const road = fundingFinding(s.funding, "road", "Routes et rails", "l'entretien");
@@ -261,8 +295,9 @@ function planningAdvice(s) {
   const dc = num(d?.com);
   const di = num(d?.ind);
   const demandKnown = dr !== null || dc !== null || di !== null;
+  const ag = agentsOf(s);
   if (rate === null && !road && housing === null && traffic === null && !demandKnown && num(s.populationDelta) === null &&
-    !flag(s, "water") && !flag(s, "transit")) return null;
+    !flag(s, "water") && !flag(s, "transit") && !ag) return null;
   const f = [];
   const water = waterFinding(s);
   const ts = traffic === null ? null : votesSeverity(traffic);
@@ -276,6 +311,8 @@ function planningAdvice(s) {
   if (hs) f.push(finding(hs, "Le coût du logement pèse sur les habitants.", "Zonez plus de résidentiel et de parcs pour faire baisser les prix."));
   if (metro.traffic) f.push(metro.traffic);
   else if (ts) f.push(finding(ts, "La circulation est dense.", "Ajoutez des routes ou des lignes de transport en commun."));
+  const jam = agentsFinding(s);
+  if (jam) f.push(jam);
   if (water) f.push(water);
   if (metro.idle) f.push(metro.idle);
   const js = jobs === null ? null : votesSeverity(jobs);
@@ -298,6 +335,9 @@ function planningAdvice(s) {
     : finding(SEVERITY.OK, "La croissance suit son cours.", "Observez la demande et zonez où elle apparaît.");
   if (metro.lines !== null && metro.lines > 0) {
     fallback.diagnosis = fallback.diagnosis.replace(/\.$/, `, ${metro.lines} ${plural(metro.lines, "ligne de métro", "lignes de métro")} en service.`);
+  }
+  if (ag && ag.cars > 0) {
+    fallback.diagnosis = fallback.diagnosis.replace(/\.$/, `, ${formatInt(ag.cars)} ${plural(ag.cars, "voiture circule", "voitures circulent")} sur les routes.`);
   }
   return advisor("planning", f, fallback);
 }
@@ -325,11 +365,12 @@ function environmentAdvice(s) {
  *   moneyHistory, pollutionHistory,           // City.history(3|5, 0), oldest first
  *   // extended rules, each only when the engine has the API (advisors.js readSnapshot); a block is
  *   // ignored unless its switch in `rules` is exactly true:
- *   rules: { water, transit, deals },         // booleans: water_rules, transit_rules, deals_rules
+ *   rules: { water, transit, deals, agents }, // booleans: water_rules, transit_rules, deals_rules, agent_rules
  *   water: { pumps, pipes, watered, dry },    // City.water_stats
  *   transit: { stations, tunnels, lines, served },  // City.transit_stats
  *   ordinances: [{ key, label, active, cost, crime, pollution }],  // cost per year, effects in percent
  *   deals: { count, income, surplus },        // active deals, their yearly income, electricity surplus
+ *   agents: { cars, finished, meanTicks, saturated, motorised },  // City.agent_stats (cars on the road, saturated tiles)
  * }
  * Returns [{ id, title, severity, diagnosis, action }] sorted by severity (urgent first), then ORDER.
  * An advisor whose data is absent is left out. Total: any input (null, wrong types) gives an array.
