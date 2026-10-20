@@ -163,7 +163,7 @@ fn records_round_trip() {
 #[test]
 fn the_densities_chunk_follows_the_buildings_chunk_in_tag_order() {
     assert_eq!(CHUNK_DENSITIES, 7);
-    assert_eq!(CHUNK_MAX_TAG, CHUNK_DENSITIES);
+    assert_eq!(CHUNK_MAX_TAG, 8, "the waste chunk (v0.8) is the last");
     let file = file_of(&with_zones());
     let chunks = &file[block_at() + 4..];
     assert_eq!(chunks[0], CHUNK_RULES);
@@ -215,7 +215,7 @@ fn a_bad_chunk_is_refused_and_leaves_the_engine_untouched() {
                     .collect::<Vec<_>>(),
             ),
         ),
-        ("unknown tag", chunk(8, &[1])),
+        ("unknown tag", chunk(9, &[1])),
     ];
     let mut engine = with_zones();
     let before = file_of(&engine);

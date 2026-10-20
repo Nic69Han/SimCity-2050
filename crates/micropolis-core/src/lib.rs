@@ -43,6 +43,7 @@ pub mod tile;
 pub mod tile_chars;
 pub mod transit;
 pub mod underground;
+pub mod waste;
 pub mod water;
 
 /// World size of the original game, kept as the default.

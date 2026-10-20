@@ -5,6 +5,7 @@ use super::{GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_MONUMENT, GENRE_PARK, GENRE_P
 use super::{GENRE_STATION, GENRE_TAXI_DEPOT, LAND_VALUE_CAP};
 use crate::agents::transport::WALK_RADIUS;
 use crate::tile::Tile;
+use crate::waste::{GENRE_INCINERATOR, GENRE_LANDFILL, GENRE_RECYCLING, GENRE_WASTE_TO_ENERGY};
 
 /// One entry of the catalog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,8 +64,8 @@ const fn amenity(k: Kind, flags: i32, radius: i32, bonus: i32) -> Kind {
     }
 }
 
-/// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6).
-pub const CATALOG: [Kind; 7] = [
+/// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6, 20-23 of v0.8).
+pub const CATALOG: [Kind; 11] = [
     amenity(kind(GENRE_PARK, (2, 2), 300, 5), 0, 6, 12),
     amenity(kind(GENRE_PLAZA, (1, 1), 100, 2), FLAG_POWER, 4, 6),
     amenity(
@@ -84,6 +85,13 @@ pub const CATALOG: [Kind; 7] = [
         needs_rail: true,
         ..kind(GENRE_STATION, (2, 2), 800, 30)
     },
+    kind(GENRE_LANDFILL, (3, 3), 500, 10),
+    Kind {
+        flags: FLAG_POWER,
+        ..kind(GENRE_INCINERATOR, (2, 2), 1500, 60)
+    },
+    kind(GENRE_RECYCLING, (2, 2), 800, 40),
+    kind(GENRE_WASTE_TO_ENERGY, (3, 3), 4000, 120),
 ];
 
 /// The catalog entry of `genre`, if it exists.

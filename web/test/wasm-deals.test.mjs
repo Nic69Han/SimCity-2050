@@ -67,7 +67,7 @@ describe("wasm deals contract", { skip: SKIP }, () => {
     const surplus = Array.from(city.surplus());
     assert.ok(surplus[0] > 0, `haight has power to spare: ${surplus}`);
     assert.equal(surplus[1], 0, "no pump");
-    for (const bad of [-1, 8, 99, 2 ** 31 - 1, -(2 ** 31)]) {
+    for (const bad of [-1, 12, 99, 2 ** 31 - 1, -(2 ** 31)]) {
       assert.equal(city.accept_deal(bad), CODE.INVALID, `accept ${bad}`);
       assert.equal(city.cancel_deal(bad), CODE.INVALID, `cancel ${bad}`);
     }
