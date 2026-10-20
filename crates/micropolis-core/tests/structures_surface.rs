@@ -18,6 +18,7 @@ fn bare() -> Simulation {
     s.tiles.fill(DIRT);
     s.total_funds = MONEY;
     s.set_structure_rules(true);
+    s.set_service_rules(true); // the service genres of the catalog need it
     s
 }
 
@@ -29,7 +30,7 @@ fn tile(s: &Simulation, x: i32, y: i32) -> u16 {
 fn every_genre_leaves_the_same_surface_tile() {
     let mut s = bare();
     for (i, k) in CATALOG.iter().enumerate() {
-        let (x, y) = (5 + 6 * i as i32, 20);
+        let (x, y) = (5 + 6 * (i % 12) as i32, 20 + 10 * (i / 12) as i32);
         s.set_tile(x, y - 1, ROADS); // a road for the bus stop
         s.set_tile(x - 1, y, RAILBASE); // a rail for the gare
         assert_eq!(

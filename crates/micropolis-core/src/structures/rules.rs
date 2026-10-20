@@ -8,6 +8,7 @@ use super::{
 use crate::agents::graph::{classify, CLASS_ROAD};
 use crate::agents::transport::rail::is_rail;
 use crate::relief::is_water;
+use crate::services::is_service_genre;
 use crate::simulation::Simulation;
 use crate::tile::{Tile, LOMASK, PWRBIT};
 use crate::tile_chars::DIRT;
@@ -132,7 +133,7 @@ impl Simulation {
             .as_slice()
             .iter()
             .copied()
-            .filter(|s| !rules || !self.is_intact(s))
+            .filter(|s| !rules || !self.is_intact(s) || self.is_orphan_service(s))
             .collect();
         self.drop_structures(&doomed)
     }
@@ -213,7 +214,10 @@ impl Simulation {
         let Some(kind) = kind_of(genre) else {
             return ToolResult::Failed;
         };
-        if !self.structure_rules() || list.len() >= MAX_STRUCTURES || !self.fits_on_map(kind, x, y)
+        if !self.structure_rules()
+            || (is_service_genre(genre) && !self.service_rules())
+            || list.len() >= MAX_STRUCTURES
+            || !self.fits_on_map(kind, x, y)
         {
             return ToolResult::Failed;
         }
@@ -246,6 +250,11 @@ impl Simulation {
             .filter(|&(dx, dy)| (dx < 0 || dx >= k.width) != (dy < 0 || dy >= k.height))
             .map(|(dx, dy)| (site.x + dx, site.y + dy));
         ring.filter_map(|(x, y)| self.tile(x, y)).any(wanted)
+    }
+
+    /// A public service building while the services are off (it cannot be built then).
+    fn is_orphan_service(&self, s: &Structure) -> bool {
+        is_service_genre(s.genre) && !self.service_rules()
     }
 
     fn fits_on_map(&self, kind: &Kind, x: i32, y: i32) -> bool {

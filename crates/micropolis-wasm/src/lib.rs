@@ -16,6 +16,7 @@ mod ordinances;
 mod overlays;
 mod relief;
 mod saves;
+mod services;
 mod sizes;
 mod sprites;
 mod structures;

@@ -37,6 +37,7 @@ pub mod position;
 pub mod relief;
 pub mod relief_rules;
 pub mod rng;
+pub mod services;
 pub mod simulation;
 pub mod structures;
 pub mod tile;

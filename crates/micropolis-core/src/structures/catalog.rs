@@ -4,6 +4,10 @@ use super::{EFFECT_LAND_VALUE, EFFECT_NONE, FLAG_POWER, FLAG_WATER, SURFACE_TILE
 use super::{GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_MONUMENT, GENRE_PARK, GENRE_PLAZA};
 use super::{GENRE_STATION, GENRE_TAXI_DEPOT, LAND_VALUE_CAP};
 use crate::agents::transport::WALK_RADIUS;
+use crate::services::{
+    GENRE_CLINIC, GENRE_COLLEGE, GENRE_HOSPITAL, GENRE_LIBRARY, GENRE_MUSEUM, GENRE_PRISON,
+    GENRE_SCHOOL,
+};
 use crate::tile::Tile;
 use crate::waste::{GENRE_INCINERATOR, GENRE_LANDFILL, GENRE_RECYCLING, GENRE_WASTE_TO_ENERGY};
 
@@ -64,8 +68,19 @@ const fn amenity(k: Kind, flags: i32, radius: i32, bonus: i32) -> Kind {
     }
 }
 
-/// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6, 20-23 of v0.8).
-pub const CATALOG: [Kind; 11] = [
+/// A public service building (docs/game-design-v09.md): needs power, its `radius` is the reach of
+/// its service; capacity and weights are in [`crate::services::SERVICES`].
+const fn public(genre: u8, size: (i32, i32), cost: i32, upkeep: i32, radius: i32) -> Kind {
+    Kind {
+        flags: FLAG_POWER,
+        radius,
+        ..kind(genre, size, cost, upkeep)
+    }
+}
+
+/// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6, 20-23 of v0.8,
+/// 30-36 of v0.9).
+pub const CATALOG: [Kind; 18] = [
     amenity(kind(GENRE_PARK, (2, 2), 300, 5), 0, 6, 12),
     amenity(kind(GENRE_PLAZA, (1, 1), 100, 2), FLAG_POWER, 4, 6),
     amenity(
@@ -92,6 +107,13 @@ pub const CATALOG: [Kind; 11] = [
     },
     kind(GENRE_RECYCLING, (2, 2), 800, 40),
     kind(GENRE_WASTE_TO_ENERGY, (3, 3), 4000, 120),
+    public(GENRE_SCHOOL, (2, 2), 500, 20, 8),
+    public(GENRE_COLLEGE, (3, 3), 1500, 60, 14),
+    public(GENRE_LIBRARY, (2, 2), 400, 15, 10),
+    public(GENRE_MUSEUM, (3, 3), 1200, 40, 14),
+    public(GENRE_CLINIC, (1, 1), 200, 10, 8),
+    public(GENRE_HOSPITAL, (3, 3), 1800, 70, 16),
+    public(GENRE_PRISON, (3, 3), 2500, 80, 20),
 ];
 
 /// The catalog entry of `genre`, if it exists.

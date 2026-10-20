@@ -114,7 +114,11 @@ fn piles_fills_and_waste_deals_round_trip() {
 
 #[test]
 fn the_waste_chunk_has_tag_8_and_follows_the_densities_chunk() {
-    assert_eq!((CHUNK_WASTE, CHUNK_MAX_TAG), (8, 8));
+    assert_eq!(
+        (CHUNK_WASTE, CHUNK_MAX_TAG),
+        (8, 9),
+        "the services chunk (v0.9) is the last"
+    );
     let (s, _) = with_waste();
     let file = file_of(&s);
     let chunks = &file[block_at() + 4..];

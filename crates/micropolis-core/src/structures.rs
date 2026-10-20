@@ -240,7 +240,10 @@ mod tests {
     #[test]
     fn the_catalog_is_in_increasing_genre_order_and_all_genres_share_one_surface() {
         let genres: Vec<u8> = CATALOG.iter().map(|k| k.genre).collect();
-        assert_eq!(genres, [1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23]);
+        assert_eq!(
+            genres,
+            [1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33, 34, 35, 36]
+        );
         for k in &CATALOG {
             assert_eq!(kind_of(k.genre), Some(k));
             assert_eq!(k.surface(), SURFACE_TILE);

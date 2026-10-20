@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(city.remove_structure(5, 5), 0);
         assert!(city.structures().is_empty());
         assert_eq!(city.structures_upkeep(), 0);
-        assert_eq!(city.structure_catalog().len(), 11 * 8);
+        assert_eq!(city.structure_catalog().len(), 18 * 8);
     }
 
     #[test]
