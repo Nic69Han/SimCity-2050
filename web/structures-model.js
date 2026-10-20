@@ -18,6 +18,11 @@ export const NAMES = Object.freeze({
   20: "Décharge", 21: "Incinérateur", 22: "Centre de recyclage", 23: "Usine de valorisation",
 });
 
+// French names of the public services genres 30-36 (docs/game-design-v09.md), kept apart from NAMES.
+export const SERVICE_NAMES = Object.freeze({
+  30: "École", 31: "Collège", 32: "Bibliothèque", 33: "Musée", 34: "Clinique", 35: "Hôpital", 36: "Prison",
+});
+
 // Why the buildings cannot be placed now (the page shows it as the button's reason).
 export const RULE_OFF_MESSAGE = "Activez les bâtiments étendus pour construire.";
 export const IN_3D_MESSAGE =
@@ -41,7 +46,7 @@ export function readStructureRules(city) {
 
 // French name of a genre; an unknown genre (a later engine) gets its number.
 export function nameOf(genre) {
-  return NAMES[genre] ?? `Bâtiment n° ${genre}`;
+  return NAMES[genre] ?? SERVICE_NAMES[genre] ?? `Bâtiment n° ${genre}`;
 }
 
 // Decodes the catalog records into { genre, width, height, cost, upkeep, flags, radius, effect }.
