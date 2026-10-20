@@ -66,7 +66,7 @@ Livré dans `crates/micropolis-core/src/waste.rs` (+ `waste/` : `production`, `t
   (neuf tuiles de la zone, puis carré de rayon `SPILL_RADIUS` = 3, puis n'importe où), au plus `TILE_CAP` = 255 par
   tuile. La capacité restante mange ensuite les ordures déjà accumulées : `BACKLOG_DECAY` = 4 par tuile et par mois.
 * **Conservation** (testée chaque mois) : `produites = traitées + recyclées + exportées + (pile après − pile avant)
-  + perdues` ; la première mois, `produites = traitées + recyclées + exportées + accumulées`. « Perdues » = ce
+  + perdues` ; le premier mois, `produites = traitées + recyclées + exportées + accumulées`. « Perdues » = ce
   qu'aucune tuile ne peut tenir (0 sauf carte pleine). « Traitées » comprend les ordures anciennes mangées.
 * **Effets** : pollution + `pile_max_du_bloc / 8` et valeur du terrain − `pile_max_du_bloc / 6` ; décharge,
   incinérateur et usine de valorisation qui fonctionnent polluent autour d'eux (40/3, 60/4, 30/3 :

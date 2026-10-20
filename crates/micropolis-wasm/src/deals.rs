@@ -143,7 +143,11 @@ mod tests {
         let offers = city.deal_offers();
         assert_eq!(offers.len(), 12 * super::OFFER_LEN);
         let w = &offers[8 * super::OFFER_LEN..9 * super::OFFER_LEN];
-        assert_eq!(w, &[0, 2, 60, -3, -180, 1], "garbage: a cost, shown negative");
+        assert_eq!(
+            w,
+            &[0, 2, 60, -3, -180, 1],
+            "garbage: a cost, shown negative"
+        );
         assert_eq!(city.accept_deal(8), 1);
         assert_eq!(city.active_deals(), vec![0, 2, 60, -3, -180, 1, 90]);
         assert_eq!(city.cancel_deal(0), 1);

@@ -246,7 +246,10 @@ impl WasteState {
             return Err("waste chunk is not a whole number of records");
         }
         let mut state = WasteState::default();
-        for r in bytes[COUNT_SIZE..fills_end].chunks_exact(FILL_RECORD_SIZE) {
+        for r in bytes[COUNT_SIZE..fills_end]
+            .as_chunks::<FILL_RECORD_SIZE>()
+            .0
+        {
             let x = i32::from(u16::from_be_bytes([r[0], r[1]]));
             let y = i32::from(u16::from_be_bytes([r[2], r[3]]));
             let units = i64::from(u32::from_be_bytes([r[4], r[5], r[6], r[7]]));
@@ -260,7 +263,7 @@ impl WasteState {
             state.fills.push(Fill { x, y, units });
         }
         let mut last_index = None;
-        for r in bytes[fills_end..].chunks_exact(TILE_RECORD_SIZE) {
+        for r in bytes[fills_end..].as_chunks::<TILE_RECORD_SIZE>().0 {
             let x = i32::from(u16::from_be_bytes([r[0], r[1]]));
             let y = i32::from(u16::from_be_bytes([r[2], r[3]]));
             if x >= width || y >= height || r[4] == 0 {
@@ -285,7 +288,7 @@ mod tests {
     fn the_tables_are_sane() {
         const { assert!(RECYCLING_PCT <= RECYCLING_MAX_PCT && RECYCLING_MAX_PCT < 100) };
         assert!(PRODUCTION_PCT.iter().all(|&p| p > 0));
-        assert!(WTE_POWER_STRENGTH < crate::power::COAL_POWER_STRENGTH);
+        const { assert!(WTE_POWER_STRENGTH < crate::power::COAL_POWER_STRENGTH) };
         assert!(BUILDING_POLLUTION.iter().all(|&(_, p, r)| p > 0 && r > 0));
         assert!(LANDFILL_CAPACITY <= i64::from(u32::MAX));
     }

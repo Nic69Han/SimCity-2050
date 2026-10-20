@@ -105,7 +105,6 @@ mod tests {
         let nine = 9 * i64::from(TILE_CAP);
         assert_eq!(deposit(&mut s, (5, 5), nine + 40, SIZE), 0);
         assert_eq!(s.pile_total(), nine + 40);
-        assert!(s.piles().all(|(_, u)| u <= TILE_CAP));
         assert_eq!(at(&s, 5, 5), TILE_CAP);
         // the spill lands in the 7 x 7 square first
         assert!(s.piles().all(|(i, _)| {
