@@ -88,7 +88,7 @@ describe("the shapes of each service", () => {
     const body = p.block[0];
     assert.ok(close(body.sx, 2 - 2 * LIBRARY.inset));
     assert.ok(close(body.x, 3), "centred on the footprint");
-    assert.equal(p.slab.length, 2 * 2 * LIBRARY.columnsPerTile);
+    assert.equal(p.slab.length, 2 * LIBRARY.columnsPerTile, "columns along the front edge only: width x per tile");
     for (const c of p.slab) {
       assert.equal(colorsOf([c])[0], rgbOfHex(COLORS.column).join(","));
       assert.ok(close(c.sy, LIBRARY.height), "each column reaches the top of the body");
@@ -157,9 +157,9 @@ describe("the shapes of each service", () => {
     for (const wall of p.slab) {
       assert.equal(colorsOf([wall])[0], rgbOfHex(COLORS.prisonWall).join(","));
       assert.ok(close(wall.sy, PRISON.wall.height), "a low wall");
-      assert.ok(close(wall.sx === PRISON.wall.thick ? wall.sz : wall.sx, 3) || wall.sx === 3 || wall.sz === 3);
+      const longSide = Math.max(wall.sx, wall.sz), thinSide = Math.min(wall.sx, wall.sz);
+      assert.ok(close(longSide, 3) && close(thinSide, PRISON.wall.thick), "a thin box as long as the footprint side");
       assert.ok(insideFootprint(wall, 1, 1, 3, 3), "the walls stand on the footprint edge");
-      assert.ok(wall.sx < PRISON.wall.height * 10 && wall.sz < 3.01);
     }
     assert.ok(PRISON.wall.height < PRISON.height, "the wall is lower than the block");
   });
