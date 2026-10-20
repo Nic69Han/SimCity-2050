@@ -18,12 +18,12 @@ use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::densities::{DensityList, Farms};
 use crate::position::Position;
+use crate::services::{ServiceCache, ServiceState};
 use crate::simulation::Simulation;
 use crate::structures::StructureList;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::water::WaterNetwork;
-use crate::services::{ServiceCache, ServiceState};
 use crate::{deals, densities, ordinances, services, structures, transit, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).

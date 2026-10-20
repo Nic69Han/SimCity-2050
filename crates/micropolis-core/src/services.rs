@@ -274,7 +274,14 @@ mod tests {
 
     #[test]
     fn a_bad_state_is_refused() {
-        let bad: [&[u8]; 6] = [&[1], &[1, 50, 0], &[151, 50], &[0, 39], &[0, 91], &[255, 255]];
+        let bad: [&[u8]; 6] = [
+            &[1],
+            &[1, 50, 0],
+            &[151, 50],
+            &[0, 39],
+            &[0, 91],
+            &[255, 255],
+        ];
         for (i, b) in bad.iter().enumerate() {
             assert!(ServiceState::decode(b).is_err(), "case {i}");
         }

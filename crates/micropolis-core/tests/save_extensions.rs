@@ -232,7 +232,10 @@ fn a_bad_block_is_cty_bad_extension() {
             "unknown flag with a second byte",
             chunk(CHUNK_RULES, &[0b1000_0000, 1]),
         ),
-        ("unknown flag in the second byte", chunk(CHUNK_RULES, &[1, 0b10])),
+        (
+            "unknown flag in the second byte",
+            chunk(CHUNK_RULES, &[1, 0b10]),
+        ),
         ("empty second byte", chunk(CHUNK_RULES, &[1, 0])),
         ("rules too long", chunk(CHUNK_RULES, &[1, 1, 1])),
         ("ordinances length", chunk(2, &[1, 2, 3])),

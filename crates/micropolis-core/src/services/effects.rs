@@ -53,7 +53,7 @@ fn working_prisons(sim: &Simulation) -> (Vec<Structure>, i32) {
         .filter(|s| is_prison(s) && sim.structure_works(s))
         .copied()
         .collect();
-    let places = prisons.iter().map(|s| capacity_of(s)).sum();
+    let places = prisons.iter().map(capacity_of).sum();
     let demand = sim.extensions().service_cache.prison_demand;
     (prisons, met_pct(places, demand))
 }

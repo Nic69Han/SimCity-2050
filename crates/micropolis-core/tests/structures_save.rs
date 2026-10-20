@@ -5,7 +5,7 @@
 #[path = "save_support/mod.rs"]
 mod support;
 
-use micropolis_core::extensions::{CHUNK_DENSITIES, CHUNK_MAX_TAG, CHUNK_RULES, CHUNK_STRUCTURES};
+use micropolis_core::extensions::{CHUNK_MAX_TAG, CHUNK_RULES, CHUNK_STRUCTURES};
 use micropolis_core::fileio::{CITY_FILE_HEADER_SIZE, RELIEF_BLOCK_OVERHEAD};
 use micropolis_core::simulation::Simulation;
 use micropolis_core::structures::{
