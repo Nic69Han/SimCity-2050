@@ -80,8 +80,7 @@ pub fn recycled(zone: &Zone, centres: &[Structure]) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::structures::GENRE_PARK;
-    use crate::waste::GENRE_RECYCLING;
+    use crate::waste::{GENRE_LANDFILL, GENRE_RECYCLING};
 
     fn centre(x: i32, y: i32) -> Structure {
         Structure {
@@ -97,7 +96,7 @@ mod tests {
         assert_eq!(units(GENRE_COMMERCIAL, 40), 16);
         assert_eq!(units(GENRE_INDUSTRIAL, 40), 24);
         assert_eq!(units(GENRE_INDUSTRIAL, 0), 0);
-        assert_eq!(units(GENRE_PARK, 40), 0);
+        assert_eq!(units(GENRE_LANDFILL, 40), 0);
     }
 
     #[test]

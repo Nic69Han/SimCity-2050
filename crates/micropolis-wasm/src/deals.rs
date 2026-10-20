@@ -14,11 +14,16 @@
 //!   deal now, 0 when it would break at the next tax collection.
 //! * `accept_deal(offer_index) -> i32` and `cancel_deal(index) -> i32`: 1 done, 0 invalid index,
 //!   -1 rule off, -2 already signed, -3 not enough surplus, -4 too many deals.
+//! * Waste (docs/game-design-v08.md): resource 2 = garbage, offers 8..=11 (north to west), listed
+//!   only while the waste rules are on. The city *pays* the neighbour, so for such a record the
+//!   adapter shows `price` and `yearly_income` **negated** (a negative number is a cost); the
+//!   engine keeps them positive. `amount` is the units taken per month. `cancel_penalty` stays the
+//!   positive number of dollars paid.
 //! * `surplus() -> Int32Array`: `[electricity, water]`, the free surplus (capacity - used - signed
 //!   deals; negative when a deal is not covered); `[0, 0]` with the rule off.
 
 use crate::City;
-use micropolis_core::deals::{settle, Deal};
+use micropolis_core::deals::{settle, Deal, OFFER_COUNT, RESOURCE_WASTE, TOTAL_OFFER_COUNT};
 use wasm_bindgen::prelude::*;
 
 /// Values per record of `deal_offers`.
@@ -31,12 +36,14 @@ fn clamp(v: i64) -> i32 {
 }
 
 fn terms(d: &Deal) -> [i32; 5] {
+    // the city pays for its garbage to be taken: a cost is shown negative
+    let sign = if d.resource == RESOURCE_WASTE { -1 } else { 1 };
     [
         i32::from(d.neighbour),
         i32::from(d.resource),
         d.amount,
-        d.price,
-        d.yearly_income(),
+        sign * d.price,
+        sign * d.yearly_income(),
     ]
 }
 
@@ -63,8 +70,13 @@ impl City {
         if !self.sim.deals_rules() {
             return out;
         }
-        out.reserve(micropolis_core::deals::OFFER_COUNT * OFFER_LEN);
-        for i in 0..micropolis_core::deals::OFFER_COUNT {
+        let shown = if self.sim.waste_rules() {
+            TOTAL_OFFER_COUNT
+        } else {
+            OFFER_COUNT
+        };
+        out.reserve(shown * OFFER_LEN);
+        for i in 0..shown {
             if let Some(offer) = self.sim.deal_offer(i) {
                 out.extend_from_slice(&terms(&offer));
                 out.push(self.sim.deal_offer_status(i) as i32);
@@ -123,10 +135,20 @@ mod tests {
         assert_eq!(offers.len(), 8 * super::OFFER_LEN);
         assert_eq!(&offers[..5], &[0, 0, 100, 5, 500]);
         assert_eq!(offers[5], -3, "no power, no surplus");
-        for bad in [-1, 8, i32::MAX, i32::MIN] {
+        for bad in [-1, 12, i32::MAX, i32::MIN] {
             assert_eq!(city.accept_deal(bad), 0, "{bad}");
             assert_eq!(city.cancel_deal(bad), 0, "{bad}");
         }
+        city.set_waste_rules(true);
+        let offers = city.deal_offers();
+        assert_eq!(offers.len(), 12 * super::OFFER_LEN);
+        let w = &offers[8 * super::OFFER_LEN..9 * super::OFFER_LEN];
+        assert_eq!(w, &[0, 2, 60, -3, -180, 1], "garbage: a cost, shown negative");
+        assert_eq!(city.accept_deal(8), 1);
+        assert_eq!(city.active_deals(), vec![0, 2, 60, -3, -180, 1, 90]);
+        assert_eq!(city.cancel_deal(0), 1);
+        city.set_waste_rules(false);
+        assert_eq!(city.deal_offers().len(), 8 * super::OFFER_LEN);
         city.sim.set_tile(3, 3, POWERPLANT | ZONEBIT);
         assert_eq!(city.surplus(), vec![700, 0]);
         assert_eq!(city.deal_offers()[5], 1);

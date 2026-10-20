@@ -20,6 +20,7 @@ mod sizes;
 mod sprites;
 mod structures;
 mod transit;
+mod waste;
 mod water;
 
 /// Seed of the random generator when a city file is loaded: the same file always gives the
