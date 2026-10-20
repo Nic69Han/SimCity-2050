@@ -9,7 +9,8 @@
 // (grey block with a tall chimney), 22 recycling centre (low green shed), 23 waste-to-energy (grey block,
 // blue roof slab, chimney) (docs/game-design-v08.md); 30-36 public services (docs/game-design-v09.md:
 // school, college, library with columns, museum, clinic and hospital with a red cross, prison with a low
-// wall); any other genre is a plain grey block.
+// wall); 40-46 power plants (docs/game-design-v10.md: gas, oil, wind, solar, hydro, microwave, fusion);
+// any other genre is a plain grey block.
 // Only the kinds below are meshes: the thin pieces of a building (roof, walls, columns, cross arms) are
 // "slab" boxes, its bodies are "block" boxes.
 import { tileCentreY } from "./view3d-model.js";
@@ -18,6 +19,7 @@ export const RECORD = 6;
 export const GENRE = Object.freeze({
   PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
   SCHOOL: 30, COLLEGE: 31, LIBRARY: 32, MUSEUM: 33, CLINIC: 34, HOSPITAL: 35, PRISON: 36,
+  GAS: 40, OIL: 41, WIND: 42, SOLAR: 43, HYDRO: 44, MICROWAVE: 45, FUSION: 46,
 });
 export const SHAPES = Object.freeze({ SLAB: "slab", TREE: "tree", FOUNTAIN: "fountain", OBELISK: "obelisk", BLOCK: "block" });
 export const KINDS = Object.freeze(Object.values(SHAPES));
@@ -51,6 +53,23 @@ export const MUSEUM = Object.freeze({ height: 0.6 }); // wide white block
 export const CLINIC = Object.freeze({ height: 0.7, cross: Object.freeze({ arm: 0.5, thick: 0.16, height: 0.04 }) });
 export const HOSPITAL = Object.freeze({ height: 1.8, cross: Object.freeze({ arm: 1.0, thick: 0.3, height: 0.05 }) });
 export const PRISON = Object.freeze({ height: 0.9, inset: 0.25, wall: Object.freeze({ height: 0.35, thick: 0.1 }) });
+// Power plants (genres 40-46). Heights in world units; the footprints are 1 to 4 tiles.
+export const GAS = Object.freeze({
+  height: 0.7, stackFractions: Object.freeze([0.25, 0.75]), // two short stacks, at these fractions of the width
+  stack: Object.freeze({ width: 0.2, height: 0.5 }),
+});
+export const OIL = Object.freeze({ height: 0.7, stack: Object.freeze({ width: 0.25, height: 2.0, inset: 0.5 }) });
+export const WIND = Object.freeze({
+  mast: Object.freeze({ width: 0.08, height: 1.6 }),
+  blade: Object.freeze({ length: 0.4, width: 0.08, thick: 0.04 }), // three arms from the hub: east, west, south
+});
+export const SOLAR = Object.freeze({ rows: 3, thick: 0.05, lift: 0.25, step: 0.12, fill: 0.9 }); // panels per plant
+export const HYDRO = Object.freeze({ dam: Object.freeze({ depth: 0.4, height: 0.7 }), water: Object.freeze({ height: 0.1 }) });
+export const MICROWAVE = Object.freeze({
+  height: 1.0, inset: 0.3, stand: Object.freeze({ width: 0.12, height: 0.4 }),
+  dish: Object.freeze({ inset: 0.05, thick: 0.05 }),
+});
+export const FUSION = Object.freeze({ height: 0.8, dome: Object.freeze({ steps: 3, step: 0.3, shrink: 0.15 }) });
 
 export const COLORS = Object.freeze({
   park: "#5cb85c", tree: "#1b5e20", square: "#e8dcc0", fountain: "#90caf9",
@@ -59,6 +78,9 @@ export const COLORS = Object.freeze({
   shed: "#66bb6a", plant: "#9e9e9e", roof: "#1e88e5",
   beige: "#e6d3a8", schoolRoof: "#c62828", white: "#f5f5f0", libraryStone: "#a59f94", column: "#d8d3c8",
   cross: "#d32f2f", prison: "#4f5358", prisonWall: "#7a7e85",
+  gas: "#b0bec5", oil: "#37474f", windMast: "#f5f5f0", windBlade: "#eeeeee", solarPanel: "#0d47a1",
+  concrete: "#bdbdbd", water: "#29b6f6", microwave: "#eceff1", dish: "#90a4ae", fusion: "#78909c",
+  fusionDome: "#b0bec5",
 });
 
 // Colour of a hex string as 0..1 components (the instance colour format).
@@ -168,10 +190,19 @@ function dumpBoxes(s, top) {
     place(s.x + fx * s.w, top + DUMP.box / 2, s.y + fz * s.h, DUMP.boxSize, DUMP.box, DUMP.boxSize, COLORS.dumpBox));
 }
 
+// A thin square stack of `width` x `height`, centred at (x, z) and standing on `top`.
+function stackAt(x, z, top, { width, height }, hex) {
+  return place(x, top + height / 2, z, width, height, width, hex);
+}
+
+// A stack `inset` in from the east and north edges of the footprint, standing on `top`.
+function cornerStack(s, top, { width, height, inset }, hex) {
+  return stackAt(s.x + s.w - inset, s.y + inset, top, { width, height }, hex);
+}
+
 // A tall thin chimney at the corner of the footprint, standing on `top`.
 function chimney(s, top) {
-  return place(s.x + s.w - CHIMNEY.inset, top + CHIMNEY.height / 2, s.y + CHIMNEY.inset,
-    CHIMNEY.width, CHIMNEY.height, CHIMNEY.width, COLORS.chimney);
+  return cornerStack(s, top, CHIMNEY, COLORS.chimney);
 }
 
 const WASTE_BUILDERS = Object.freeze({
@@ -273,7 +304,95 @@ const SERVICE_BUILDERS = Object.freeze({
   },
 });
 
-const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS });
+// Power plants (genres 40-46), built from blocks and slabs like the rest of this file.
+
+// Two short stacks on the back of a gas plant, standing on `top`.
+function gasStacks(s, top) {
+  return GAS.stackFractions.map((fx) => stackAt(s.x + fx * s.w, cz(s), top, GAS.stack, COLORS.chimney));
+}
+
+// The wind turbine's blades: three arms from the hub at the centre, at height `top`. Each arm is as long as
+// WIND.blade.length allows, and at most half a side of the footprint, so the turbine stays inside its tiles.
+function bladesOn(s, top) {
+  const { width, thick } = WIND.blade;
+  const len = Math.min(WIND.blade.length, s.w / 2, s.h / 2);
+  const x = cx(s), z = cz(s);
+  return [
+    place(x + len / 2, top, z, len, thick, width, COLORS.windBlade),
+    place(x - len / 2, top, z, len, thick, width, COLORS.windBlade),
+    place(x, top, z + len / 2, width, thick, len, COLORS.windBlade),
+  ];
+}
+
+// The solar panels: SOLAR.rows thin slabs in rows across the footprint, each one step higher than the last.
+function solarPanels(s, base) {
+  const { rows, thick, lift, step, fill } = SOLAR;
+  const band = s.h / rows;
+  const out = [];
+  for (let i = 0; i < rows; i++) {
+    const y = base + lift + i * step + thick / 2;
+    out.push(place(cx(s), y, s.y + (i + 0.5) * band, s.w * fill, thick, band * fill, COLORS.solarPanel));
+  }
+  return out;
+}
+
+// The dam: a concrete block across the footprint (along x), with a blue water slab on its north side.
+function dam(s, base) {
+  const { depth, height } = HYDRO.dam;
+  const wall = place(cx(s), base + height / 2, cz(s), s.w, height, depth, COLORS.concrete);
+  const reach = (s.h - depth) / 2; // the water's depth, between the north edge and the dam
+  const water = place(cx(s), base + HYDRO.water.height / 2, s.y + reach / 2, s.w, HYDRO.water.height, reach, COLORS.water);
+  return [[SHAPES.BLOCK, wall], [SHAPES.SLAB, water]];
+}
+
+// The dome of the fusion plant: FUSION.dome.steps blocks stacked on `top`, each one `shrink` fraction smaller.
+function dome(s, top) {
+  const { steps, step, shrink } = FUSION.dome;
+  const out = [];
+  let y = top;
+  for (let i = 0; i < steps; i++) {
+    const k = 1 - (i + 1) * shrink;
+    out.push([SHAPES.BLOCK, place(cx(s), y + step / 2, cz(s), s.w * k, step, s.h * k, COLORS.fusionDome)]);
+    y += step;
+  }
+  return out;
+}
+
+const ENERGY_BUILDERS = Object.freeze({
+  [GENRE.GAS](s, base) {
+    const b = body(s, base, GAS.height, COLORS.gas);
+    return [[SHAPES.BLOCK, b.p], ...gasStacks(s, b.top).map((p) => [SHAPES.BLOCK, p])];
+  },
+  [GENRE.OIL](s, base) {
+    const b = body(s, base, OIL.height, COLORS.oil);
+    return [[SHAPES.BLOCK, b.p], [SHAPES.BLOCK, cornerStack(s, b.top, OIL.stack, COLORS.chimney)]];
+  },
+  [GENRE.WIND](s, base) {
+    const { width, height } = WIND.mast;
+    const mast = place(cx(s), base + height / 2, cz(s), width, height, width, COLORS.windMast);
+    return [[SHAPES.SLAB, mast], ...bladesOn(s, base + height).map((p) => [SHAPES.SLAB, p])];
+  },
+  [GENRE.SOLAR](s, base) {
+    return solarPanels(s, base).map((p) => [SHAPES.SLAB, p]);
+  },
+  [GENRE.HYDRO](s, base) {
+    return dam(s, base);
+  },
+  [GENRE.MICROWAVE](s, base) {
+    const { height, inset, stand, dish } = MICROWAVE;
+    const b = body(s, base, height, COLORS.microwave, inset);
+    const post = place(cx(s), b.top + stand.height / 2, cz(s), stand.width, stand.height, stand.width, COLORS.dish);
+    const top = b.top + stand.height;
+    const disc = place(cx(s), top + dish.thick / 2, cz(s), s.w - 2 * dish.inset, dish.thick, s.h - 2 * dish.inset, COLORS.dish);
+    return [[SHAPES.BLOCK, b.p], [SHAPES.SLAB, post], [SHAPES.SLAB, disc]];
+  },
+  [GENRE.FUSION](s, base) {
+    const b = body(s, base, FUSION.height, COLORS.fusion);
+    return [[SHAPES.BLOCK, b.p], ...dome(s, b.top)];
+  },
+});
+
+const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS, ...ENERGY_BUILDERS });
 
 export function partsOf(s, base) {
   const build = BUILDERS_ALL[s.genre] ?? block;
