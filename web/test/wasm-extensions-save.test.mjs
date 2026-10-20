@@ -75,8 +75,9 @@ describe("wasm extensions block in city files", { skip: SKIP }, () => {
     const city = City.new_sized(97, 83, 5);
     const before = Array.from(city.save_city());
     const bad = [
-      [9, ...be32(0)], // unknown tag
-      [1, ...be32(1), 0b100_0000], // unknown rules flag
+      [10, ...be32(0)], // unknown tag
+      [1, ...be32(1), 0b1000_0000], // unknown rules flag (first byte)
+      [1, ...be32(2), 0, 0b10], // unknown rules flag (second byte)
       [3, ...be32(2), 1, 2], // water chunk of the wrong size
       [1, ...be32(1), 1, 1, ...be32(1), 1], // repeated tag
       [1, 0, 0], // header cut short

@@ -18,6 +18,7 @@ fn bare() -> Simulation {
     s.tiles.fill(DIRT);
     s.total_funds = MONEY;
     s.set_structure_rules(true);
+    s.set_service_rules(true); // the service genres of the catalog need it
     s
 }
 

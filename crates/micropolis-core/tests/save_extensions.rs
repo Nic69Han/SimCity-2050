@@ -216,7 +216,8 @@ fn a_bad_block_is_cty_bad_extension() {
     let good = file_of(&full(w, h));
     let n = (w * h) as usize;
     let refused = [
-        ("unknown tag", chunk(9, &[1])),
+        ("unknown tag", chunk(10, &[1])),
+        ("tag 8 is not known here", chunk(8, &[1])),
         ("tag zero", chunk(0, &[])),
         (
             "out of order",
@@ -226,8 +227,14 @@ fn a_bad_block_is_cty_bad_extension() {
             "repeated",
             [chunk(CHUNK_RULES, &[1]), chunk(CHUNK_RULES, &[1])].concat(),
         ),
-        ("unknown flag", chunk(CHUNK_RULES, &[0b100_0000])),
-        ("rules too long", chunk(CHUNK_RULES, &[1, 1])),
+        ("unknown flag", chunk(CHUNK_RULES, &[0b1000_0000])),
+        (
+            "unknown flag with a second byte",
+            chunk(CHUNK_RULES, &[0b1000_0000, 1]),
+        ),
+        ("unknown flag in the second byte", chunk(CHUNK_RULES, &[1, 0b10])),
+        ("empty second byte", chunk(CHUNK_RULES, &[1, 0])),
+        ("rules too long", chunk(CHUNK_RULES, &[1, 1, 1])),
         ("ordinances length", chunk(2, &[1, 2, 3])),
         ("water size", chunk(CHUNK_WATER, &[1, 2, 3])),
         ("transit size", chunk(CHUNK_TRANSIT, &vec![1; n + 1])),
