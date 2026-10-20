@@ -1,0 +1,6 @@
+/* energy: styles of web/energy-ui.js (docs/game-design-v10.md). */
+#energy-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#energy-panel .energy-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#energy-panel .energy-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#energy-panel .energy-stats, #energy-panel .energy-plants { margin: .3rem 0; padding-left: 1.2rem; font-size: .9rem; }
+#energy-panel .energy-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }

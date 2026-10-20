@@ -47,6 +47,10 @@
 //   - service_rules() / service_stats() (docs/game-design-v09.md): service_rules() is off by default and after a
 //     new city or a load; service_stats() is ten zeros while it is off, else the fixed numbers SERVICES_FIXED.
 //     Both methods are hidden unless the constructor has `services: true`.
+//   - energy (docs/game-design-v10.md; `energy: true`): energy_rules() is off by default and after a new city or a
+//     load. Off: energy_stats() is six zeros and power_plants() is empty. On: energy_stats() is ENERGY_FIXED and
+//     power_plants() lists MOCK_PLANTS (records of 6), both fixed numbers (mock-energy.mjs). No genre joins the
+//     catalog and no plant is placed: the mock only reports the fixed numbers.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -55,6 +59,7 @@ import {
   isZone, zoneCost, zoneTile, zoneLayer, zoneStats, ZONE_HALF,
 } from "./mock-zoning.mjs";
 import { MOCK_WASTE_STRUCTURES, wasteStatsOf } from "./mock-waste.mjs";
+import { ENERGY_METHODS, energyStatsOf, powerPlantsOf } from "./mock-energy.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -192,6 +197,7 @@ export class MockCity {
   #wasteRules = false; // waste switch (City.waste_rules)
   #wasteValues = wasteStatsOf(true, []); // the numbers set by set_mock_waste (zeros until then)
   #servRules = false; // public services switch (City.service_rules)
+  #energyRules = false; // energy switch (City.energy_rules)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -201,7 +207,7 @@ export class MockCity {
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
-    densities = false, waste = false, services = false,
+    densities = false, waste = false, services = false, energy = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -215,6 +221,7 @@ export class MockCity {
     if (!densities) for (const name of DENSITY_METHODS) this[name] = undefined;
     if (!waste) for (const name of WASTE_METHODS) this[name] = undefined;
     if (!services) for (const name of SERVICE_METHODS) this[name] = undefined;
+    if (!energy) for (const name of ENERGY_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -247,6 +254,7 @@ export class MockCity {
     this.#wasteRules = false;
     this.#wasteValues = wasteStatsOf(true, []);
     this.#servRules = false;
+    this.#energyRules = false;
   }
 
   #inside(x, y) {
@@ -645,6 +653,23 @@ export class MockCity {
     return this.#servRules ? Int32Array.from(SERVICES_FIXED) : Int32Array.from(SERVICES_FIXED, () => 0);
   }
 
+  // --- energy (docs/game-design-v10.md, contract of crates/micropolis-wasm/src/energy.rs); present only with the
+  // constructor option `energy: true` ---
+  energy_rules() {
+    return this.#energyRules;
+  }
+  set_energy_rules(on) {
+    this.#energyRules = Boolean(on);
+  }
+  // Six integers, see mock-energy.mjs; zeros while the rule is off.
+  energy_stats() {
+    return energyStatsOf(this.#energyRules);
+  }
+  // Records of 6 [genre, x, y, age_months, lifetime_months, current_power]; empty while the rule is off.
+  power_plants() {
+    return powerPlantsOf(this.#energyRules);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -687,6 +712,7 @@ export class MockCity {
     this.#wasteRules = false;
     this.#wasteValues = wasteStatsOf(true, []);
     this.#servRules = false;
+    this.#energyRules = false;
   }
   take_events() {
     return 0;

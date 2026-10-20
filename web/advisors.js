@@ -9,6 +9,7 @@ import { decodeRail } from "./agents-model.js";
 import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
 import { countLandfills, wasteSnapshot } from "./waste-model.js";
 import { decodeStats as decodeServices } from "./services-model.js";
+import { decodeStats as decodeEnergy } from "./energy-model.js";
 
 const HIST_MONEY = 3;
 const HIST_POLLUTION = 5;
@@ -24,7 +25,7 @@ function call(city, name, ...args) {
 
 const RULES = [
   ["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"], ["waste", "waste_rules"],
-  ["services", "service_rules"],
+  ["services", "service_rules"], ["energy", "energy_rules"],
 ];
 
 /** The rule switches the engine has, { water, transit, deals, agents, waste, services } (a missing method leaves the name out). */
@@ -102,6 +103,9 @@ export function readSnapshot(city) {
   // service_stats (docs/game-design-v09.md): read with the services rule only; decoded as services-model.js does
   const sv = rules.services ? ints(call(city, "service_stats")) : null;
   if (sv && sv.length >= 6) s.services = decodeServices(sv);
+  // energy_stats (docs/game-design-v10.md): read with the energy rule only; decoded as energy-model.js does
+  const en = rules.energy ? ints(call(city, "energy_stats")) : null;
+  if (en && en.length >= 6) s.energy = decodeEnergy(en);
   if (hasOrdinances(city)) {
     s.ordinances = readOrdinances(city).map((o) => ({
       key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
@@ -145,6 +149,8 @@ export function cheapKey(city) {
   }
   // education, life expectancy and the places they fill (the first six service_stats numbers)
   if (rules.services) parts.push(ints(call(city, "service_stats"))?.slice(0, 6).join());
+  // production, consumption, bought, plants, end of life, pollution (energy-model.js)
+  if (rules.energy) parts.push(ints(call(city, "energy_stats"))?.join());
   return parts.join("/");
 }
 

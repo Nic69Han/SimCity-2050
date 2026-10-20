@@ -9,7 +9,7 @@ const norm = (s) => s.replace(/[  ]/g, " ");
 describe("the waste resource", () => {
   test("resource 2 is named Déchets, the others are unchanged", () => {
     assert.equal(WASTE_RESOURCE, 2);
-    assert.equal(RESOURCES.length, 3);
+    assert.equal(RESOURCES.length, 4, "resource 3 is the electricity purchase (deals-energy.test.mjs)");
     assert.deepEqual(RESOURCES[2], { label: "Déchets", noun: "de déchets" });
     assert.equal(RESOURCES[0].label, "Électricité");
     assert.equal(RESOURCES[1].label, "Eau");
