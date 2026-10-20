@@ -5,11 +5,16 @@
 // A record is 6 integers [genre, x, y, width, height, state]: x, y the top-left tile, state bit 0
 // powered, bit 1 watered (not drawn yet). World X = tile x, Z = tile y, Y = height (view3d-model.js).
 // Genres: 1 urban park (flat slab with trees), 2 public square (flat slab with a fountain),
-// 3 monument (stone base with a tall obelisk); any other genre is a plain grey block.
+// 3 monument (stone base with a tall obelisk); 20 landfill (brown mound with dark boxes), 21 incinerator
+// (grey block with a tall chimney), 22 recycling centre (low green shed), 23 waste-to-energy (grey block,
+// blue roof slab, chimney) (docs/game-design-v08.md). Any other genre is a plain grey block.
+// The waste genres reuse the slab and block shapes, so the meshes of view3d-structures.js are unchanged.
 import { tileCentreY } from "./view3d-model.js";
 
 export const RECORD = 6;
-export const GENRE = Object.freeze({ PARK: 1, SQUARE: 2, MONUMENT: 3 });
+export const GENRE = Object.freeze({
+  PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
+});
 export const SHAPES = Object.freeze({ SLAB: "slab", TREE: "tree", FOUNTAIN: "fountain", OBELISK: "obelisk", BLOCK: "block" });
 export const KINDS = Object.freeze(Object.values(SHAPES));
 
@@ -26,9 +31,20 @@ export const FOUNTAIN = Object.freeze({ radius: 0.15, height: 0.25 });
 export const MONUMENT = Object.freeze({ base: 0.15, width: 0.4, height: 2.5 });
 export const BLOCK_HEIGHT = 0.8;
 
+// Waste genres (heights in world units, footprints in tiles). The landfill's mound is a flat slab with
+// DUMP_BOXES.length dark boxes on it, centred at these fractions of the footprint (kept inside it).
+export const DUMP = Object.freeze({ mound: 0.12, box: 0.25, boxSize: 0.3 });
+export const DUMP_BOXES = Object.freeze([[0.25, 0.3], [0.7, 0.35], [0.45, 0.75]]);
+export const WASTE_BODY_HEIGHT = 0.6; // incinerator and waste-to-energy block
+export const SHED_HEIGHT = 0.4; // recycling centre: low and wide
+export const ROOF_HEIGHT = 0.08; // waste-to-energy roof slab
+export const CHIMNEY = Object.freeze({ width: 0.2, height: 1.6, inset: 0.5 }); // tall thin, half a tile in from the corner
+
 export const COLORS = Object.freeze({
   park: "#5cb85c", tree: "#1b5e20", square: "#e8dcc0", fountain: "#90caf9",
   stone: "#8a8f96", obelisk: "#b8bec6", block: "#9e9e9e",
+  landfill: "#8d6e63", dumpBox: "#4e342e", incinerator: "#757575", chimney: "#424242",
+  shed: "#66bb6a", plant: "#9e9e9e", roof: "#1e88e5",
 });
 
 // Colour of a hex string as 0..1 components (the instance colour format).
@@ -127,13 +143,51 @@ const BUILDERS = Object.freeze({
   },
 });
 
+// A box covering the footprint, standing on `base`; returns the placement and the top height.
+function boxOn(s, base, height, hex) {
+  return { p: place(cx(s), base + height / 2, cz(s), s.w, height, s.h, hex), top: base + height };
+}
+
+// The dark boxes of a landfill, standing on the mound top (DUMP_BOXES, inside the footprint).
+function dumpBoxes(s, top) {
+  return DUMP_BOXES.map(([fx, fz]) =>
+    place(s.x + fx * s.w, top + DUMP.box / 2, s.y + fz * s.h, DUMP.boxSize, DUMP.box, DUMP.boxSize, COLORS.dumpBox));
+}
+
+// A tall thin chimney at the corner of the footprint, standing on `top`.
+function chimney(s, top) {
+  return place(s.x + s.w - CHIMNEY.inset, top + CHIMNEY.height / 2, s.y + CHIMNEY.inset,
+    CHIMNEY.width, CHIMNEY.height, CHIMNEY.width, COLORS.chimney);
+}
+
+const WASTE_BUILDERS = Object.freeze({
+  [GENRE.LANDFILL](s, base) {
+    const { p, top } = slab(s, base, DUMP.mound, COLORS.landfill);
+    return [[SHAPES.SLAB, p], ...dumpBoxes(s, top).map((b) => [SHAPES.BLOCK, b])];
+  },
+  [GENRE.INCINERATOR](s, base) {
+    const { p, top } = boxOn(s, base, WASTE_BODY_HEIGHT, COLORS.incinerator);
+    return [[SHAPES.BLOCK, p], [SHAPES.BLOCK, chimney(s, top)]];
+  },
+  [GENRE.RECYCLING](s, base) {
+    return [[SHAPES.BLOCK, boxOn(s, base, SHED_HEIGHT, COLORS.shed).p]];
+  },
+  [GENRE.WASTE_TO_ENERGY](s, base) {
+    const body = boxOn(s, base, WASTE_BODY_HEIGHT, COLORS.plant);
+    const roof = slab(s, body.top, ROOF_HEIGHT, COLORS.roof);
+    return [[SHAPES.BLOCK, body.p], [SHAPES.SLAB, roof.p], [SHAPES.BLOCK, chimney(s, roof.top)]];
+  },
+});
+
 // Any genre without a builder: a grey block over the footprint.
 function block(s, base) {
   return [[SHAPES.BLOCK, place(cx(s), base + BLOCK_HEIGHT / 2, cz(s), s.w, BLOCK_HEIGHT, s.h, COLORS.block)]];
 }
 
+const BUILDER_OF = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS });
+
 export function partsOf(s, base) {
-  const build = BUILDERS[s.genre] ?? block;
+  const build = BUILDER_OF[s.genre] ?? block;
   return build(s, base);
 }
 
