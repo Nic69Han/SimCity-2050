@@ -5,11 +5,18 @@
 // A record is 6 integers [genre, x, y, width, height, state]: x, y the top-left tile, state bit 0
 // powered, bit 1 watered (not drawn yet). World X = tile x, Z = tile y, Y = height (view3d-model.js).
 // Genres: 1 urban park (flat slab with trees), 2 public square (flat slab with a fountain),
-// 3 monument (stone base with a tall obelisk); any other genre is a plain grey block.
+// 3 monument (stone base with a tall obelisk), 30-36 public services (docs/game-design-v09.md: school,
+// college, library with columns, museum, clinic and hospital with a red cross, prison with a low wall);
+// any other genre is a plain grey block.
+// Only the kinds below are meshes: the thin pieces of a building (roof, walls, columns, cross arms) are
+// "slab" boxes, its bodies are "block" boxes.
 import { tileCentreY } from "./view3d-model.js";
 
 export const RECORD = 6;
-export const GENRE = Object.freeze({ PARK: 1, SQUARE: 2, MONUMENT: 3 });
+export const GENRE = Object.freeze({
+  PARK: 1, SQUARE: 2, MONUMENT: 3,
+  SCHOOL: 30, COLLEGE: 31, LIBRARY: 32, MUSEUM: 33, CLINIC: 34, HOSPITAL: 35, PRISON: 36,
+});
 export const SHAPES = Object.freeze({ SLAB: "slab", TREE: "tree", FOUNTAIN: "fountain", OBELISK: "obelisk", BLOCK: "block" });
 export const KINDS = Object.freeze(Object.values(SHAPES));
 
@@ -26,9 +33,20 @@ export const FOUNTAIN = Object.freeze({ radius: 0.15, height: 0.25 });
 export const MONUMENT = Object.freeze({ base: 0.15, width: 0.4, height: 2.5 });
 export const BLOCK_HEIGHT = 0.8;
 
+// Services (genres 30-36). Heights in world units (a tile is 1 unit wide).
+export const SCHOOL = Object.freeze({ height: 0.9, roof: 0.08 }); // beige block, red roof slab
+export const COLLEGE = Object.freeze({ height: 1.5 }); // larger beige block
+export const LIBRARY = Object.freeze({ height: 0.8, inset: 0.1, columnsPerTile: 2, column: 0.12 });
+export const MUSEUM = Object.freeze({ height: 0.6 }); // wide white block
+export const CLINIC = Object.freeze({ height: 0.7, cross: Object.freeze({ arm: 0.5, thick: 0.16, height: 0.04 }) });
+export const HOSPITAL = Object.freeze({ height: 1.8, cross: Object.freeze({ arm: 1.0, thick: 0.3, height: 0.05 }) });
+export const PRISON = Object.freeze({ height: 0.9, inset: 0.25, wall: Object.freeze({ height: 0.35, thick: 0.1 }) });
+
 export const COLORS = Object.freeze({
   park: "#5cb85c", tree: "#1b5e20", square: "#e8dcc0", fountain: "#90caf9",
   stone: "#8a8f96", obelisk: "#b8bec6", block: "#9e9e9e",
+  beige: "#e6d3a8", roof: "#c62828", white: "#f5f5f0", libraryStone: "#a59f94", column: "#d8d3c8",
+  cross: "#d32f2f", prison: "#4f5358", prisonWall: "#7a7e85",
 });
 
 // Colour of a hex string as 0..1 components (the instance colour format).
@@ -132,8 +150,85 @@ function block(s, base) {
   return [[SHAPES.BLOCK, place(cx(s), base + BLOCK_HEIGHT / 2, cz(s), s.w, BLOCK_HEIGHT, s.h, COLORS.block)]];
 }
 
+// A box over the footprint, standing on `base`, inset from its edges: the placement and the height of its top.
+function body(s, base, height, hex, inset = 0) {
+  const w = s.w - 2 * inset, d = s.h - 2 * inset;
+  return { p: place(cx(s), base + height / 2, cz(s), w, height, d, hex), top: base + height };
+}
+
+// Two thin boxes crossing over the footprint, standing on `top`: the red cross of a clinic or hospital.
+function crossOn(s, top, { arm, thick, height }) {
+  const x = cx(s), z = cz(s), y = top + height / 2;
+  return [
+    [SHAPES.SLAB, place(x, y, z, thick, height, arm, COLORS.cross)],
+    [SHAPES.SLAB, place(x, y, z, arm, height, thick, COLORS.cross)],
+  ];
+}
+
+// Columns along the front (north) edge: COLUMNS_PER_TILE per tile of width, `height` tall. The count is
+// bounded by the footprint width, which is clamped to MAX_SIDE.
+function columns(s, base, height) {
+  const w = clampSide(s.w);
+  const n = w * LIBRARY.columnsPerTile;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const x = s.x + ((i + 0.5) * w) / n;
+    const z = s.y + LIBRARY.column / 2;
+    out.push([SHAPES.SLAB, place(x, base + height / 2, z, LIBRARY.column, height, LIBRARY.column, COLORS.column)]);
+  }
+  return out;
+}
+
+// A low wall of thin boxes around the footprint, standing on `base`.
+function walls(s, base) {
+  const { height, thick } = PRISON.wall;
+  const y = base + height / 2;
+  const hex = COLORS.prisonWall;
+  return [
+    [SHAPES.SLAB, place(cx(s), y, s.y + thick / 2, s.w, height, thick, hex)],
+    [SHAPES.SLAB, place(cx(s), y, s.y + s.h - thick / 2, s.w, height, thick, hex)],
+    [SHAPES.SLAB, place(s.x + thick / 2, y, cz(s), thick, height, s.h, hex)],
+    [SHAPES.SLAB, place(s.x + s.w - thick / 2, y, cz(s), thick, height, s.h, hex)],
+  ];
+}
+
+// The services (genres 30-36): a beige school with a red roof slab, a larger beige college, a stone library
+// with columns, a wide white museum, a white clinic and a white hospital with a red cross, a dark prison
+// with a low wall around its yard.
+const SERVICE_BUILDERS = Object.freeze({
+  [GENRE.SCHOOL](s, base) {
+    const b = body(s, base, SCHOOL.height, COLORS.beige);
+    const roof = body(s, b.top, SCHOOL.roof, COLORS.roof);
+    return [[SHAPES.BLOCK, b.p], [SHAPES.SLAB, roof.p]];
+  },
+  [GENRE.COLLEGE](s, base) {
+    return [[SHAPES.BLOCK, body(s, base, COLLEGE.height, COLORS.beige).p]];
+  },
+  [GENRE.LIBRARY](s, base) {
+    const b = body(s, base, LIBRARY.height, COLORS.libraryStone, LIBRARY.inset);
+    return [[SHAPES.BLOCK, b.p], ...columns(s, base, LIBRARY.height)];
+  },
+  [GENRE.MUSEUM](s, base) {
+    return [[SHAPES.BLOCK, body(s, base, MUSEUM.height, COLORS.white).p]];
+  },
+  [GENRE.CLINIC](s, base) {
+    const b = body(s, base, CLINIC.height, COLORS.white);
+    return [[SHAPES.BLOCK, b.p], ...crossOn(s, b.top, CLINIC.cross)];
+  },
+  [GENRE.HOSPITAL](s, base) {
+    const b = body(s, base, HOSPITAL.height, COLORS.white);
+    return [[SHAPES.BLOCK, b.p], ...crossOn(s, b.top, HOSPITAL.cross)];
+  },
+  [GENRE.PRISON](s, base) {
+    const b = body(s, base, PRISON.height, COLORS.prison, PRISON.inset);
+    return [[SHAPES.BLOCK, b.p], ...walls(s, base)];
+  },
+});
+
+const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...SERVICE_BUILDERS });
+
 export function partsOf(s, base) {
-  const build = BUILDERS[s.genre] ?? block;
+  const build = BUILDERS_ALL[s.genre] ?? block;
   return build(s, base);
 }
 
