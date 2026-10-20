@@ -47,9 +47,14 @@ fn square(cx: i32, cy: i32, r: i32, width: i32, height: i32) -> Vec<u32> {
     out
 }
 
+/// Tiles one [`deposit`] looks at at most: the nine of the zone, then the square of
+/// [`SPILL_RADIUS`].
+pub const DEPOSIT_TILES: u64 =
+    9 + ((2 * SPILL_RADIUS as u64) + 1) * ((2 * SPILL_RADIUS as u64) + 1);
+
 /// Puts `amount` units on the map for the zone centred on `(cx, cy)`: evenly on its own nine
-/// tiles, then on the square of [`SPILL_RADIUS`] around it, then on the first tiles of the map
-/// with room. Returns the units that no tile could hold. Bounded by the squares and the map.
+/// tiles, then on the square of [`SPILL_RADIUS`] around it. Returns the overflow, which the
+/// month hands to one [`sweep`] for all the zones. Bounded by [`DEPOSIT_TILES`].
 pub fn deposit(
     state: &mut WasteState,
     (cx, cy): (i32, i32),
@@ -60,15 +65,41 @@ pub fn deposit(
     for r in [1, SPILL_RADIUS] {
         left = spread_evenly(state, &square(cx, cy, r, width, height), left);
     }
-    for index in 0..(width * height) as u32 {
-        if left == 0 {
+    left
+}
+
+/// What one [`sweep`] did.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Sweep {
+    /// Units no tile could hold.
+    pub left: i64,
+    /// Tiles looked at.
+    pub visits: u64,
+}
+
+/// Puts `amount` units on the first tiles of the map with room, from tile 0 upward; returns
+/// what did not fit and the tiles visited. One pass over the map at most (`size` tiles), and
+/// none at all when the map is full.
+pub fn sweep(state: &mut WasteState, amount: i64, size: (i32, i32)) -> Sweep {
+    let tiles = (size.0 * size.1).max(0) as u32;
+    let full = i64::from(tiles) * i64::from(TILE_CAP);
+    let mut out = Sweep {
+        left: amount,
+        visits: 0,
+    };
+    if amount <= 0 || state.pile_total() >= full {
+        return out;
+    }
+    for index in 0..tiles {
+        if out.left == 0 {
             break;
         }
-        let put = left.min(room(state, index));
+        out.visits += 1;
+        let put = out.left.min(room(state, index));
         add(state, index, put);
-        left -= put;
+        out.left -= put;
     }
-    left
+    out
 }
 
 #[cfg(test)]
@@ -114,16 +145,25 @@ mod tests {
     }
 
     #[test]
-    fn past_the_square_it_goes_anywhere_and_a_full_map_loses_the_rest() {
+    fn past_the_square_the_overflow_is_returned_and_a_sweep_places_it() {
         let mut s = WasteState::default();
         let square49 = 49 * i64::from(TILE_CAP);
-        assert_eq!(deposit(&mut s, (5, 5), square49 + 10, SIZE), 0);
+        assert_eq!(deposit(&mut s, (5, 5), square49 + 10, SIZE), 10);
+        assert_eq!(s.pile_total(), square49);
+        let sw = sweep(&mut s, 10, SIZE);
+        assert_eq!(sw.left, 0);
         assert_eq!(s.pile_total(), square49 + 10);
+    }
+
+    #[test]
+    fn a_sweep_on_a_full_map_loses_the_rest_without_looking_at_a_tile() {
         let everything = i64::from(SIZE.0 * SIZE.1) * i64::from(TILE_CAP);
         let mut s = WasteState::default();
-        assert_eq!(deposit(&mut s, (0, 0), everything + 77, SIZE), 77);
+        let sw = sweep(&mut s, everything + 77, SIZE);
+        assert_eq!(sw.left, 77);
         assert_eq!(s.pile_total(), everything);
-        assert_eq!(deposit(&mut s, (3, 3), 5, SIZE), 5);
+        assert!(sw.visits <= (SIZE.0 * SIZE.1) as u64);
+        assert_eq!(sweep(&mut s, 5, SIZE), Sweep { left: 5, visits: 0 });
     }
 
     #[test]

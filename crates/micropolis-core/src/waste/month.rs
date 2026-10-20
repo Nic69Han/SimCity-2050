@@ -1,7 +1,7 @@
 //! The monthly treatment: production, recycling, burning, burying, export, piling.
 
 use super::production::{recycled, Zone};
-use super::spread::deposit;
+use super::spread::{deposit, sweep, DEPOSIT_TILES};
 use super::treatment::{export, Pool};
 use super::{
     WasteReport, BACKLOG_DECAY, GENRE_INCINERATOR, GENRE_LANDFILL, GENRE_RECYCLING,
@@ -23,12 +23,22 @@ fn export_deals(sim: &Simulation) -> Vec<(i64, i64)> {
         .collect()
 }
 
+/// What [`pile_up`] did.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Piled {
+    /// Units no tile could hold.
+    pub lost: i64,
+    /// Tiles looked at in all: at most `zones x DEPOSIT_TILES + map tiles`.
+    pub visits: u64,
+}
+
 /// Gives each zone its share of `left` units, in proportion to what it makes (`weights`); the
-/// shares add up to `left` exactly. Returns the units no tile could hold.
-fn pile_up(sim: &mut Simulation, zones: &[Zone], weights: &[i64], left: i64) -> i64 {
+/// shares add up to `left` exactly. Each zone spreads its own around it; the overflow of all of
+/// them is placed by one sweep of the map.
+pub(crate) fn pile_up(sim: &mut Simulation, zones: &[Zone], weights: &[i64], left: i64) -> Piled {
     let total: i64 = weights.iter().sum();
     let size = sim.world_size();
-    let (mut cumulated, mut given, mut lost) = (0, 0, 0);
+    let (mut cumulated, mut given, mut overflow, mut visits) = (0, 0, 0, 0);
     for (zone, weight) in zones.iter().zip(weights) {
         cumulated += weight;
         let upto = if total == 0 {
@@ -40,10 +50,15 @@ fn pile_up(sim: &mut Simulation, zones: &[Zone], weights: &[i64], left: i64) -> 
         given = upto;
         if share > 0 {
             let state = &mut sim.extensions_mut().waste_state;
-            lost += deposit(state, (zone.x, zone.y), share, size);
+            overflow += deposit(state, (zone.x, zone.y), share, size);
+            visits += DEPOSIT_TILES;
         }
     }
-    lost
+    let swept = sweep(&mut sim.extensions_mut().waste_state, overflow, size);
+    Piled {
+        lost: swept.left,
+        visits: visits + swept.visits,
+    }
 }
 
 /// Hook body of `ext_monthly_balance`: one month of garbage. Returns the dollars paid to the
@@ -85,7 +100,7 @@ pub(crate) fn monthly_balance(sim: &mut Simulation) -> i32 {
         let state = &mut sim.extensions_mut().waste_state;
         state.set_pile(index, units - eaten as u8);
     }
-    let lost = pile_up(sim, &zones, &kept, left);
+    let lost = pile_up(sim, &zones, &kept, left).lost;
     for (site, buried) in landfills.iter().zip(&pool.buried) {
         let state = &mut sim.extensions_mut().waste_state;
         let fill = state.fill_at(site.x, site.y);
@@ -101,4 +116,41 @@ pub(crate) fn monthly_balance(sim: &mut Simulation) -> i32 {
         energised: pool.energised,
     };
     cost.clamp(0, i64::from(i32::MAX)) as i32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::position::Position;
+    use crate::tile_chars::DIRT;
+    use crate::waste::TILE_CAP;
+
+    #[test]
+    fn a_full_map_keeps_conservation_and_the_visits_stay_bounded() {
+        let (w, h) = (60, 50);
+        let mut sim = Simulation::new(w, h);
+        sim.tiles.fill(DIRT);
+        sim.total_funds = 100_000_000;
+        sim.set_structure_rules(true);
+        sim.set_waste_rules(true);
+        let mut zones = Vec::new();
+        for i in 0..40 {
+            let (x, y) = (3 + 4 * (i % 10), 3 + 4 * (i / 10));
+            sim.res_plop(Position::new(x, y), 3, 0);
+            zones.push(Zone { x, y, base: 10 });
+        }
+        let full = i64::from(w * h) * i64::from(TILE_CAP);
+        let weights = vec![10; zones.len()];
+        let first = pile_up(&mut sim, &zones, &weights, full + 1000);
+        assert_eq!(first.lost, 1000);
+        assert_eq!(sim.extensions().waste_state.pile_total(), full);
+        // a month on a full map: everything is lost, with no tile looked at beyond the zones'
+        let again = pile_up(&mut sim, &zones, &weights, 5000);
+        assert_eq!(again.lost, 5000);
+        assert_eq!(sim.extensions().waste_state.pile_total(), full);
+        let bound = zones.len() as u64 * DEPOSIT_TILES + u64::from((w * h) as u32);
+        assert!(first.visits <= bound, "{} > {bound}", first.visits);
+        assert!(again.visits <= bound, "{} > {bound}", again.visits);
+        assert_eq!(again.visits, zones.len() as u64 * DEPOSIT_TILES);
+    }
 }
