@@ -5,6 +5,7 @@
 import { DEAL_LEN } from "./deals-model.js";
 import { decodeBudget, decodeEvaluation } from "./budget-text.js";
 import { advise, SEVERITY_LABEL } from "./advisors-model.js";
+import { decodeRail } from "./agents-model.js";
 import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
 
 const HIST_MONEY = 3;
@@ -90,6 +91,9 @@ export function readSnapshot(city) {
   // transport_stats: [buses, taxis, waiting, bus_trips_month, taxi_rides_month, income_month], read with the rule only
   const tr = rules.agents ? ints(call(city, "transport_stats")) : null;
   if (tr && tr.length >= 3) s.transport = { waiting: tr[2] };
+  // rail_stats: [trains, rames, train_riders_month, metro_riders_month, rail_income_month, train_lines, metro_lines]
+  const rl = rules.agents ? ints(call(city, "rail_stats")) : null;
+  if (rl) s.rail = decodeRail(rl);
   if (hasOrdinances(city)) {
     s.ordinances = readOrdinances(city).map((o) => ({
       key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
@@ -101,9 +105,10 @@ export function readSnapshot(city) {
 
 /**
  * The cheap flags of the extended rules, read every frame: the rule switches, the ordinances in force and
- * the water and metro counters (few integers each) and the saturated road count. They change when the player
- * flips a switch, votes an ordinance, builds a pipe, a pump, a tunnel or a station, or when the traffic jams,
- * so the advice follows without waiting a month. The switches are in JSON.stringify(rules), agents included.
+ * the water and metro counters (few integers each), the saturated road count, the waiting riders and the rail
+ * riders of the month. They change when the player flips a switch, votes an ordinance, builds a pipe, a pump,
+ * a tunnel or a station, or when the traffic jams, so the advice follows without waiting a month. The switches
+ * are in JSON.stringify(rules), agents included.
  */
 export function cheapKey(city) {
   const rules = readRules(city);
@@ -116,7 +121,10 @@ export function cheapKey(city) {
   }
   if (rules.water) parts.push(ints(call(city, "water_stats"))?.join());
   if (rules.transit) parts.push(ints(call(city, "transit_stats"))?.join());
-  if (rules.agents) parts.push(ints(call(city, "agent_stats"))?.[3] ?? null, ints(call(city, "transport_stats"))?.[2] ?? null);
+  if (rules.agents) {
+    const rail = ints(call(city, "rail_stats"));
+    parts.push(ints(call(city, "agent_stats"))?.[3] ?? null, ints(call(city, "transport_stats"))?.[2] ?? null, rail?.[2] ?? null, rail?.[3] ?? null);
+  }
   if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
   return parts.join("/");
 }

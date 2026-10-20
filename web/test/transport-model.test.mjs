@@ -16,15 +16,19 @@ describe("names of the transport genres", () => {
     assert.equal(structures.nameOf(12), "Dépôt de taxis");
   });
 
+  test("genre 13 is the rail station, Gare (docs/game-design-v06.md)", () => {
+    assert.equal(structures.nameOf(13), "Gare");
+  });
+
   test("the v0.4 names are unchanged, and an unknown genre still gets its number", () => {
     assert.equal(structures.nameOf(1), "Parc urbain");
     assert.equal(structures.nameOf(3), "Monument");
-    assert.equal(structures.nameOf(13), "Bâtiment n° 13");
+    assert.equal(structures.nameOf(14), "Bâtiment n° 14");
     assert.equal(structures.nameOf(4), "Bâtiment n° 4");
   });
 
-  test("the names table lists exactly the six known genres", () => {
-    assert.deepEqual(Object.keys(structures.NAMES).map(Number), [1, 2, 3, 10, 11, 12]);
+  test("the names table lists exactly the seven known genres", () => {
+    assert.deepEqual(Object.keys(structures.NAMES).map(Number), [1, 2, 3, 10, 11, 12, 13]);
   });
 });
 

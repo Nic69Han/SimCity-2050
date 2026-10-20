@@ -2,9 +2,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  MAX_VEHICLES_3D, READ_INTERVAL, SIZES, buildPlacements, decodeVehicles, interpolate, kindColor,
-  shouldRead, sizeOf, writeVehicleMatrix, yawFor,
+  MAX_VEHICLES_3D, METRO_DEPTH, METRO_KIND, READ_INTERVAL, SIZES, buildPlacements, centreYOf, decodeVehicles,
+  interpolate, kindColor, shouldRead, sizeOf, writeVehicleMatrix, yawFor,
 } from "../view3d-vehicles-model.js";
+import { TUNNEL_DEPTH } from "../view3d-underground-model.js";
 import { cornerAltitudes, tileCentreY } from "../view3d-model.js";
 
 const W = 6, H = 5;
@@ -169,7 +170,7 @@ test("placements: the box stands on the tile ground, carries its yaw and colour"
 
 test("placements: each box has the size of its kind and stands on half of its own height", () => {
   const corners = flat();
-  const vehicles = [0, 1, 2, 3, 4, 99].map((kind, i) => ({ id: i, kind, dir: 0, x: 1.5, y: 1.5 }));
+  const vehicles = [0, 1, 2, 3, 99].map((kind, i) => ({ id: i, kind, dir: 0, x: 1.5, y: 1.5 }));
   const { items } = buildPlacements({ w: W, h: H, corners, vehicles });
   const ground = tileCentreY(corners, H, 1, 1);
   items.forEach((p, i) => {
@@ -177,7 +178,47 @@ test("placements: each box has the size of its kind and stands on half of its ow
     assert.deepEqual(p.size, size, `kind ${vehicles[i].kind}`);
     assert.ok(Math.abs(p.y - (ground + size.height / 2)) < 1e-9, `height of kind ${vehicles[i].kind}`);
   });
-  assert.deepEqual(items[5].size, SIZES[0], "an unknown kind is a car");
+  assert.deepEqual(items[4].size, SIZES[0], "an unknown kind is a car");
+});
+
+test("metro depth: a rame (kind 4) is as deep as a tunnel, the same constant as the 3D underground", () => {
+  assert.equal(METRO_KIND, 4);
+  assert.equal(METRO_DEPTH, TUNNEL_DEPTH);
+  assert.ok(METRO_DEPTH > 0, "under the ground");
+});
+
+test("centreYOf: a rame is METRO_DEPTH under the ground whatever its size; other kinds stand on the ground", () => {
+  const ground = 2.5;
+  for (const size of [SIZES[0], SIZES[4]]) {
+    assert.ok(Math.abs(centreYOf(METRO_KIND, ground, size) - (ground - METRO_DEPTH)) < 1e-12);
+  }
+  for (const kind of [0, 1, 2, 3, 99]) {
+    assert.ok(Math.abs(centreYOf(kind, ground, sizeOf(kind)) - (ground + sizeOf(kind).height / 2)) < 1e-12, `kind ${kind}`);
+  }
+});
+
+test("placements: a rame is centred under the tile ground and its whole box stays under it", () => {
+  const corners = flat(12);
+  const ground = tileCentreY(corners, H, 2, 3);
+  const { items } = buildPlacements({
+    w: W, h: H, corners, vehicles: [{ id: 1, kind: METRO_KIND, dir: 1, x: 2.5, y: 3.5 }],
+  });
+  const p = items[0];
+  assert.ok(Math.abs(p.y - (ground - METRO_DEPTH)) < 1e-9, "centre at the tunnel depth");
+  assert.ok(p.y + p.size.height / 2 < ground, "the top of the box is still under the ground");
+  assert.deepEqual(p.size, SIZES[4]);
+  assert.deepEqual(p.rgb, kindColor(METRO_KIND));
+});
+
+test("placements: a train (kind 3) stays on the ground like a car, and a rame sits below the car of its tile", () => {
+  const corners = flat(7);
+  const ground = tileCentreY(corners, H, 0, 0);
+  const { items } = buildPlacements({
+    w: W, h: H, corners,
+    vehicles: [{ id: 1, kind: 3, dir: 0, x: 0.5, y: 0.5 }, { id: 2, kind: 0, dir: 0, x: 0.5, y: 0.5 }],
+  });
+  assert.ok(Math.abs(items[0].y - (ground + SIZES[3].height / 2)) < 1e-9, "train on the ground");
+  assert.ok(Math.abs(items[1].y - (ground + SIZES[0].height / 2)) < 1e-9, "car on the ground");
 });
 
 test("placements: a position outside the grid still uses a ground tile of the grid", () => {

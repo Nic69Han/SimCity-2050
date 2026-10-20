@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as model from "../structures-model.js";
 import * as tools from "../tools-structures.js";
 import { extraCatalog, extraCalls, extraBlockedReason, extraLabel, isExtraTool } from "../extra-tools.js";
-import { MockCity, MOCK_STRUCTURES, RESULT } from "./mock-engine.mjs";
+import { MockCity, MOCK_STRUCTURES, MOCK_TRANSIT_STRUCTURES, MOCK_RAIL_STRUCTURES, RESULT } from "./mock-engine.mjs";
 
 // A mock engine with the buildings (the option of the mock: without it there are none).
 const withBuildings = (seed = 1, options = {}) => new MockCity(seed, { ...options, structures: true });
@@ -289,5 +289,62 @@ describe("the mock engine's buildings", () => {
     city.place_structure(2, 20, 20);
     city.place_structure(3, 25, 25);
     assert.equal(city.structures_upkeep(), 5 + 2 + 20);
+  });
+});
+
+// ---- the rail genre (docs/game-design-v06.md): genre 13 is the station, Gare ----
+
+describe("genre 13 is the station, Gare", () => {
+  test("nameOf(13) is Gare, and the v0.5 names are unchanged", () => {
+    assert.equal(model.nameOf(13), "Gare");
+    assert.equal(model.nameOf(12), "Dépôt de taxis");
+    assert.equal(model.nameOf(1), "Parc urbain");
+  });
+
+  test("a genre past the rail stays a number", () => {
+    assert.equal(model.nameOf(14), "Bâtiment n° 14");
+  });
+});
+
+describe("the mock catalog gets the station only with the rail option", () => {
+  const genres = (city) => model.decodeCatalog(city.structure_catalog()).map((r) => r.genre);
+
+  test("structures alone: the v0.4 catalog, no station", () => {
+    assert.deepEqual(genres(withBuildings(1)), MOCK_STRUCTURES.map((m) => m.genre));
+    assert.deepEqual(genres(withBuildings(1)), [1, 2, 3]);
+  });
+
+  test("structures and rail: the station, genre 13, 2x2, named Gare", () => {
+    const city = new MockCity(1, { structures: true, rail: true });
+    const decoded = model.decodeCatalog(city.structure_catalog());
+    assert.deepEqual(decoded.map((r) => r.genre), [1, 2, 3, 13]);
+    const station = decoded.find((r) => r.genre === 13);
+    assert.equal(station.width, 2);
+    assert.equal(station.height, 2);
+    assert.equal(station.cost, MOCK_RAIL_STRUCTURES[0].cost);
+    assert.equal(model.nameOf(station.genre), "Gare");
+  });
+
+  test("structures, transit and rail: the transit genres come before the station", () => {
+    const g = genres(new MockCity(1, { structures: true, transit: true, rail: true }));
+    assert.deepEqual(g, [...MOCK_STRUCTURES, ...MOCK_TRANSIT_STRUCTURES, ...MOCK_RAIL_STRUCTURES].map((m) => m.genre));
+  });
+
+  test("the rail option alone adds no catalog: the buildings are not there", () => {
+    assert.equal(new MockCity(1, { rail: true }).structure_catalog, undefined);
+  });
+
+  test("the station can be placed where a 2x2 building fits", () => {
+    const city = new MockCity(1, { structures: true, rail: true, funds: 100000 });
+    city.set_structure_rules(true);
+    let placed = null;
+    for (let x = 1; x < 39 && !placed; x++) {
+      for (let y = 1; y < 29 && !placed; y++) {
+        if (city.place_structure(13, x, y) === RESULT.OK) placed = [x, y];
+      }
+    }
+    assert.ok(placed, "a free spot exists on the mock map");
+    const [st] = city.structures();
+    assert.equal(st, 13);
   });
 });

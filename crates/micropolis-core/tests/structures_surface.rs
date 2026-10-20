@@ -7,7 +7,7 @@ use micropolis_core::structures::{
     is_surface, kind_of, CATALOG, GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_MONUMENT, GENRE_PARK,
     GENRE_PLAZA, GENRE_TAXI_DEPOT, LEGACY_SURFACE_LAST, SURFACE_BITS, SURFACE_TILE,
 };
-use micropolis_core::tile::{LOMASK, PWRBIT};
+use micropolis_core::tile::{LOMASK, PWRBIT, RAILBASE};
 use micropolis_core::tile_chars::{DIRT, ROADS};
 use micropolis_core::tool::{EditingTool, ToolResult};
 
@@ -31,6 +31,7 @@ fn every_genre_leaves_the_same_surface_tile() {
     for (i, k) in CATALOG.iter().enumerate() {
         let (x, y) = (5 + 6 * i as i32, 20);
         s.set_tile(x, y - 1, ROADS); // a road for the bus stop
+        s.set_tile(x - 1, y, RAILBASE); // a rail for the gare
         assert_eq!(
             s.place_structure(k.genre, x, y),
             ToolResult::Ok,

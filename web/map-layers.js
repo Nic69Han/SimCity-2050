@@ -9,10 +9,12 @@ import { WATER_LAYER } from "./map-layer-water.js";
 import { TRANSIT_LAYER } from "./map-layer-transit.js";
 import { STRUCTURES_LAYER } from "./map-layer-structures.js";
 import { DENSITIES_LAYER } from "./map-layer-densities.js";
+import { WASTE_LAYER } from "./map-layer-waste.js";
+import { COVERAGE_LAYER } from "./map-layer-coverage.js";
 import { VEHICLES_LAYER } from "./map-layer-vehicles.js";
 
 // The layers of the page, in drawing order (a workstream fills its own module).
-export const MAP_LAYERS = Object.freeze([DENSITIES_LAYER, WATER_LAYER, TRANSIT_LAYER, STRUCTURES_LAYER, VEHICLES_LAYER]);
+export const MAP_LAYERS = Object.freeze([DENSITIES_LAYER, COVERAGE_LAYER, WASTE_LAYER, WATER_LAYER, TRANSIT_LAYER, STRUCTURES_LAYER, VEHICLES_LAYER]);
 
 // The layer painter of a renderer: `plan(city)` says which layers draw now and whether the tiles
 // must be repainted in full first (a layer draws over them, so a dirty-rectangle repaint would

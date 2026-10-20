@@ -57,11 +57,11 @@ describe("wasm extended buildings", { skip: SKIP }, () => {
     assert.equal(city.funds(), funds);
   });
 
-  test("the catalog lists the genres of the milestones (v0.4: 1-3, v0.5: 10-12)", () => {
+  test("the catalog lists the genres of the milestones (v0.4: 1-3, v0.5: 10-12, v0.6: 13)", () => {
     const cat = catalogOf(new City(1));
     assert.deepEqual(
       cat.map((k) => [k.genre, k.width, k.height]),
-      [[PARK, 2, 2], [PLAZA, 1, 1], [MONUMENT, 3, 3], [10, 1, 1], [11, 2, 2], [12, 2, 2]],
+      [[PARK, 2, 2], [PLAZA, 1, 1], [MONUMENT, 3, 3], [10, 1, 1], [11, 2, 2], [12, 2, 2], [13, 2, 2]],
     );
     for (const k of cat) {
       assert.ok(k.cost > 0 && k.upkeep >= 0 && k.radius >= 0);

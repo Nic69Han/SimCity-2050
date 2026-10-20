@@ -1182,6 +1182,11 @@ impl Simulation {
             if self.extensions_active() && self.structure_rules() {
                 self.repair_structures();
             }
+            // Density rules: a destroyed zone loses its record at once, so a classic zone
+            // built on the same centre is dense.
+            if self.extensions_active() && self.density_rules() {
+                self.repair_densities();
+            }
         }
         result
     }
