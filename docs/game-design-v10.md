@@ -42,3 +42,28 @@ centrales est sauvegardé (nouveau morceau 10). Actif seulement si `structures` 
 Comparaisons C++ identiques ; puissance ajoutée et retirée testée ; vieillissement (perte à 80 %, arrêt en fin de vie)
 testé ; pollution par genre testée ; achat aux voisins testé (conservation de l'électricité) ; sauvegarde aller-retour ;
 e2e : activer l'énergie, poser une éolienne, voir la production monter ; tous les tests verts ; relecture.
+
+## Précisions du contrat (fixées par la relecture avant les chantiers)
+* **Chiffres de départ** (constantes nommées, ajustables par le chantier cœur et documentées dans la section livrée) :
+  coût, entretien, puissance (tuiles alimentées, comme `COAL_POWER_STRENGTH`), pollution (intensité, rayon) et durée
+  de vie en années : gaz 3×3 (4 000, 40, 400, 30/3, 40), pétrole 3×3 (3 000, 50, 500, 50/4, 40), éolienne 1×1 (250,
+  2, 30, 0, 20), solaire 3×3 (6 000, 20, 250, 0, 30), hydroélectrique 2×2 (3 500, 30, 300, 0, 60), micro-ondes 3×3
+  (15 000, 100, 2 000, 0, 50), fusion 4×4 (40 000, 150, 3 000, 0, 80) ; charbon 50 ans, nucléaire 50 ans.
+* **Âge** : un mois de jeu = un bilan mensuel (`ext_monthly_balance`), comme les déchets. Une centrale posée a l'âge 0.
+  Les centrales classiques (charbon, nucléaire) reçoivent un âge seulement règle allumée (clé = tuile centrale) ;
+  leur puissance classique est réduite par le même crochet `ext_power_sources` (valeur négative autorisée, résultat
+  jamais sous 0). Puissance actuelle : 100 % jusqu'à 80 % de la vie, puis décroissance linéaire jusqu'à 50 % à la
+  fin de vie ; au-delà, 0 (arrêtée). Démolir et reconstruire remet l'âge à 0.
+* **Micro-ondes** : pas d'accident dans ce jalon (déterminisme et simplicité) ; noté comme limite connue.
+* **Achat d'électricité** : ressource 3 (`RESOURCE_POWER_BUY`), offres 12 à 15 (nord, est, sud, ouest), indices fixes ;
+  `deal_offers()` renvoie 16 enregistrements quand la règle de l'énergie est active (les offres 8 à 11 restent
+  celles des déchets et sont refusées si les déchets sont éteints, comme aujourd'hui). La ville **paie** (prix et
+  revenu affichés négatifs par l'adaptateur, comme les déchets) ; la quantité achetée s'ajoute à la puissance du
+  réseau par `ext_power_sources`. Aucune rupture d'accord ; annulation par `cancel_deal` ou en éteignant la règle.
+* **Sauvegarde** : morceau 10 (`CHUNK_ENERGY`, `CHUNK_MAX_TAG` = 10) : nombre d'enregistrements (2 octets) puis par
+  centrale x, y (2+2), âge en mois (2), triés, sans doublon ; écrit seulement s'il n'est pas vide. Bit 1 du second
+  octet des règles (`RULES2_ENERGY`). Règle éteinte et rien de stocké : fichier identique octet pour octet.
+* **Éteindre la règle** : retire les centrales 40-46 (sans remboursement), oublie les âges et les achats.
+* `energy_stats()` : production = puissance totale du réseau (tuiles), consommation = tuiles demandées (celles du
+  calcul classique), achetée = puissance achetée, centrales = toutes (classiques comprises), fin de vie = celles
+  au-delà de 80 %, pollution = somme des intensités des centrales en marche.
