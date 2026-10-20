@@ -5,6 +5,8 @@
 // The engine's statistics (City.service_stats): Int32Array [eq, life, students, school_places, patients,
 // care_places, inmates, prison_places, education_pct, health_pct], see FIELDS below.
 
+import { COVERAGE_KIND } from "./map-layer-coverage-model.js";
+
 // The engine methods of the public services. Without all of them there is no services panel.
 export const METHODS = Object.freeze(["service_rules", "set_service_rules", "service_stats"]);
 
@@ -18,12 +20,13 @@ export const STAT_COUNT = FIELDS.length;
 export const MAX_PERCENT = 100;
 
 // The coverage views of the panel: the value of the option (its key), the coverage kind sent to
-// setCoverageView (the key, or null for none) and the French label. The key "" is «Aucune».
+// setCoverageView (the numeric kind of the engine's contract, or null for none) and the French label.
+// The key "" is «Aucune».
 export const VIEWS = Object.freeze([
-  { key: "", label: "Aucune" },
-  { key: "education", label: "Éducation" },
-  { key: "health", label: "Santé" },
-  { key: "security", label: "Sécurité" },
+  { key: "", label: "Aucune", kind: null },
+  { key: "education", label: "Éducation", kind: COVERAGE_KIND.EDUCATION },
+  { key: "health", label: "Santé", kind: COVERAGE_KIND.HEALTH },
+  { key: "security", label: "Sécurité", kind: COVERAGE_KIND.SAFETY },
 ]);
 
 // Why the rule is off or on, as the note under the statistics (French).
@@ -86,8 +89,8 @@ export function noteText(on) {
   return on ? RULE_ON_NOTE : RULE_OFF_NOTE;
 }
 
-/** The coverage kind of a select value: "education", "health", "security", or null for «Aucune» or an unknown key. */
+/** The coverage kind (0 education, 1 health, 2 security) of a select value; null for «Aucune» or an unknown key. */
 export function viewKind(key) {
   const v = VIEWS.find((x) => x.key === key);
-  return v && v.key !== "" ? v.key : null;
+  return v ? v.kind : null;
 }

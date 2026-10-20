@@ -109,13 +109,24 @@ describe("texts", () => {
 });
 
 describe("viewKind", () => {
-  test("a view key gives its coverage kind; the empty key and unknown keys give null", () => {
-    assert.equal(M.viewKind("education"), "education");
-    assert.equal(M.viewKind("health"), "health");
-    assert.equal(M.viewKind("security"), "security");
+  test("a view key gives the numeric kind of the engine contract: 0 education, 1 health, 2 security", () => {
+    assert.equal(M.viewKind("education"), 0);
+    assert.equal(M.viewKind("health"), 1);
+    assert.equal(M.viewKind("security"), 2);
+  });
+
+  test("«Aucune» and unknown or missing keys give null", () => {
     assert.equal(M.viewKind(""), null);
     assert.equal(M.viewKind("zoning"), null);
+    assert.equal(M.viewKind("Education"), null, "keys are exact");
     assert.equal(M.viewKind(undefined), null);
+  });
+
+  test("every view kind is null or a valid coverage kind (0..2), as setCoverageView takes", () => {
+    for (const v of M.VIEWS) {
+      assert.ok(v.kind === null || [0, 1, 2].includes(v.kind), `view "${v.key}"`);
+    }
+    assert.deepEqual(M.VIEWS.map((v) => v.kind), [null, 0, 1, 2]);
   });
 });
 
