@@ -49,7 +49,11 @@ aller-retour ; e2e : activer les services, poser une école, voir la couche édu
 Code : `crates/micropolis-core/src/services.rs` (constantes, catalogue des services, état sauvegardé),
 `services/rules.rs` (interrupteur, passe mensuelle, statistiques, couches), `services/report.rs` (mesure de la
 couverture), `services/effects.rs` (les quatre crochets), `crates/micropolis-wasm/src/services.rs` (adaptateur).
-Tests : `tests/services_rules.rs`, `tests/services_save.rs`, tests unitaires des modules, tests wasm.
+Deux fichiers hors de la liste initiale, modifiés et **acceptés par le lead** (une dizaine de lignes) :
+`structures/rules.rs` (`place_structure` refuse les genres 30-36 règle éteinte ; `repair_structures` retire les
+bâtiments de service orphelins via `is_orphan_service`) et `densities/rules.rs` (`zone_population` passe de privé
+à `pub(crate)`). `place_structure` étant l'unique chemin de pose, la barrière ne peut pas être ailleurs.
+Tests : `tests/services_rules.rs`, `tests/services_save.rs`, tests unitaires des modules, tests wasm (`web/test/wasm-services.test.mjs`, `crates/micropolis-wasm/src/services.rs`).
 
 * **Interrupteur** : `Extensions::services` = bit 0 du **second octet** du morceau de règles (tag 1), qui devient
   facultatif : un morceau d'un octet se lit comme avant ; deux octets ne s'écrivent que si un bit du second est
