@@ -45,3 +45,42 @@ Comparaisons C++ identiques ; conservation des déchets (produits = traités + r
 par mois) ; plafonds testés ; décharge pleine qui ne prend plus rien ; électricité de la valorisation comptée dans le
 réseau ; sauvegarde aller-retour ; e2e : activer les déchets, poser une décharge, voir la couche ; tous les tests verts ;
 relecture.
+
+## Cœur des déchets (chantier livré)
+Livré dans `crates/micropolis-core/src/waste.rs` (+ `waste/` : `production`, `treatment`, `spread`, `effects`,
+`month`, `rules`), `crates/micropolis-wasm/src/waste.rs`, `deals.rs` (cœur et adaptateur), `extensions.rs`,
+`power.rs`, le catalogue. Tests : `tests/waste_rules.rs`, `tests/waste_save.rs` et les tests unitaires des modules.
+
+* **Interrupteur** `Extensions::waste`, bit 6 (`0b100_0000`) du morceau des règles ; l'ancien « drapeau inconnu » de
+  test passe à `0b1000_0000`. Actif seulement avec `structures` (`waste_active`). Éteint : crochets inertes, appels
+  vides, `waste_stats()` tout à 0, `waste_layer()` tout à 0 ; l'éteindre oublie les ordures, les remplissages et
+  les accords de déchets (gratuitement).
+* **Mois** = une collecte d'impôts (crochet `ext_monthly_balance`). Production d'une zone : `population × % / 100`
+  avec 25 % (résidentiel), 40 % (commercial), 60 % (industriel) ; la population des zones commerciales et
+  industrielles vaut `TIER_POPULATION` = 8 par palier.
+* **Ordre du traitement** : recyclage (chaque centre à moins de `RECYCLING_RADIUS` = 8 tuiles de la zone retire
+  `RECYCLING_PCT` = 30 % de sa production, au plus `RECYCLING_MAX_PCT` = 60 %) → incinérateurs (300 par mois chacun,
+  électricité nécessaire) → usines de valorisation (500 par mois chacune, `WTE_POWER_STRENGTH` = 400 tuiles
+  d'électricité ajoutées au réseau comme une centrale) → décharges (`LANDFILL_CAPACITY` = 20 000 unités, pleine
+  ensuite, dans l'ordre de la liste) → accords d'export → le reste s'accumule autour des zones qui l'ont produit
+  (neuf tuiles de la zone, puis carré de rayon `SPILL_RADIUS` = 3, puis n'importe où), au plus `TILE_CAP` = 255 par
+  tuile. La capacité restante mange ensuite les ordures déjà accumulées : `BACKLOG_DECAY` = 4 par tuile et par mois.
+* **Conservation** (testée chaque mois) : `produites = traitées + recyclées + exportées + (pile après − pile avant)
+  + perdues` ; la première mois, `produites = traitées + recyclées + exportées + accumulées`. « Perdues » = ce
+  qu'aucune tuile ne peut tenir (0 sauf carte pleine). « Traitées » comprend les ordures anciennes mangées.
+* **Effets** : pollution + `pile_max_du_bloc / 8` et valeur du terrain − `pile_max_du_bloc / 6` ; décharge,
+  incinérateur et usine de valorisation qui fonctionnent polluent autour d'eux (40/3, 60/4, 30/3 :
+  intensité, rayon, décroissance linéaire).
+* **Accords** : ressource 2 « déchets », offres 8 à 11 (nord, est, sud, ouest), seulement avec la règle des déchets.
+  **Signe** : la ville *paie* le voisin. Le moteur garde `amount` (unités par mois) et `price` (dollars par unité
+  réellement prise) positifs ; l'adaptateur affiche `price` et `yearly_income` **négatifs** pour la ressource 2
+  (`cancel_penalty` reste le nombre positif de dollars payés). Un accord de déchets n'a pas de surplus à couvrir,
+  ne se rompt jamais et ne part que par `cancel_deal` ou en éteignant la règle. `deal_offers()` renvoie 12
+  enregistrements (au lieu de 8) quand la règle des déchets est active.
+* **Sauvegarde** : morceau 8 (`CHUNK_WASTE`, `CHUNK_MAX_TAG` = 8) : nombre de décharges (2 octets), puis par
+  décharge x, y (2+2), remplissage (4), puis par tuile non vide x, y (2+2), unités (1) ; ordre strictement
+  croissant, refus de tout enregistrement coupé ou impossible. Règle éteinte et rien de stocké : fichier identique
+  octet pour octet. Au chargement, les remplissages des décharges disparues sont oubliés.
+* **API wasm** comme dans le tableau ci-dessus ; `waste_stats()` : `[produits, traités, recyclés, exportés,
+  accumulés_total, capacité_restante, électricité]`, où l'électricité est la capacité en tuiles des usines de
+  valorisation qui fonctionnent.

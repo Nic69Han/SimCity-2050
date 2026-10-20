@@ -31,7 +31,11 @@ fn pile_up(sim: &mut Simulation, zones: &[Zone], weights: &[i64], left: i64) -> 
     let (mut cumulated, mut given, mut lost) = (0, 0, 0);
     for (zone, weight) in zones.iter().zip(weights) {
         cumulated += weight;
-        let upto = if total == 0 { 0 } else { left * cumulated / total };
+        let upto = if total == 0 {
+            0
+        } else {
+            left * cumulated / total
+        };
         let share = upto - given;
         given = upto;
         if share > 0 {

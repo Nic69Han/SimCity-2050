@@ -22,8 +22,8 @@ use crate::simulation::Simulation;
 use crate::structures::StructureList;
 use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
-use crate::water::WaterNetwork;
 use crate::waste::WasteState;
+use crate::water::WaterNetwork;
 use crate::{deals, densities, ordinances, structures, transit, waste, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).

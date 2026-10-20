@@ -84,7 +84,10 @@ mod tests {
     fn units_go_to_incinerators_then_plants_then_landfills_in_order() {
         let mut p = Pool::new(10, 20, vec![5, 100]);
         assert_eq!(p.absorb(8), 8);
-        assert_eq!((p.burned, p.energised, p.buried.clone()), (8, 0, vec![0, 0]));
+        assert_eq!(
+            (p.burned, p.energised, p.buried.clone()),
+            (8, 0, vec![0, 0])
+        );
         assert_eq!(p.absorb(30), 30);
         assert_eq!((p.burned, p.energised), (10, 20));
         assert_eq!(p.buried, vec![5, 3]);

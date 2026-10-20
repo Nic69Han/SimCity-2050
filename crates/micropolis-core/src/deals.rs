@@ -512,7 +512,10 @@ mod tests {
 
     #[test]
     fn waste_offers_follow_the_classic_ones_and_keep_the_classic_indexes() {
-        assert_eq!((OFFER_COUNT, WASTE_OFFER_BASE, TOTAL_OFFER_COUNT), (8, 8, 12));
+        assert_eq!(
+            (OFFER_COUNT, WASTE_OFFER_BASE, TOTAL_OFFER_COUNT),
+            (8, 8, 12)
+        );
         assert_eq!(MAX_DEALS, TOTAL_OFFER_COUNT);
         for i in 0..OFFER_COUNT {
             assert_ne!(offer_for(i, 0, 0).unwrap().resource, RESOURCE_WASTE);
@@ -533,7 +536,11 @@ mod tests {
         // no surplus is needed: the city buys a service
         assert_eq!(s.accept_deal(WASTE_OFFER_BASE), DealResult::Done);
         assert_eq!(s.accept_deal(WASTE_OFFER_BASE), DealResult::Already);
-        assert_eq!(s.deal_surplus(), [0, 0], "a waste deal uses no electricity or water");
+        assert_eq!(
+            s.deal_surplus(),
+            [0, 0],
+            "a waste deal uses no electricity or water"
+        );
         // settle neither pays nor breaks it
         let (net, kept) = settle(&s.extensions().deal_list, s.raw_surplus());
         assert_eq!((net, kept[0]), (0, true));
@@ -556,7 +563,11 @@ mod tests {
         assert_eq!(s.accept_deal(WASTE_OFFER_BASE + 1), DealResult::Done);
         assert_eq!(s.accept_deal(2), DealResult::Done);
         s.set_waste_rules(false);
-        let kept: Vec<(u8, u8)> = s.deals().iter().map(|d| (d.neighbour, d.resource)).collect();
+        let kept: Vec<(u8, u8)> = s
+            .deals()
+            .iter()
+            .map(|d| (d.neighbour, d.resource))
+            .collect();
         assert_eq!(kept, [(0, 0), (1, 0)]);
     }
 

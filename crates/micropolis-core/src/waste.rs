@@ -335,7 +335,10 @@ mod tests {
         assert!(WasteState::default().encode(67).is_empty());
         let s = sample();
         let bytes = s.encode(67);
-        assert_eq!(bytes.len(), COUNT_SIZE + 2 * FILL_RECORD_SIZE + 2 * TILE_RECORD_SIZE);
+        assert_eq!(
+            bytes.len(),
+            COUNT_SIZE + 2 * FILL_RECORD_SIZE + 2 * TILE_RECORD_SIZE
+        );
         assert_eq!(WasteState::decode(&bytes, 80, 67), Ok(s));
     }
 

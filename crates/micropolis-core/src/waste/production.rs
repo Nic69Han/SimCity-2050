@@ -1,8 +1,6 @@
 //! What the zones make: the zone list with its production, and what the recycling centres cut.
 
-use super::{
-    PRODUCTION_PCT, RECYCLING_MAX_PCT, RECYCLING_PCT, RECYCLING_RADIUS, TIER_POPULATION,
-};
+use super::{PRODUCTION_PCT, RECYCLING_MAX_PCT, RECYCLING_PCT, RECYCLING_RADIUS, TIER_POPULATION};
 use crate::densities::{zone_genre, GENRE_COMMERCIAL, GENRE_INDUSTRIAL, GENRE_RESIDENTIAL};
 use crate::simulation::Simulation;
 use crate::structures::Structure;
@@ -111,7 +109,12 @@ mod tests {
         assert_eq!(recycled_pct(&zone, &[centre(10, 20)]), 0);
         assert_eq!(recycled_pct(&zone, &[centre(11, 20)]), RECYCLING_PCT);
         assert_eq!(recycled(&zone, &[centre(11, 20)]), 30);
-        let many = [centre(11, 20), centre(12, 20), centre(13, 20), centre(14, 20)];
+        let many = [
+            centre(11, 20),
+            centre(12, 20),
+            centre(13, 20),
+            centre(14, 20),
+        ];
         assert_eq!(recycled_pct(&zone, &many), RECYCLING_MAX_PCT);
         assert_eq!(recycled(&zone, &many), 60);
     }
