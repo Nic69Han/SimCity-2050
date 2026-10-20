@@ -215,7 +215,7 @@ fn a_bad_chunk_is_refused_and_leaves_the_engine_untouched() {
                     .collect::<Vec<_>>(),
             ),
         ),
-        ("unknown tag", chunk(8, &[1])),
+        ("unknown tag", chunk(9, &[1])),
     ];
     let mut engine = with_zones();
     let before = file_of(&engine);
