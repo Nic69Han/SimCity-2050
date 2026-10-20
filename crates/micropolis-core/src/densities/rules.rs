@@ -139,7 +139,7 @@ impl Simulation {
     }
 
     /// The classic population of the zone centred on `pos` (`tile` is its centre tile).
-    fn zone_population(&self, pos: Position, tile: Tile, genre: u8) -> i32 {
+    pub(crate) fn zone_population(&self, pos: Position, tile: Tile, genre: u8) -> i32 {
         let tile = tile & LOMASK;
         i32::from(match genre {
             GENRE_RESIDENTIAL if tile == FREEZ => self.do_free_pop(pos),

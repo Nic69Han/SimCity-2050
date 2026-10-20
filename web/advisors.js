@@ -7,6 +7,8 @@ import { decodeBudget, decodeEvaluation } from "./budget-text.js";
 import { advise, SEVERITY_LABEL } from "./advisors-model.js";
 import { decodeRail } from "./agents-model.js";
 import { supports as hasOrdinances, readOrdinances } from "./ordinances-model.js";
+import { countLandfills, wasteSnapshot } from "./waste-model.js";
+import { decodeStats as decodeServices } from "./services-model.js";
 
 const HIST_MONEY = 3;
 const HIST_POLLUTION = 5;
@@ -20,9 +22,12 @@ function call(city, name, ...args) {
   return typeof city?.[name] === "function" ? city[name](...args) : null;
 }
 
-const RULES = [["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"]];
+const RULES = [
+  ["water", "water_rules"], ["transit", "transit_rules"], ["deals", "deals_rules"], ["agents", "agent_rules"], ["waste", "waste_rules"],
+  ["services", "service_rules"],
+];
 
-/** The rule switches the engine has, { water, transit, deals, agents } (a missing method leaves the name out). */
+/** The rule switches the engine has, { water, transit, deals, agents, waste, services } (a missing method leaves the name out). */
 function readRules(city) {
   const rules = {};
   for (const [name, method] of RULES) {
@@ -94,12 +99,19 @@ export function readSnapshot(city) {
   // rail_stats: [trains, rames, train_riders_month, metro_riders_month, rail_income_month, train_lines, metro_lines]
   const rl = rules.agents ? ints(call(city, "rail_stats")) : null;
   if (rl) s.rail = decodeRail(rl);
+  // service_stats (docs/game-design-v09.md): read with the services rule only; decoded as services-model.js does
+  const sv = rules.services ? ints(call(city, "service_stats")) : null;
+  if (sv && sv.length >= 6) s.services = decodeServices(sv);
   if (hasOrdinances(city)) {
     s.ordinances = readOrdinances(city).map((o) => ({
       key: o.key, label: o.label, active: o.active, cost: o.info.cost, crime: o.info.crime, pollution: o.info.pollution,
     }));
   }
   if (rules.deals) s.deals = readDeals(city);
+  // waste_stats: [produced, treated, recycled, exported, accumulated, landfill_left, power], read with the rule only;
+  // the landfills are counted in structures() (docs/game-design-v08.md).
+  const ws = rules.waste ? ints(call(city, "waste_stats")) : null;
+  if (ws && ws.length >= 6) s.waste = wasteSnapshot(ws, ints(call(city, "structures")));
   return s;
 }
 
@@ -126,6 +138,13 @@ export function cheapKey(city) {
     parts.push(ints(call(city, "agent_stats"))?.[3] ?? null, ints(call(city, "transport_stats"))?.[2] ?? null, rail?.[2] ?? null, rail?.[3] ?? null);
   }
   if (rules.deals) parts.push(call(city, "active_deals")?.length, call(city, "surplus")?.join?.());
+  if (rules.waste) {
+    // the garbage on the map (index 4) and the landfill room (index 5), and the landfills placed
+    const ws = ints(call(city, "waste_stats"));
+    parts.push(ws?.[4] ?? null, ws?.[5] ?? null, countLandfills(ints(call(city, "structures"))));
+  }
+  // education, life expectancy and the places they fill (the first six service_stats numbers)
+  if (rules.services) parts.push(ints(call(city, "service_stats"))?.slice(0, 6).join());
   return parts.join("/");
 }
 

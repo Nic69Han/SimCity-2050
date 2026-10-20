@@ -93,7 +93,7 @@ function offerRow(offer, api) {
   };
   li.append(
     el("span", { class: "deal-title" }, titleText(offer)),
-    el("span", { class: "deal-terms" }, `${termsText(offer)}. ${incomeText(offer.income)}`),
+    el("span", { class: "deal-terms" }, `${termsText(offer)}. ${incomeText(offer.income, offer.resource)}`),
     el("span", { class: "deal-state" }, reason),
     sign,
   );
@@ -118,7 +118,7 @@ function dealRow(deal, api) {
   };
   li.append(
     el("span", { class: "deal-title" }, titleText(deal)),
-    el("span", { class: "deal-terms" }, `${termsText(deal)}. ${incomeText(deal.income)}`),
+    el("span", { class: "deal-terms" }, `${termsText(deal)}. ${incomeText(deal.income, deal.resource)}`),
     el("span", { class: "deal-state" }, stateText(deal)),
     cancel,
   );

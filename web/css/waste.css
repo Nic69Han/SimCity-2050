@@ -1,0 +1,6 @@
+/* waste: styles of web/waste-ui.js (docs/game-design-v08.md). */
+#waste-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#waste-panel .waste-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#waste-panel .waste-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#waste-panel .waste-stats { margin: .3rem 0; padding-left: 1.2rem; font-size: .9rem; }
+#waste-panel .waste-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }

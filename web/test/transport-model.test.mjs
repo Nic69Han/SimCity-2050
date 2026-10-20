@@ -27,8 +27,8 @@ describe("names of the transport genres", () => {
     assert.equal(structures.nameOf(4), "Bâtiment n° 4");
   });
 
-  test("the names table lists exactly the seven known genres", () => {
-    assert.deepEqual(Object.keys(structures.NAMES).map(Number), [1, 2, 3, 10, 11, 12, 13]);
+  test("the names table lists exactly the known genres (the waste genres 20-23 since v0.8)", () => {
+    assert.deepEqual(Object.keys(structures.NAMES).map(Number), [1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23]);
   });
 });
 
