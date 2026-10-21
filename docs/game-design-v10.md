@@ -49,7 +49,8 @@ e2e : activer l'énergie, poser une éolienne, voir la production monter ; tous 
   de vie en années : gaz 3×3 (4 000, 40, 400, 30/3, 40), pétrole 3×3 (3 000, 50, 500, 50/4, 40), éolienne 1×1 (250,
   2, 30, 0, 20), solaire 3×3 (6 000, 20, 250, 0, 30), hydroélectrique 2×2 (3 500, 30, 300, 0, 60), micro-ondes 3×3
   (15 000, 100, 2 000, 0, 50), fusion 4×4 (40 000, 150, 3 000, 0, 80) ; charbon 50 ans, nucléaire 50 ans.
-* **Âge** : un mois de jeu = un bilan mensuel (`ext_monthly_balance`), comme les déchets. Une centrale posée a l'âge 0.
+* **Âge** : compté en mois ; il avance au bilan (`ext_monthly_balance`), qui passe une fois par collecte d'impôts, c'est-à-dire
+  une fois par an de jeu : +12 mois par passage (corrigé à l'intégration). Une centrale posée a l'âge 0.
   Les centrales classiques (charbon, nucléaire) reçoivent un âge seulement règle allumée (clé = tuile centrale) ;
   leur puissance classique est réduite par le même crochet `ext_power_sources` (valeur négative autorisée, résultat
   jamais sous 0). Puissance actuelle : 100 % jusqu'à 80 % de la vie, puis décroissance linéaire jusqu'à 50 % à la
@@ -67,3 +68,53 @@ e2e : activer l'énergie, poser une éolienne, voir la production monter ; tous 
 * `energy_stats()` : production = puissance totale du réseau (tuiles), consommation = tuiles demandées (celles du
   calcul classique), achetée = puissance achetée, centrales = toutes (classiques comprises), fin de vie = celles
   au-delà de 80 %, pollution = somme des intensités des centrales en marche.
+
+## Cœur de l'énergie (chantier livré)
+Code : `crates/micropolis-core/src/energy.rs` (types, tables, sauvegarde) et `energy/` (`curve` âge et puissance,
+`plants` centrales en service, `rules` interrupteur, statistiques, crochet de puissance, `effects` pollution, `month`
+bilan mensuel, `demand` consommation) ; adaptateur `crates/micropolis-wasm/src/energy.rs` ; achat dans `deals.rs`
+(cœur et adaptateur). Tests : `tests/energy_rules.rs`, `tests/energy_save.rs`, unitaires des modules, adaptateur.
+
+* **Interrupteur** : `Extensions::energy`, bit 1 du second octet des règles (`RULES2_ENERGY`) ; `energy_active()` =
+  énergie et `structures` allumées. Éteint (défaut) : les crochets rendent leur entrée, `energy_stats()` est nul,
+  `power_plants()` est vide, aucune offre d'électricité ; le moteur est celui du C++ (test « règle seule = moteur
+  d'origine » sur 600 pas de simulation, comparaisons `compare-*.sh` inchangées). Éteindre retire les genres 40-46 (sans
+  remboursement), oublie âges et achats.
+* **Genres** (coût, entretien/mois, puissance en tuiles alimentées, pollution intensité/rayon, vie en années) :
+  gaz 40 (3×3 ; 4 000, 40, 400, 30/3, 40), pétrole 41 (3×3 ; 3 000, 50, 500, 50/4, 40), éolienne 42 (1×1 ; 250, 2, 30,
+  0, 20), solaire 43 (3×3 ; 6 000, 20, 250, 0, 30), hydroélectrique 44 (2×2 ; 3 500, 30, 300, 0, 60), micro-ondes 45
+  (3×3 ; 15 000, 100, 2 000, 0, 50), fusion 46 (4×4 ; 40 000, 150, 3 000, 0, 80) ; charbon (genre 0) et nucléaire
+  (genre 1) : 50 ans. Valeurs de départ du contrat, inchangées. Table `PLANTS` (puissance, pollution, vie) et
+  `CATALOG` (coût, entretien, taille). Hydro : `Kind::needs_water`, une tuile d'eau doit toucher l'emprise (comme
+  `needs_rail`).
+* **Puissance** : `Simulation::energy_power_sources()`, appelé par `ext_power_sources` (somme avec les déchets) dans
+  `do_power_scan` : empile la tuile en haut à gauche de chaque centrale en service (puissance actuelle > 0), ajoute
+  leur puissance, retire la perte des centrales classiques usées, ajoute l'électricité achetée ; le total ne passe
+  jamais sous 0. `power_capacity()` (accords) compte les centrales mais pas l'électricité achetée (jamais revendue).
+* **Âge** : `EnergyState` (âges triés par `(x, y)`, au plus `MAX_PLANTS` = 1 024). Un bilan = une collecte d'impôts = un an
+  de jeu : chaque centrale en place gagne `AGE_STEP_MONTHS` = 12 mois (une centrale classique reçoit un âge au premier bilan, règle allumée) ; les âges
+  des centrales disparues sont oubliés (reconstruire repart à 0) ; plafond `MAX_AGE_MONTHS` = 65 535 (champ de 16
+  bits). Courbe (`curve::power_at`, entiers) : 100 % jusqu'à 80 % de la vie (`WEAR_START_PCT`), puis décroissance
+  linéaire jusqu'à 50 % (`WEAR_FLOOR_PCT`) juste avant la fin de vie, puis 0 : la centrale s'arrête et ne pollue plus.
+  « Fin de vie » dans `energy_stats()` = au-delà de 80 %.
+* **Pollution** : `ext_pollution` ajoute, pour chaque centrale en marche, `intensité × (rayon + 1 − d) / (rayon + 1)`
+  avec `d` la distance à l'emprise (0 au-delà du rayon). Seuls gaz et pétrole polluent ; les centrales classiques
+  gardent la pollution du moteur d'origine. `energy_stats()[5]` = somme des intensités en marche (80 avec une gaz et
+  une pétrole).
+* **Achat** : ressource 3 (`RESOURCE_POWER_BUY`), offres 12 à 15 (`POWER_OFFER_BASE` = 12), base (quantité, prix)
+  `POWER_OFFERS` = (100, 2), (150, 2), (200, 3), (250, 2), quantité × (palier de population + 1), prix + dérive
+  d'années comme les autres offres. La ville paie `quantité × prix` à chaque bilan mensuel (`energy::month`) ;
+  l'adaptateur montre prix et revenu négatifs ; `Deal::is_cost()` regroupe déchets et électricité achetée. Pas de
+  rupture, pas de surplus requis ; résiliation par `cancel_deal` (pénalité : moitié du coût d'un mois) ou en éteignant
+  la règle. `deal_offers()` renvoie 16 enregistrements règle active (les offres 8 à 11 gardent leur place et sont
+  refusées, statut -1, si les déchets sont éteints).
+* **Sauvegarde** : morceau 10 (`CHUNK_ENERGY`, `CHUNK_MAX_TAG` = 10) : nombre (2 octets) puis x, y, mois (2+2+2) par
+  centrale ; écrit seulement s'il n'est pas vide ; refusé (`cty_bad_extension`) si coupé, vide, longueur inexacte,
+  au-delà de 1 024, hors carte ou non trié ; au chargement les âges sans centrale sont retirés, et règle éteinte tout
+  est oublié. Règle éteinte et rien de stocké : fichier identique octet pour octet.
+* **API wasm** : `energy_rules`, `set_energy_rules`, `energy_stats` (6 entiers du contrat), `power_plants`
+  (enregistrements de 6, triés par position) ; `deal_offers` 16 enregistrements.
+* **Limites connues** : pas d'accident de micro-ondes (déterminisme, simplicité) ; l'algorithme de propagation
+  classique perd parfois une tuile quand le réseau manque de puissance (puissance utilisée = production ou
+  production − 1, comparée dans les tests) ; la consommation affichée est le nombre de tuiles que le calcul classique
+  alimenterait avec une puissance illimitée depuis les centrales.

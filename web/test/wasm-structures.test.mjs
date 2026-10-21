@@ -57,13 +57,14 @@ describe("wasm extended buildings", { skip: SKIP }, () => {
     assert.equal(city.funds(), funds);
   });
 
-  test("the catalog lists the genres of the milestones (v0.4: 1-3, v0.5: 10-12, v0.6: 13, v0.8: 20-23, v0.9: 30-36)", () => {
+  test("the catalog lists the genres of the milestones (v0.4: 1-3, v0.5: 10-12, v0.6: 13, v0.8: 20-23, v0.9: 30-36, v0.10: 40-46)", () => {
     const cat = catalogOf(new City(1));
     assert.deepEqual(
       cat.map((k) => [k.genre, k.width, k.height]),
       [[PARK, 2, 2], [PLAZA, 1, 1], [MONUMENT, 3, 3], [10, 1, 1], [11, 2, 2], [12, 2, 2], [13, 2, 2],
        [20, 3, 3], [21, 2, 2], [22, 2, 2], [23, 3, 3],
-       [30, 2, 2], [31, 3, 3], [32, 2, 2], [33, 3, 3], [34, 1, 1], [35, 3, 3], [36, 3, 3]],
+       [30, 2, 2], [31, 3, 3], [32, 2, 2], [33, 3, 3], [34, 1, 1], [35, 3, 3], [36, 3, 3],
+       [40, 3, 3], [41, 3, 3], [42, 1, 1], [43, 3, 3], [44, 2, 2], [45, 3, 3], [46, 4, 4]],
     );
     for (const k of cat) {
       assert.ok(k.cost > 0 && k.upkeep >= 0 && k.radius >= 0);

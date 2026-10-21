@@ -8,7 +8,7 @@ use micropolis_core::structures::{
     GENRE_PLAZA, GENRE_TAXI_DEPOT, LEGACY_SURFACE_LAST, SURFACE_BITS, SURFACE_TILE,
 };
 use micropolis_core::tile::{LOMASK, PWRBIT, RAILBASE};
-use micropolis_core::tile_chars::{DIRT, ROADS};
+use micropolis_core::tile_chars::{DIRT, RIVER, ROADS};
 use micropolis_core::tool::{EditingTool, ToolResult};
 
 const MONEY: i64 = 10_000_000;
@@ -19,6 +19,7 @@ fn bare() -> Simulation {
     s.total_funds = MONEY;
     s.set_structure_rules(true);
     s.set_service_rules(true); // the service genres of the catalog need it
+    s.set_energy_rules(true); // and the power plants
     s
 }
 
@@ -33,6 +34,7 @@ fn every_genre_leaves_the_same_surface_tile() {
         let (x, y) = (5 + 6 * (i % 12) as i32, 20 + 10 * (i / 12) as i32);
         s.set_tile(x, y - 1, ROADS); // a road for the bus stop
         s.set_tile(x - 1, y, RAILBASE); // a rail for the gare
+        s.set_tile(x, y + k.height, RIVER); // water for the hydroelectric plant
         assert_eq!(
             s.place_structure(k.genre, x, y),
             ToolResult::Ok,

@@ -52,8 +52,9 @@ impl Simulation {
         // Power that the combined coal and nuclear power plants can deliver.
         let mut max_power: i64 = self.coal_power_pop as i64 * COAL_POWER_STRENGTH
             + self.nuclear_power_pop as i64 * NUCLEAR_POWER_STRENGTH;
-        // Extended rules (inert unless active): the waste-to-energy plants join the grid.
-        max_power += self.ext_power_sources();
+        // Extended rules (inert unless active): the waste-to-energy and energy plants join the
+        // grid, the worn classic plants lose power (never under 0 together).
+        max_power = (max_power + self.ext_power_sources()).max(0);
 
         let mut num_power: i64 = 0; // Amount of power used.
 
