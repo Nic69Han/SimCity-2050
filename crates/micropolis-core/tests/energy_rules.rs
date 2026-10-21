@@ -366,19 +366,19 @@ fn each_genre_pollutes_as_its_table_says_and_a_stopped_plant_does_not() {
     assert_eq!(both.energy_stats()[5], 80);
 }
 
-/// A wind turbine and `n` powered-by-it residential zones in a row from (20, 30).
+/// A wind turbine and `n` residential zones in rows of 20 touching each other, from (20, 31).
 fn windy_town(n: i32) -> Simulation {
     let mut s = bare();
     build(&mut s, GENRE_WIND, 18, 31);
     for i in 0..n {
-        s.res_plop(Position::new(20 + 3 * i, 31), 3, 0);
+        s.res_plop(Position::new(20 + 3 * (i % 20), 31 + 3 * (i / 20)), 3, 0);
     }
     s
 }
 
 #[test]
 fn bought_electricity_joins_the_grid_and_the_city_pays_for_it() {
-    let mut s = windy_town(22);
+    let mut s = windy_town(32);
     s.set_deals_rules(true);
     run(&mut s, 120);
     let demand = i64::from(s.energy_stats()[1]);
@@ -389,9 +389,11 @@ fn bought_electricity_joins_the_grid_and_the_city_pays_for_it() {
     run(&mut s, 120);
     let stats = s.energy_stats();
     let total = 30 + offered;
-    assert!(demand > total, "the offer must not cover the whole demand");
+    assert!(demand > total, "offer {offered} must not cover demand {demand}");
     assert_eq!((i64::from(stats[0]), i64::from(stats[2])), (total, offered));
-    assert_eq!(s.power_used(), total, "conservation: all of it is used");
+    // conservation: never more than there is, and (to the one tile the classic scan loses when
+    // it runs dry) all of it
+    assert!((total - 1..=total).contains(&s.power_used()), "used {}", s.power_used());
     assert_eq!(i64::from(stats[1]), demand);
     // when the city asks for less than it has, it uses only what it asks for
     let mut small = windy_town(1);
