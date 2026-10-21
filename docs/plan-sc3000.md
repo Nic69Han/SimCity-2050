@@ -11,7 +11,7 @@ classique reste identique au moteur C++.
 v0.1 (3D, conseillers, tutoriel, sons), v0.2 (eau, ordonnances, métro, relief jouable), v0.2b (sous-sol 3D, accords
 avec les voisins), v0.3 (voitures simulées), v0.3b (aller-retour, conseiller de la circulation), v0.4 (bâtiments
 étendus), v0.5 (bus et taxis), v0.6 (trains et métro animés), v0.7 (densités et fermes), v0.8 (déchets), v0.9
-(éducation, santé, justice).
+(éducation, santé, justice), v0.10 (énergie).
 
 ## Jalons à venir (dans l'ordre)
 
