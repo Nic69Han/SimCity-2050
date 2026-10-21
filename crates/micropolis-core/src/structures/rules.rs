@@ -104,6 +104,10 @@ impl Simulation {
                 self.set_tile(tx, ty, kind.surface() | SURFACE_BITS);
             }
             self.extensions_mut().structure_list.push(s);
+            // A new plant is 0 months old, whatever stood on its anchor before.
+            if is_plant_genre(genre) {
+                self.extensions_mut().energy_state.forget(x, y);
+            }
         }
         self.finish_structure_tool(result, x, y)
     }

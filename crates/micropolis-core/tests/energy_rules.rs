@@ -461,3 +461,37 @@ fn the_plants_and_the_ages_are_capped() {
         micropolis_core::energy::MAX_AGE_MONTHS
     );
 }
+
+/// Bulldozes the whole 4 x 4 footprint of a classic plant centred on `c` (no valve pass).
+fn bulldoze_plant(s: &mut Simulation, c: (i32, i32)) {
+    for x in c.0 - 2..=c.0 + 1 {
+        for y in c.1 - 2..=c.1 + 1 {
+            s.tool_down(EditingTool::Bulldozer, x, y);
+        }
+    }
+    assert!(s.energy_plants().is_empty(), "the plant is gone");
+}
+
+#[test]
+fn a_plant_built_where_a_worn_classic_plant_stood_is_new_without_any_valve_pass() {
+    // a coal plant rebuilt at the same place
+    let mut s = bare();
+    let c = coal_plant(&mut s, 40, 40);
+    s.extensions_mut().energy_state.set(c.0, c.1, 590);
+    bulldoze_plant(&mut s, c);
+    let again = coal_plant(&mut s, 40, 40);
+    assert_eq!(again, c);
+    assert_eq!(plant_at(&s, c.0, c.1).age, 0);
+    assert_eq!(s.power_capacity(), 700);
+
+    // a catalog plant whose top-left is the old centre
+    let mut w = bare();
+    let c = coal_plant(&mut w, 40, 40);
+    w.extensions_mut().energy_state.set(c.0, c.1, 590);
+    bulldoze_plant(&mut w, c);
+    w.tool_down(EditingTool::Bulldozer, c.0, c.1);
+    build(&mut w, GENRE_WIND, c.0, c.1);
+    let p = plant_at(&w, c.0, c.1);
+    assert_eq!((p.age, p.power), (0, 30));
+    assert_eq!(w.power_capacity(), 30);
+}

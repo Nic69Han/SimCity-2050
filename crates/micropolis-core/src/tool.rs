@@ -1187,6 +1187,11 @@ impl Simulation {
             if self.extensions_active() && self.density_rules() {
                 self.repair_densities();
             }
+            // Energy rules: a plant that is gone forgets its age at once, so a plant built on
+            // the same anchor is new.
+            if self.extensions_active() && self.energy_rules() {
+                self.repair_energy();
+            }
         }
         result
     }
