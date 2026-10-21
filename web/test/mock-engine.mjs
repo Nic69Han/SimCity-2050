@@ -51,6 +51,12 @@
 //     load. Off: energy_stats() is six zeros and power_plants() is empty. On: energy_stats() is ENERGY_FIXED and
 //     power_plants() lists MOCK_PLANTS (records of 6), both fixed numbers (mock-energy.mjs). No genre joins the
 //     catalog and no plant is placed: the mock only reports the fixed numbers.
+//   - economy (docs/game-design-v11.md; `economy: true`): economy_rules() is off by default and after a new city or
+//     a load. Off: set_tax_rate refuses, bond_offer is [0, 0], issue_bond and repay_bond return 0, bonds() is empty,
+//     tax_income and goods_stats are zeros. On: the nine rates start at 7 and are set in 0..=20; tax_income is the
+//     rate times 100 per case; bonds issue at 10 000 $ (the funds rise) up to 10, at 3,0 % plus 1,0 % per bond in
+//     force; repay_bond refuses an unknown index or missing funds; goods_stats is MOCK_GOODS with the shortage flag
+//     set by set_mock_shortage(flag) (a test hook, not in the engine contract). Mock-economy.mjs holds the state.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -60,6 +66,7 @@ import {
 } from "./mock-zoning.mjs";
 import { MOCK_WASTE_STRUCTURES, wasteStatsOf } from "./mock-waste.mjs";
 import { ENERGY_METHODS, energyStatsOf, powerPlantsOf } from "./mock-energy.mjs";
+import { ECONOMY_METHODS, MockEconomy } from "./mock-economy.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -198,6 +205,7 @@ export class MockCity {
   #wasteValues = wasteStatsOf(true, []); // the numbers set by set_mock_waste (zeros until then)
   #servRules = false; // public services switch (City.service_rules)
   #energyRules = false; // energy switch (City.energy_rules)
+  #econ = new MockEconomy(); // economy state (City.economy_rules and the methods after it)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -207,7 +215,7 @@ export class MockCity {
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
-    densities = false, waste = false, services = false, energy = false,
+    densities = false, waste = false, services = false, energy = false, economy = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -222,6 +230,7 @@ export class MockCity {
     if (!waste) for (const name of WASTE_METHODS) this[name] = undefined;
     if (!services) for (const name of SERVICE_METHODS) this[name] = undefined;
     if (!energy) for (const name of ENERGY_METHODS) this[name] = undefined;
+    if (!economy) for (const name of ECONOMY_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -255,6 +264,7 @@ export class MockCity {
     this.#wasteValues = wasteStatsOf(true, []);
     this.#servRules = false;
     this.#energyRules = false;
+    this.#econ.reset();
   }
 
   #inside(x, y) {
@@ -670,6 +680,51 @@ export class MockCity {
     return powerPlantsOf(this.#energyRules);
   }
 
+  // --- economy (docs/game-design-v11.md, contract of crates/micropolis-wasm/src/economy.rs); present only with the
+  // constructor option `economy: true`. The state is in mock-economy.mjs; the funds move with the bonds here. ---
+  economy_rules() {
+    return this.#econ.rules();
+  }
+  set_economy_rules(on) {
+    this.#econ.setRules(on);
+  }
+  tax_rates() {
+    return this.#econ.rates();
+  }
+  // genre 1 residential, 2 commercial, 3 industrial; richesse 1 modest, 2 average, 3 wealthy.
+  set_tax_rate(genre, richesse, rate) {
+    if (!Number.isInteger(genre) || genre < 1 || genre > 3) return false;
+    if (!Number.isInteger(richesse) || richesse < 1 || richesse > 3) return false;
+    return this.#econ.setRate((genre - 1) * 3 + (richesse - 1), rate);
+  }
+  tax_income() {
+    return this.#econ.income();
+  }
+  // Flat records [amount, permille, years] of the bonds in force.
+  bonds() {
+    return this.#econ.bondsFlat();
+  }
+  bond_offer() {
+    return this.#econ.offer();
+  }
+  issue_bond() {
+    const r = this.#econ.issue();
+    this.#funds += r.delta;
+    return r.code;
+  }
+  repay_bond(index) {
+    const r = this.#econ.repay(index, this.#funds);
+    this.#funds += r.delta;
+    return r.code;
+  }
+  goods_stats() {
+    return this.#econ.goods();
+  }
+  // Test hook (not in the engine contract): the shortage flag goods_stats reports while the rule is on.
+  set_mock_shortage(flag) {
+    this.#econ.setShortage(flag);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -713,6 +768,7 @@ export class MockCity {
     this.#wasteValues = wasteStatsOf(true, []);
     this.#servRules = false;
     this.#energyRules = false;
+    this.#econ.reset();
   }
   take_events() {
     return 0;
