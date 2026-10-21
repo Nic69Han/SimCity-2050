@@ -389,11 +389,18 @@ fn bought_electricity_joins_the_grid_and_the_city_pays_for_it() {
     run(&mut s, 120);
     let stats = s.energy_stats();
     let total = 30 + offered;
-    assert!(demand > total, "offer {offered} must not cover demand {demand}");
+    assert!(
+        demand > total,
+        "offer {offered} must not cover demand {demand}"
+    );
     assert_eq!((i64::from(stats[0]), i64::from(stats[2])), (total, offered));
     // conservation: never more than there is, and (to the one tile the classic scan loses when
     // it runs dry) all of it
-    assert!((total - 1..=total).contains(&s.power_used()), "used {}", s.power_used());
+    assert!(
+        (total - 1..=total).contains(&s.power_used()),
+        "used {}",
+        s.power_used()
+    );
     assert_eq!(i64::from(stats[1]), demand);
     // when the city asks for less than it has, it uses only what it asks for
     let mut small = windy_town(1);
@@ -404,7 +411,7 @@ fn bought_electricity_joins_the_grid_and_the_city_pays_for_it() {
     assert_eq!(small.power_used(), i64::from(st[1]));
     assert!(i64::from(st[1]) < i64::from(st[0]));
     // the sale surplus does not hold the bought power
-    assert_eq!(small.deal_surplus()[0], 30 - small.power_used() - 0);
+    assert_eq!(small.deal_surplus()[0], 30 - small.power_used());
 }
 
 #[test]
@@ -445,7 +452,7 @@ fn the_plants_and_the_ages_are_capped() {
     let ages = s.extensions().energy_state.as_slice();
     assert_eq!(ages.len(), MAX_STRUCTURES);
     assert!(ages.iter().all(|a| a.months == 1));
-    assert!(MAX_STRUCTURES <= micropolis_core::energy::MAX_PLANTS);
+    const { assert!(MAX_STRUCTURES <= micropolis_core::energy::MAX_PLANTS) };
     // an age never passes what the file can hold
     s.extensions_mut().energy_state.set(20, 2, u32::MAX);
     month(&mut s);
