@@ -141,8 +141,9 @@ describe("the statistics and the plants", () => {
     ui.update(api);
     const lines = listItems(panel, "energy-plants").map(norm);
     assert.equal(lines.length, 3);
-    assert.equal(lines[0], "Centrale au gaz : âge 3 ans, puissance 100 %");
-    assert.equal(lines[1], "Éolienne : âge 16 ans, puissance 92 %");
+    assert.equal(lines[0], "Centrale au gaz : âge 3 ans, puissance 400 tuiles");
+    assert.equal(lines[1], "Éolienne : âge 16 ans, puissance 26 tuiles");
+    assert.equal(lines[2], "Centrale à charbon : âge 10 ans, puissance 700 tuiles");
   });
 
   test("the lists are rebuilt only when their lines change", () => {

@@ -16,7 +16,7 @@ describe("the API, the caps and the feature detection", () => {
     assert.equal(M.PLANT_LENGTH, 6);
     assert.equal(M.MAX_PLANTS, 256);
     assert.equal(M.MONTHS_PER_YEAR, 12);
-    assert.equal(M.MAX_PERCENT, 100);
+    assert.equal(M.MAX_PERCENT, undefined, "the power is in tiles, not percentages: no cap");
   });
 
   test("supports: true only with all four methods as functions", () => {
@@ -60,17 +60,24 @@ describe("decodeStats", () => {
 
 describe("decodePlants", () => {
   test("reads records of six numbers; a truncated last record is ignored", () => {
-    const flat = Int32Array.from([40, 10, 10, 36, 480, 100, 42, 4, 4, 200, 240, 92, 0, 1]);
+    const flat = Int32Array.from([40, 10, 10, 36, 480, 400, 42, 4, 4, 200, 240, 26, 0, 1]);
     assert.deepEqual(M.decodePlants(flat), [
-      { genre: 40, x: 10, y: 10, ageMonths: 36, lifetimeMonths: 480, power: 100 },
-      { genre: 42, x: 4, y: 4, ageMonths: 200, lifetimeMonths: 240, power: 92 },
+      { genre: 40, x: 10, y: 10, ageMonths: 36, lifetimeMonths: 480, power: 400 },
+      { genre: 42, x: 4, y: 4, ageMonths: 200, lifetimeMonths: 240, power: 26 },
     ]);
   });
 
-  test("the power is a percentage: capped at MAX_PERCENT, a negative one is 0", () => {
-    const [a, b] = M.decodePlants([40, 0, 0, 0, 480, 130, 40, 0, 0, 0, 480, -7]);
-    assert.equal(a.power, 100);
+  test("the power is a count of powered tiles: no cap, a negative or non-numeric one is 0", () => {
+    const [a, b, c] = M.decodePlants([40, 0, 0, 0, 480, 397, 40, 0, 0, 0, 480, -7, 40, 0, 0, 0, 480, "x"]);
+    assert.equal(a.power, 397, "a worn gas plant shows its own tiles");
     assert.equal(b.power, 0);
+    assert.equal(c.power, 0);
+  });
+
+  test("a plant above 100 tiles keeps its value: a new fusion plant gives 3 000 tiles", () => {
+    const [fusion] = M.decodePlants([46, 0, 0, 0, 960, 3000]);
+    assert.equal(fusion.power, 3000);
+    assert.equal(M.decodePlants([0, 0, 0, 0, 600, 700])[0].power, 700, "a coal plant gives COAL_POWER_STRENGTH");
   });
 
   test("the plants are at most MAX_PLANTS, whatever the engine sends", () => {
@@ -114,13 +121,28 @@ describe("ages, names and lines", () => {
     assert.equal(M.plantName(99), "Bâtiment n° 99");
   });
 
-  test("plantLine: name, age in years, power in percent", () => {
-    const line = M.plantLine({ genre: 40, ageMonths: 36, power: 100 });
-    assert.equal(plain(line), "Centrale au gaz : âge 3 ans, puissance 100 %");
+  test("powerText: the tiles, singular for one tile or none", () => {
+    assert.equal(M.powerText(0), "0 tuile");
+    assert.equal(M.powerText(1), "1 tuile");
+    assert.equal(M.powerText(30), "30 tuiles");
+    assert.equal(plain(M.powerText(3000)), "3 000 tuiles");
+    assert.equal(M.powerText(-5), "0 tuile", "a negative count reads as 0");
+  });
+
+  test("plantLine: name, age in years, power in tiles, never a percent", () => {
+    const line = M.plantLine({ genre: 40, ageMonths: 36, power: 400 });
+    assert.equal(plain(line), "Centrale au gaz : âge 3 ans, puissance 400 tuiles");
+    assert.doesNotMatch(line, /%/);
+  });
+
+  test("a new wind turbine reads 30 tiles, a worn gas plant its tiles, a fusion plant 3 000 tiles", () => {
+    assert.equal(plain(M.plantLine({ genre: 42, ageMonths: 0, power: 30 })), "Éolienne : âge 0 ans, puissance 30 tuiles");
+    assert.equal(plain(M.plantLine({ genre: 40, ageMonths: 420, power: 397 })), "Centrale au gaz : âge 35 ans, puissance 397 tuiles");
+    assert.equal(plain(M.plantLine({ genre: 46, ageMonths: 0, power: 3000 })), "Centrale à fusion : âge 0 ans, puissance 3 000 tuiles");
   });
 
   test("an age of one year reads in the singular", () => {
-    assert.equal(plain(M.plantLine({ genre: 42, ageMonths: 12, power: 90 })), "Éolienne : âge 1 an, puissance 90 %");
+    assert.equal(plain(M.plantLine({ genre: 42, ageMonths: 12, power: 30 })), "Éolienne : âge 1 an, puissance 30 tuiles");
   });
 
   test("plantsLines: one line per plant, or the sentence for none", () => {
@@ -128,7 +150,7 @@ describe("ages, names and lines", () => {
     assert.equal(M.NO_PLANTS_TEXT, "Aucune centrale posée.");
     const lines = M.plantsLines(M.decodePlants(Int32Array.from(MOCK_PLANTS.flat())));
     assert.equal(lines.length, 3);
-    assert.equal(plain(lines[2]), "Centrale à charbon : âge 10 ans, puissance 100 %");
+    assert.equal(plain(lines[2]), "Centrale à charbon : âge 10 ans, puissance 700 tuiles");
   });
 
   test("statsLines: six lines in French, in a fixed order", () => {

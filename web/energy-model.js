@@ -6,6 +6,8 @@
 // plants_at_end_of_life, air_pollution], see FIELDS below.
 // The engine's plants (City.power_plants): records of PLANT_LENGTH integers
 // [genre, x, y, age_months, lifetime_months, current_power]; genre 0 coal, 1 nuclear, 40-46 the new plants.
+// current_power is the number of powered tiles the plant gives now (COAL_POWER_STRENGTH is the unit of a coal
+// plant), not a percentage: a new wind turbine gives 30, a new fusion plant 3 000. The page never caps it.
 
 import { formatInt } from "./budget-text.js";
 import { nameOf } from "./structures-model.js";
@@ -22,8 +24,6 @@ export const PLANT_LENGTH = 6;
 export const MAX_PLANTS = 256;
 // The age of a plant is shown in whole years.
 export const MONTHS_PER_YEAR = 12;
-// A plant's power is a percentage: the decoded value never goes above this.
-export const MAX_PERCENT = 100;
 
 // The two classic plants (not in the structures catalog): coal and nuclear.
 const CLASSIC_NAMES = Object.freeze({ 0: "Centrale à charbon", 1: "Centrale nucléaire" });
@@ -47,8 +47,6 @@ export function readRulesOn(city) {
 // A count as the page shows it: a non-negative integer, 0 for anything else.
 const count = (n) => Math.max(0, Math.trunc(Number(n)) || 0);
 const int = (n) => Math.trunc(Number(n)) || 0;
-// A percentage: a count, at most MAX_PERCENT.
-const percent = (n) => Math.min(MAX_PERCENT, count(n));
 
 /**
  * Decodes energy_stats into the record named by FIELDS. Only the first STAT_COUNT values are read; a missing
@@ -62,7 +60,8 @@ export function decodeStats(values) {
 
 /**
  * Decodes power_plants into [{ genre, x, y, ageMonths, lifetimeMonths, power }], one per record of PLANT_LENGTH
- * integers, at most MAX_PLANTS. A truncated last record is ignored; the power is a percentage (MAX_PERCENT).
+ * integers, at most MAX_PLANTS. A truncated last record is ignored. The power is a count of powered tiles (a
+ * negative or non-numeric value counts as 0; there is no upper cap).
  */
 export function decodePlants(flat) {
   const src = flat ?? [];
@@ -74,7 +73,7 @@ export function decodePlants(flat) {
       y: int(src[at + 2]),
       ageMonths: count(src[at + 3]),
       lifetimeMonths: count(src[at + 4]),
-      power: percent(src[at + 5]),
+      power: count(src[at + 5]),
     });
   }
   return out;
@@ -90,10 +89,16 @@ export function plantName(genre) {
   return CLASSIC_NAMES[genre] ?? nameOf(genre);
 }
 
-/** One plant line (French): "Centrale au gaz : âge 3 ans, puissance 100 %". */
+/** A power in powered tiles (French): "400 tuiles"; one tile or none is the singular "tuile". */
+export function powerText(tiles) {
+  const n = count(tiles);
+  return `${formatInt(n)} ${n <= 1 ? "tuile" : "tuiles"}`;
+}
+
+/** One plant line (French): "Centrale au gaz : âge 3 ans, puissance 400 tuiles". */
 export function plantLine(p) {
   const years = ageYears(p.ageMonths);
-  return `${plantName(p.genre)} : âge ${formatInt(years)} ${years === 1 ? "an" : "ans"}, puissance ${formatInt(p.power)} %`;
+  return `${plantName(p.genre)} : âge ${formatInt(years)} ${years === 1 ? "an" : "ans"}, puissance ${powerText(p.power)}`;
 }
 
 /** The plant lines of the panel, or the one line «Aucune centrale posée.» for an empty list. */

@@ -27,7 +27,8 @@ describe("the mock's energy", () => {
     assert.deepEqual([...city.energy_stats()], [...ENERGY_FIXED]);
     const plants = [...city.power_plants()];
     assert.equal(plants.length, MOCK_PLANTS.length * 6);
-    assert.deepEqual(plants.slice(0, 6), [40, 10, 10, 36, 480, 100]);
+    assert.deepEqual(plants.slice(0, 6), [40, 10, 10, 36, 480, 400]);
+    assert.deepEqual(plants.slice(12, 18), [0, 20, 5, 120, 600, 700], "the coal plant gives COAL_POWER_STRENGTH tiles");
     city.set_energy_rules(false);
     assert.equal(city.energy_stats()[0], 0, "off again");
   });

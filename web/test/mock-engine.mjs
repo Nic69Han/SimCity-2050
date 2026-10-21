@@ -665,7 +665,7 @@ export class MockCity {
   energy_stats() {
     return energyStatsOf(this.#energyRules);
   }
-  // Records of 6 [genre, x, y, age_months, lifetime_months, current_power]; empty while the rule is off.
+  // Records of 6 [genre, x, y, age_months, lifetime_months, powered_tiles]; empty while the rule is off.
   power_plants() {
     return powerPlantsOf(this.#energyRules);
   }
