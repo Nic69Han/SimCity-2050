@@ -7,6 +7,7 @@ use super::{
 };
 use crate::agents::graph::{classify, CLASS_ROAD};
 use crate::agents::transport::rail::is_rail;
+use crate::energy::is_plant_genre;
 use crate::relief::is_water;
 use crate::services::is_service_genre;
 use crate::simulation::Simulation;
@@ -133,7 +134,9 @@ impl Simulation {
             .as_slice()
             .iter()
             .copied()
-            .filter(|s| !rules || !self.is_intact(s) || self.is_orphan_service(s))
+            .filter(|s| {
+                !rules || !self.is_intact(s) || self.is_orphan_service(s) || self.is_orphan_plant(s)
+            })
             .collect();
         self.drop_structures(&doomed)
     }
@@ -190,6 +193,7 @@ impl Simulation {
     fn drop_structures(&mut self, doomed: &[Structure]) -> bool {
         for s in doomed {
             self.clear_surface(s);
+            self.extensions_mut().energy_state.forget(s.x, s.y);
         }
         self.extensions_mut()
             .structure_list
@@ -216,6 +220,7 @@ impl Simulation {
         };
         if !self.structure_rules()
             || (is_service_genre(genre) && !self.service_rules())
+            || (is_plant_genre(genre) && !self.energy_rules())
             || list.len() >= MAX_STRUCTURES
             || !self.fits_on_map(kind, x, y)
         {
@@ -229,7 +234,8 @@ impl Simulation {
             .collect();
         let no_road = kind.needs_road && !self.touches(&site, |t| classify(t) == CLASS_ROAD);
         let no_rail = kind.needs_rail && !self.touches(&site, is_rail);
-        if tiles.iter().any(|&t| is_water(t)) || no_road || no_rail {
+        let no_water = kind.needs_water && !self.touches(&site, is_water);
+        if tiles.iter().any(|&t| is_water(t)) || no_road || no_rail || no_water {
             return ToolResult::Failed;
         }
         if tiles.iter().any(|&t| t & LOMASK != DIRT) {
@@ -255,6 +261,11 @@ impl Simulation {
     /// A public service building while the services are off (it cannot be built then).
     fn is_orphan_service(&self, s: &Structure) -> bool {
         is_service_genre(s.genre) && !self.service_rules()
+    }
+
+    /// A power plant while the energy rules are off (it cannot be built then).
+    fn is_orphan_plant(&self, s: &Structure) -> bool {
+        is_plant_genre(s.genre) && !self.energy_rules()
     }
 
     fn fits_on_map(&self, kind: &Kind, x: i32, y: i32) -> bool {

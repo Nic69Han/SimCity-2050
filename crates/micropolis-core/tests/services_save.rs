@@ -78,7 +78,7 @@ fn chunk_tags(file: &[u8], w: i32, h: i32) -> Vec<(u8, usize)> {
 #[test]
 fn the_new_tag_is_accepted() {
     assert_eq!(CHUNK_SERVICES, 9);
-    assert_eq!(CHUNK_MAX_TAG, 9);
+    assert_eq!(CHUNK_MAX_TAG, 10);
 }
 
 #[test]

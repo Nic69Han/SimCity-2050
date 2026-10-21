@@ -4,6 +4,9 @@ use super::{EFFECT_LAND_VALUE, EFFECT_NONE, FLAG_POWER, FLAG_WATER, SURFACE_TILE
 use super::{GENRE_BUS_DEPOT, GENRE_BUS_STOP, GENRE_MONUMENT, GENRE_PARK, GENRE_PLAZA};
 use super::{GENRE_STATION, GENRE_TAXI_DEPOT, LAND_VALUE_CAP};
 use crate::agents::transport::WALK_RADIUS;
+use crate::energy::{
+    GENRE_FUSION, GENRE_GAS, GENRE_HYDRO, GENRE_MICROWAVE, GENRE_OIL, GENRE_SOLAR, GENRE_WIND,
+};
 use crate::services::{
     GENRE_CLINIC, GENRE_COLLEGE, GENRE_HOSPITAL, GENRE_LIBRARY, GENRE_MUSEUM, GENRE_PRISON,
     GENRE_SCHOOL,
@@ -33,6 +36,8 @@ pub struct Kind {
     pub needs_road: bool,
     /// Placement rule: a classic rail tile must touch the footprint (same neighbours).
     pub needs_rail: bool,
+    /// Placement rule: a water tile must touch the footprint (same neighbours).
+    pub needs_water: bool,
 }
 
 impl Kind {
@@ -55,6 +60,7 @@ const fn kind(genre: u8, size: (i32, i32), cost: i32, upkeep: i32) -> Kind {
         bonus: 0,
         needs_road: false,
         needs_rail: false,
+        needs_water: false,
     }
 }
 
@@ -79,8 +85,8 @@ const fn public(genre: u8, size: (i32, i32), cost: i32, upkeep: i32, radius: i32
 }
 
 /// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6, 20-23 of v0.8,
-/// 30-36 of v0.9).
-pub const CATALOG: [Kind; 18] = [
+/// 30-36 of v0.9, 40-46 of v0.10: the power plants, whose power is in [`crate::energy::PLANTS`]).
+pub const CATALOG: [Kind; 25] = [
     amenity(kind(GENRE_PARK, (2, 2), 300, 5), 0, 6, 12),
     amenity(kind(GENRE_PLAZA, (1, 1), 100, 2), FLAG_POWER, 4, 6),
     amenity(
@@ -114,6 +120,16 @@ pub const CATALOG: [Kind; 18] = [
     public(GENRE_CLINIC, (1, 1), 200, 10, 8),
     public(GENRE_HOSPITAL, (3, 3), 1800, 70, 16),
     public(GENRE_PRISON, (3, 3), 2500, 80, 20),
+    kind(GENRE_GAS, (3, 3), 4000, 40),
+    kind(GENRE_OIL, (3, 3), 3000, 50),
+    kind(GENRE_WIND, (1, 1), 250, 2),
+    kind(GENRE_SOLAR, (3, 3), 6000, 20),
+    Kind {
+        needs_water: true,
+        ..kind(GENRE_HYDRO, (2, 2), 3500, 30)
+    },
+    kind(GENRE_MICROWAVE, (3, 3), 15_000, 100),
+    kind(GENRE_FUSION, (4, 4), 40_000, 150),
 ];
 
 /// The catalog entry of `genre`, if it exists.
