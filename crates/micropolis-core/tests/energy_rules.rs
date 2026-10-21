@@ -9,8 +9,8 @@ mod support;
 use micropolis_core::deals::{DealResult, POWER_OFFER_BASE};
 use micropolis_core::energy::curve::{life_months, power_at, wear_start};
 use micropolis_core::energy::{
-    spec_of, GENRE_COAL, GENRE_FUSION, GENRE_GAS, GENRE_HYDRO, GENRE_MICROWAVE, GENRE_NUCLEAR,
-    GENRE_OIL, GENRE_SOLAR, GENRE_WIND, PLANTS, STATS_SIZE,
+    spec_of, AGE_STEP_MONTHS, GENRE_COAL, GENRE_FUSION, GENRE_GAS, GENRE_HYDRO, GENRE_MICROWAVE,
+    GENRE_NUCLEAR, GENRE_OIL, GENRE_SOLAR, GENRE_WIND, PLANTS, STATS_SIZE,
 };
 use micropolis_core::position::Position;
 use micropolis_core::simulation::Simulation;
@@ -224,13 +224,13 @@ fn the_grid_is_powered_from_a_plant_and_dark_without_it() {
 }
 
 #[test]
-fn a_new_plant_is_0_months_old_and_a_month_adds_one() {
+fn a_new_plant_is_0_months_old_and_each_pass_adds_a_year() {
     let mut s = bare();
     build(&mut s, GENRE_WIND, 30, 30);
     assert_eq!(plant_at(&s, 30, 30).age, 0);
     months(&mut s, 5);
     let p = plant_at(&s, 30, 30);
-    assert_eq!((p.age, p.life, p.power), (5, 240, 30));
+    assert_eq!((p.age, p.life, p.power), (5 * AGE_STEP_MONTHS, 240, 30));
     // pulling it down and building it again starts over, even within the month
     assert_eq!(s.remove_structure(30, 30), ToolResult::Ok);
     build(&mut s, GENRE_WIND, 30, 30);
@@ -247,15 +247,19 @@ fn a_plant_keeps_full_power_to_80_percent_of_its_life_then_loses_power_then_stop
     let spec = spec_of(GENRE_WIND).unwrap();
     let (start, end) = (wear_start(spec), life_months(spec));
     assert_eq!((start, end), (192, 240));
-    months(&mut s, start);
+    // one pass of the balance hook is one game year
+    months(&mut s, start / AGE_STEP_MONTHS);
     assert_eq!((plant_at(&s, 30, 30).power, s.power_capacity()), (30, 30));
     assert_eq!(s.energy_stats()[4], 0, "not worn yet");
     month(&mut s);
-    assert_eq!(s.energy_stats()[4], 1, "worn from the month after");
-    assert_eq!(plant_at(&s, 30, 30).power, power_at(spec, start + 1));
-    months(&mut s, end - start - 2);
+    assert_eq!(s.energy_stats()[4], 1, "worn from the year after");
+    assert_eq!(
+        plant_at(&s, 30, 30).power,
+        power_at(spec, start + AGE_STEP_MONTHS)
+    );
+    months(&mut s, (end - start) / AGE_STEP_MONTHS - 2);
     let last = plant_at(&s, 30, 30);
-    assert_eq!(last.age, end - 1);
+    assert_eq!(last.age, end - AGE_STEP_MONTHS);
     assert!(
         last.power >= 15 && last.power < 30,
         "still above half: {}",
@@ -312,7 +316,10 @@ fn the_classic_plants_get_an_age_with_the_first_month_and_none_with_the_rule_off
     let c = coal_plant(&mut s, 40, 40);
     assert!(s.extensions().energy_state.is_empty());
     months(&mut s, 3);
-    assert_eq!(s.extensions().energy_state.age_of(c.0, c.1), 3);
+    assert_eq!(
+        s.extensions().energy_state.age_of(c.0, c.1),
+        3 * AGE_STEP_MONTHS
+    );
     // bulldozed and rebuilt elsewhere: the old age is forgotten
     s.tool_down(EditingTool::Bulldozer, c.0, c.1);
     s.ext_valves();
@@ -451,7 +458,7 @@ fn the_plants_and_the_ages_are_capped() {
     month(&mut s);
     let ages = s.extensions().energy_state.as_slice();
     assert_eq!(ages.len(), MAX_STRUCTURES);
-    assert!(ages.iter().all(|a| a.months == 1));
+    assert!(ages.iter().all(|a| a.months == AGE_STEP_MONTHS));
     const { assert!(MAX_STRUCTURES <= micropolis_core::energy::MAX_PLANTS) };
     // an age never passes what the file can hold
     s.extensions_mut().energy_state.set(20, 2, u32::MAX);

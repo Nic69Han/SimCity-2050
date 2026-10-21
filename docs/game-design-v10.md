@@ -49,7 +49,8 @@ e2e : activer l'énergie, poser une éolienne, voir la production monter ; tous 
   de vie en années : gaz 3×3 (4 000, 40, 400, 30/3, 40), pétrole 3×3 (3 000, 50, 500, 50/4, 40), éolienne 1×1 (250,
   2, 30, 0, 20), solaire 3×3 (6 000, 20, 250, 0, 30), hydroélectrique 2×2 (3 500, 30, 300, 0, 60), micro-ondes 3×3
   (15 000, 100, 2 000, 0, 50), fusion 4×4 (40 000, 150, 3 000, 0, 80) ; charbon 50 ans, nucléaire 50 ans.
-* **Âge** : un mois de jeu = un bilan mensuel (`ext_monthly_balance`), comme les déchets. Une centrale posée a l'âge 0.
+* **Âge** : compté en mois ; il avance au bilan (`ext_monthly_balance`), qui passe une fois par collecte d'impôts, c'est-à-dire
+  une fois par an de jeu : +12 mois par passage (corrigé à l'intégration). Une centrale posée a l'âge 0.
   Les centrales classiques (charbon, nucléaire) reçoivent un âge seulement règle allumée (clé = tuile centrale) ;
   leur puissance classique est réduite par le même crochet `ext_power_sources` (valeur négative autorisée, résultat
   jamais sous 0). Puissance actuelle : 100 % jusqu'à 80 % de la vie, puis décroissance linéaire jusqu'à 50 % à la
@@ -77,7 +78,7 @@ bilan mensuel, `demand` consommation) ; adaptateur `crates/micropolis-wasm/src/e
 * **Interrupteur** : `Extensions::energy`, bit 1 du second octet des règles (`RULES2_ENERGY`) ; `energy_active()` =
   énergie et `structures` allumées. Éteint (défaut) : les crochets rendent leur entrée, `energy_stats()` est nul,
   `power_plants()` est vide, aucune offre d'électricité ; le moteur est celui du C++ (test « règle seule = moteur
-  d'origine » sur 600 mois, comparaisons `compare-*.sh` inchangées). Éteindre retire les genres 40-46 (sans
+  d'origine » sur 600 pas de simulation, comparaisons `compare-*.sh` inchangées). Éteindre retire les genres 40-46 (sans
   remboursement), oublie âges et achats.
 * **Genres** (coût, entretien/mois, puissance en tuiles alimentées, pollution intensité/rayon, vie en années) :
   gaz 40 (3×3 ; 4 000, 40, 400, 30/3, 40), pétrole 41 (3×3 ; 3 000, 50, 500, 50/4, 40), éolienne 42 (1×1 ; 250, 2, 30,
@@ -90,8 +91,8 @@ bilan mensuel, `demand` consommation) ; adaptateur `crates/micropolis-wasm/src/e
   `do_power_scan` : empile la tuile en haut à gauche de chaque centrale en service (puissance actuelle > 0), ajoute
   leur puissance, retire la perte des centrales classiques usées, ajoute l'électricité achetée ; le total ne passe
   jamais sous 0. `power_capacity()` (accords) compte les centrales mais pas l'électricité achetée (jamais revendue).
-* **Âge** : `EnergyState` (âges triés par `(x, y)`, au plus `MAX_PLANTS` = 1 024). Un mois = un bilan mensuel : chaque
-  centrale en place gagne un mois (une centrale classique reçoit un âge au premier bilan, règle allumée) ; les âges
+* **Âge** : `EnergyState` (âges triés par `(x, y)`, au plus `MAX_PLANTS` = 1 024). Un bilan = une collecte d'impôts = un an
+  de jeu : chaque centrale en place gagne `AGE_STEP_MONTHS` = 12 mois (une centrale classique reçoit un âge au premier bilan, règle allumée) ; les âges
   des centrales disparues sont oubliés (reconstruire repart à 0) ; plafond `MAX_AGE_MONTHS` = 65 535 (champ de 16
   bits). Courbe (`curve::power_at`, entiers) : 100 % jusqu'à 80 % de la vie (`WEAR_START_PCT`), puis décroissance
   linéaire jusqu'à 50 % (`WEAR_FLOOR_PCT`) juste avant la fin de vie, puis 0 : la centrale s'arrête et ne pollue plus.

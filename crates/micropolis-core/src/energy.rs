@@ -63,6 +63,9 @@ pub const GENRE_MICROWAVE: u8 = 45;
 pub const GENRE_FUSION: u8 = 46;
 /// Months in a year of life span.
 pub const MONTHS_PER_YEAR: u32 = 12;
+/// Months a plant ages at each pass of the monthly balance hook, which the classic engine runs once
+/// per tax collection, that is once per game year.
+pub const AGE_STEP_MONTHS: u32 = MONTHS_PER_YEAR;
 /// Percent of the life span after which a plant loses power.
 pub const WEAR_START_PCT: u32 = 80;
 /// Percent of its power a plant still gives just before the end of its life.

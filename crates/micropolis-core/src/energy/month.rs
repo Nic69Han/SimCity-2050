@@ -1,7 +1,7 @@
 //! The monthly pass of the energy: the plants get a month older and the city pays for the
 //! electricity it buys.
 
-use super::{EnergyState, MAX_PLANTS};
+use super::{EnergyState, AGE_STEP_MONTHS, MAX_PLANTS};
 use crate::deals::RESOURCE_POWER_BUY;
 use crate::simulation::Simulation;
 
@@ -16,13 +16,13 @@ fn purchases(sim: &Simulation) -> i64 {
         .sum()
 }
 
-/// Every plant now standing is one month older; the ages of the others are forgotten. A plant
-/// never seen starts at 0 and so is 1 month old after its first pass. Plants past
-/// [`MAX_PLANTS`] are not followed.
+/// Every plant now standing is one year ([`AGE_STEP_MONTHS`]) older: the hook runs once per tax
+/// collection, every `TAX_FREQUENCY` city ticks, which is one game year. The ages of the others
+/// are forgotten. A plant never seen starts at 0. Plants past [`MAX_PLANTS`] are not followed.
 fn age_plants(sim: &mut Simulation) {
     let mut next = EnergyState::default();
     for p in sim.energy_plants().iter().take(MAX_PLANTS) {
-        next.set(p.x, p.y, p.age.saturating_add(1));
+        next.set(p.x, p.y, p.age.saturating_add(AGE_STEP_MONTHS));
     }
     sim.extensions_mut().energy_state = next;
 }
