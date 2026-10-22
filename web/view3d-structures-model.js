@@ -10,6 +10,8 @@
 // blue roof slab, chimney) (docs/game-design-v08.md); 30-36 public services (docs/game-design-v09.md:
 // school, college, library with columns, museum, clinic and hospital with a red cross, prison with a low
 // wall); 40-46 power plants (docs/game-design-v10.md: gas, oil, wind, solar, hydro, microwave, fusion);
+// 50-54 rewards (mayor's house, city hall, statue, courthouse, arch) and 60-63 special deals (casino, state
+// prison, toxic dump, missile base) (docs/game-design-v12.md, web/view3d-structures-rewards.js);
 // any other genre is a plain grey block.
 // Only the kinds below are meshes: the thin pieces of a building (roof, walls, columns, cross arms) are
 // "slab" boxes, its bodies are "block" boxes.
@@ -22,6 +24,8 @@ export const GENRE = Object.freeze({
   PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
   SCHOOL: 30, COLLEGE: 31, LIBRARY: 32, MUSEUM: 33, CLINIC: 34, HOSPITAL: 35, PRISON: 36,
   GAS: 40, OIL: 41, WIND: 42, SOLAR: 43, HYDRO: 44, MICROWAVE: 45, FUSION: 46,
+  MAYOR_HOUSE: 50, CITY_HALL: 51, STATUE: 52, COURTHOUSE: 53, ARCH: 54,
+  CASINO: 60, STATE_PRISON: 61, TOXIC_DUMP: 62, MISSILE_BASE: 63,
 });
 export const SHAPES = Object.freeze({ SLAB: "slab", TREE: "tree", FOUNTAIN: "fountain", OBELISK: "obelisk", BLOCK: "block" });
 export const KINDS = Object.freeze(Object.values(SHAPES));
@@ -57,6 +61,10 @@ export const HOSPITAL = Object.freeze({ height: 1.8, cross: Object.freeze({ arm:
 export const PRISON = Object.freeze({ height: 0.9, inset: 0.25, wall: Object.freeze({ height: 0.35, thick: 0.1 }) });
 // Power plants (genres 40-46): web/view3d-structures-energy.js.
 export { GAS, OIL, WIND, SOLAR, HYDRO, MICROWAVE, FUSION } from "./view3d-structures-energy.js";
+// Rewards and special deals (genres 50-54, 60-63): web/view3d-structures-rewards.js.
+export {
+  MAYOR, HALL, STATUE, COURTHOUSE, ARCH, CASINO, STATE_PRISON, TOXIC_DUMP, MISSILE_BASE,
+} from "./view3d-structures-rewards.js";
 
 export const COLORS = Object.freeze({
   park: "#5cb85c", tree: "#1b5e20", square: "#e8dcc0", fountain: "#90caf9",
