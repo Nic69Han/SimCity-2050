@@ -85,6 +85,25 @@ describe("highwayLine, the drag line", () => {
     assert.deepEqual(diag.at(-1), { x: 2, y: 2 });
   });
 
+  test("a drag across a corner places the corner tile (steps by sides only)", () => {
+    const line = m.highwayLine(14, 5, 15, 7);
+    assert.deepEqual(line, [{ x: 15, y: 5 }, { x: 15, y: 6 }, { x: 15, y: 7 }]);
+    assert.ok(line.some((t) => t.x === 15 && t.y === 5), "the corner (15,5) is in the line");
+  });
+
+  test("every tile of the line touches the previous one by a side, for any drag", () => {
+    const sideBy = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+    const drags = [[0, 0, 1, 1], [14, 5, 15, 7], [28, 10, 30, 12], [0, 0, 7, 3], [9, 9, 2, 1], [3, 3, 3, 9]];
+    for (const [x0, y0, x1, y1] of drags) {
+      let prev = { x: x0, y: y0 };
+      for (const t of m.highwayLine(x0, y0, x1, y1)) {
+        assert.ok(sideBy(prev, t), `${x0},${y0} -> ${x1},${y1}: ${prev.x},${prev.y} then ${t.x},${t.y}`);
+        prev = t;
+      }
+      assert.deepEqual(prev, { x: x1, y: y1 }, "the line ends on the target");
+    }
+  });
+
   test("the line length is capped at HIGHWAY_DRAG_MAX tiles", () => {
     assert.equal(m.HIGHWAY_DRAG_MAX, 256);
     const long = m.highwayLine(0, 0, 1000, 0);

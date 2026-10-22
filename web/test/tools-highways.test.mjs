@@ -90,6 +90,24 @@ describe("engine calls", () => {
     assert.equal(tools.calls(poor, entryOf(poor)).drag(20, 10, 24, 10), RESULT.NO_MONEY);
   });
 
+  test("a diagonal drag across the corner of an L-shaped road places the corner and every tile", () => {
+    // L-shaped road: y = 5 from x = 10 to 15, then x = 15 from y = 5 to 7 (the corner is (15, 5)).
+    // The drag from (14, 5) to (15, 7) steps (15, 5), (15, 6), (15, 7): every one is a road.
+    const city = withHighways();
+    city.set_highway_rules(true);
+    for (let x = 10; x <= 15; x++) city.tool_down(ROAD, x, 5);
+    for (let y = 6; y <= 7; y++) city.tool_down(ROAD, 15, y);
+    const c = tools.calls(city, entryOf(city));
+    assert.equal(c.down(14, 5), RESULT.OK);
+    assert.equal(c.drag(14, 5, 15, 7), RESULT.OK);
+    assert.equal(city.highway_stats()[0], 4, "the start, then the corner and the two tiles after it");
+    const layer = city.highway_layer(); // the default map: 40 x 30, index x * 30 + y
+    for (const [x, y] of [[14, 5], [15, 5], [15, 6], [15, 7]]) {
+      assert.equal(layer[x * 30 + y], 1, `highway on (${x}, ${y})`);
+    }
+    assert.equal(layer[10 * 30 + 5], 0, "a road tile the drag never crossed has no highway");
+  });
+
   test("a drag stops at the line cap", () => {
     const city = new MockCity(1, { highways: true, rubble: 0, width: 300, height: 20 });
     city.set_highway_rules(true);

@@ -5,7 +5,7 @@
 // The engine's statistics (City.highway_stats): Int32Array [tiles, yearly_upkeep_in_dollars].
 
 import { formatInt, formatMoney } from "./budget-text.js";
-import { lineTiles } from "./relief.js";
+import { tunnelPath } from "./transit-model.js";
 
 // The engine methods of the highways. Without all of them there is no highway tool and no highways section.
 export const METHODS = Object.freeze([
@@ -66,9 +66,11 @@ export function highwaysBlockedReason(city) {
 }
 
 /**
- * The tiles of a drag from (x0, y0) to (x1, y1): the tiles after the start, along the line, at most
- * HIGHWAY_DRAG_MAX of them.
+ * The tiles of a drag from (x0, y0) to (x1, y1): the tiles after the start, at most HIGHWAY_DRAG_MAX of them.
+ * The steps are by sides only (the walk of transit-model.js tunnelPath): each tile touches the previous one by
+ * a side, so a corner of the road is placed too and the highway stays 4-connected like the roads it follows.
+ * The walk has as many steps as the drag spans tiles, so the cap is applied to its result.
  */
 export function highwayLine(x0, y0, x1, y1) {
-  return lineTiles(x0, y0, x1, y1).slice(0, HIGHWAY_DRAG_MAX);
+  return tunnelPath(x0, y0, x1, y1).slice(0, HIGHWAY_DRAG_MAX);
 }
