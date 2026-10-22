@@ -92,7 +92,7 @@ impl HighwayList {
             return Err("highways chunk does not match its tile count");
         }
         let mut tiles = Vec::with_capacity(count);
-        for t in body.chunks_exact(CHUNK_TILE_SIZE) {
+        for t in body.as_chunks::<CHUNK_TILE_SIZE>().0 {
             let tile = (
                 u16::from_be_bytes([t[0], t[1]]),
                 u16::from_be_bytes([t[2], t[3]]),
