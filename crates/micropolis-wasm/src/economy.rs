@@ -25,10 +25,6 @@ use wasm_bindgen::prelude::*;
 /// Values per record of `bonds`.
 pub const BOND_LEN: usize = 3;
 
-fn clamp(v: i64) -> i32 {
-    v.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
-}
-
 #[wasm_bindgen]
 impl City {
     /// Whether the economy rules are on (off by default).

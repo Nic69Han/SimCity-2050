@@ -3,7 +3,6 @@
 
 use super::{
     be_i32, BOND_AMOUNT, BOND_BASE_PERMILLE, BOND_RECORD_SIZE, BOND_STEP_PERMILLE, MAX_BONDS,
-    MAX_BOND_YEARS,
 };
 
 /// A bond: what it brought, its yearly rate (fixed at issue) and the years it has run.
@@ -61,7 +60,7 @@ pub fn pay_year(bonds: &mut [Bond]) -> i64 {
     let mut total = 0;
     for b in bonds.iter_mut() {
         total += i64::from(b.interest());
-        b.years = b.years.saturating_add(1).min(MAX_BOND_YEARS);
+        b.years = b.years.saturating_add(1);
     }
     total
 }
@@ -87,6 +86,7 @@ pub fn repay_what_can_be(bonds: &mut Vec<Bond>, funds: i64) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::economy::MAX_BOND_YEARS;
 
     #[test]
     fn the_rate_rises_with_the_bonds_running_and_stops_at_the_cap() {
