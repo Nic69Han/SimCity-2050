@@ -12,7 +12,7 @@ import { MockCity } from "./mock-engine.mjs";
 
 describe("every module follows the contract", () => {
   test("the registry lists relief, water and transit, each with its own kind", () => {
-    assert.deepEqual(EXTRA_TOOL_MODULES.map((m) => m.KIND), ["relief", "water", "transit", "structures", "zoning"]);
+    assert.deepEqual(EXTRA_TOOL_MODULES.map((m) => m.KIND), ["relief", "water", "transit", "structures", "zoning", "highways"]);
     for (const m of EXTRA_TOOL_MODULES) {
       for (const name of ["catalog", "calls", "label", "blockedReason"]) {
         assert.equal(typeof m[name], "function", `${m.KIND}.${name}`);
