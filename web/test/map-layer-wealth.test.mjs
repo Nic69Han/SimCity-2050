@@ -18,10 +18,13 @@ function fakeCtx() {
   };
 }
 
-// A city with the wealth engine API the test controls. `bytes` is what wealth_layer() returns.
-function fakeCity({ bytes = new Uint8Array(W * H), w = W, h = H, api = true } = {}) {
+// A city with the wealth engine API the test controls. `bytes` is what wealth_layer() returns; `rules` is what
+// economy_rules() returns (the economy rule on or off); `api` false drops the wealth_layer method, `rulesApi` false
+// drops the economy_rules method.
+function fakeCity({ bytes = new Uint8Array(W * H), w = W, h = H, api = true, rules = true, rulesApi = true } = {}) {
   const city = { width: () => w, height: () => h };
   if (api) city.wealth_layer = () => bytes;
+  if (rulesApi) city.economy_rules = () => rules;
   return city;
 }
 
@@ -158,6 +161,31 @@ describe("the layer", () => {
     setWealthView(true);
     assert.equal(WEALTH_LAYER.visible(fakeCity({ api: false })), false, "an engine without wealth_layer");
     assert.equal(WEALTH_LAYER.visible({}), false, "an engine without anything");
+    setWealthView(false);
+  });
+
+  test("hidden when the economy rule is off, even with the view asked (the view toggle survives the rule)", () => {
+    setWealthView(true);
+    assert.equal(WEALTH_LAYER.visible(fakeCity({ rules: false })), false, "rule off, view on");
+    assert.equal(WEALTH_LAYER.visible(fakeCity({ rules: true })), true, "rule on, view on");
+    setWealthView(false);
+    assert.equal(WEALTH_LAYER.visible(fakeCity({ rules: false })), false, "rule off, view off");
+  });
+
+  test("hidden when the engine has no economy_rules method, even with the view asked", () => {
+    setWealthView(true);
+    assert.equal(WEALTH_LAYER.visible(fakeCity({ rulesApi: false })), false, "an engine without economy_rules");
+    assert.equal(WEALTH_LAYER.visible(fakeCity({ rulesApi: false, api: false })), false, "neither method");
+    setWealthView(false);
+  });
+
+  test("the rule check is a boolean: a falsy economy_rules() answer hides the layer, a truthy one does not", () => {
+    setWealthView(true);
+    const city = fakeCity();
+    city.economy_rules = () => 0;
+    assert.equal(WEALTH_LAYER.visible(city), false, "0 is off");
+    city.economy_rules = () => 1;
+    assert.equal(WEALTH_LAYER.visible(city), true, "1 is on");
     setWealthView(false);
   });
 
