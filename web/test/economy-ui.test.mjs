@@ -337,3 +337,50 @@ describe("hidden without the engine API or before it is ready", () => {
     assert.equal(byIdOrNull(panel, "economy-taxes"), null);
   });
 });
+
+describe("the value typed in a tax input while the game runs", () => {
+  test("a focused input keeps the typed value through the frames; the engine rate comes back once it is not focused", () => {
+    const city = new MockCity(1, { economy: true });
+    const { api, panel } = setupPage(city);
+    city.set_economy_rules(true);
+    const input = taxInput(panel, 1, 1);
+    globalThis.document.activeElement = input;
+    input.value = "1";
+    ui.update(api); // a frame while the player types
+    assert.equal(input.value, "1", "the frame does not reset the typed digit");
+    input.value = "12";
+    ui.update(api);
+    assert.equal(input.value, "12");
+    assert.equal(city.tax_rates()[0], MOCK_TAX_START, "nothing is sent before the change");
+    globalThis.document.activeElement = null;
+    ui.update(api);
+    assert.equal(input.value, String(MOCK_TAX_START), "not focused: the engine rate is written again");
+  });
+
+  test("the other inputs are written even while one is focused", () => {
+    const city = new MockCity(1, { economy: true });
+    const { api, panel } = setupPage(city);
+    city.set_economy_rules(true);
+    globalThis.document.activeElement = taxInput(panel, 1, 1);
+    taxInput(panel, 2, 2).value = "3"; // a stale value elsewhere
+    ui.update(api);
+    assert.equal(taxInput(panel, 2, 2).value, String(MOCK_TAX_START));
+  });
+
+  test("a change made while the input has the focus (Enter) is settled: a refused value goes back to the engine rate", () => {
+    const city = new MockCity(1, { economy: true });
+    const { api, panel } = setupPage(city);
+    city.set_economy_rules(true);
+    const input = taxInput(panel, 2, 2);
+    globalThis.document.activeElement = input;
+    input.value = "25";
+    input.onchange();
+    assert.equal(input.value, String(MOCK_TAX_START), "the refused text is replaced although the input is focused");
+    assert.match(status(panel), /^Taux refusé/);
+    input.value = "15";
+    input.onchange();
+    assert.equal(city.tax_rates()[1 * 3 + 1], 15);
+    assert.equal(input.value, "15");
+    assert.equal(api.city().tax_rates()[4], 15);
+  });
+});

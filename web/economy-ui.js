@@ -89,12 +89,18 @@ function build(api) {
   return { box, note, taxes, bonds, goods, status, keys: {} };
 }
 
-// A tax change: the page reads the input, the engine decides (set_tax_rate returns a boolean), and the inputs show the
-// engine's values again, so a refused change goes back to the rate that holds.
+// A tax change: the page reads the input, the engine decides (set_tax_rate returns a boolean), and the input shows the
+// engine's value again, so a refused change goes back to the rate that holds. The input is written here even when it has
+// the focus: writeTaxes leaves a focused input alone (the player may be typing), and the change event is the moment to
+// settle it.
 function onTaxChange(api, genre, cls) {
-  const rate = parseRate(ui.taxes.inputs[cellIndex(genre, cls)].value);
-  const ok = rate !== null && Boolean(api.city().set_tax_rate(genre, cls, rate));
+  const index = cellIndex(genre, cls);
+  const input = ui.taxes.inputs[index];
+  const city = api.city();
+  const rate = parseRate(input.value);
+  const ok = rate !== null && Boolean(city.set_tax_rate(genre, cls, rate));
   ui.status.textContent = taxMessage(ok);
+  input.value = String(decodeRates(city.tax_rates())[index]);
   update(api);
 }
 
@@ -108,13 +114,15 @@ function onRepay(api, index) {
   update(api);
 }
 
-// Writes the nine rates and their income; the rates are written only when they differ from the input.
+// Writes the nine rates and their income. A rate is written only when its input differs and is not the focused one: the
+// update runs every frame while the game plays, and a number input fires its change only on blur or Enter, so the value
+// the player is typing must not be reset (onTaxChange writes the engine's value once the change is made).
 function writeTaxes(city, on) {
   const rates = decodeRates(city.tax_rates());
   const income = decodeIncome(city.tax_income());
   rates.forEach((rate, i) => {
     const input = ui.taxes.inputs[i];
-    if (input.value !== String(rate)) input.value = String(rate);
+    if (document.activeElement !== input && input.value !== String(rate)) input.value = String(rate);
     input.disabled = !on;
     const text = incomeText(income[i]);
     if (ui.taxes.incomes[i].textContent !== text) ui.taxes.incomes[i].textContent = text;
