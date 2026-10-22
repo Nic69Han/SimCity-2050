@@ -15,6 +15,7 @@
 // "slab" boxes, its bodies are "block" boxes.
 import { tileCentreY } from "./view3d-model.js";
 import { ENERGY_COLORS, energyBuilders } from "./view3d-structures-energy.js";
+import { REWARD_COLORS, rewardBuilders } from "./view3d-structures-rewards.js";
 
 export const RECORD = 6;
 export const GENRE = Object.freeze({
@@ -65,6 +66,7 @@ export const COLORS = Object.freeze({
   beige: "#e6d3a8", schoolRoof: "#c62828", white: "#f5f5f0", libraryStone: "#a59f94", column: "#d8d3c8",
   cross: "#d32f2f", prison: "#4f5358", prisonWall: "#7a7e85",
   ...ENERGY_COLORS,
+  ...REWARD_COLORS,
 });
 
 // Colour of a hex string as 0..1 components (the instance colour format).
@@ -291,7 +293,11 @@ const SERVICE_BUILDERS = Object.freeze({
 
 const ENERGY_BUILDERS = energyBuilders({ GENRE, SHAPES, COLORS, place, body, stackAt, cornerStack, cx, cz });
 
-const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS, ...ENERGY_BUILDERS });
+const REWARD_BUILDERS = rewardBuilders({ GENRE, SHAPES, COLORS, place, body, stackAt, cornerStack, cx, cz });
+
+const BUILDERS_ALL = Object.freeze({
+  ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS, ...ENERGY_BUILDERS, ...REWARD_BUILDERS,
+});
 
 export function partsOf(s, base) {
   const build = BUILDERS_ALL[s.genre] ?? block;
