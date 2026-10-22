@@ -17,8 +17,10 @@
 use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::densities::{DensityList, Farms};
+use crate::disasters2::{DisasterReport, DisasterState};
 use crate::economy::EconomyState;
 use crate::energy::EnergyState;
+use crate::highways::HighwayList;
 use crate::position::Position;
 use crate::rewards::{RewardReport, RewardState};
 use crate::services::{ServiceCache, ServiceState};
@@ -29,8 +31,8 @@ use crate::transit::TransitNetwork;
 use crate::waste::WasteState;
 use crate::water::WaterNetwork;
 use crate::{
-    deals, densities, economy, energy, ordinances, rewards, services, structures, transit, waste,
-    water,
+    deals, densities, disasters2, economy, energy, highways, ordinances, rewards, services,
+    structures, transit, waste, water,
 };
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
@@ -57,8 +59,12 @@ pub const CHUNK_ENERGY: u8 = 10;
 pub const CHUNK_ECONOMY: u8 = 11;
 /// Chunk tag: the unlocked rewards and the answers to the offers ([`RewardState::encode`]).
 pub const CHUNK_REWARDS: u8 = 12;
+/// Chunk tag: the highway tiles ([`HighwayList::encode`]).
+pub const CHUNK_HIGHWAYS: u8 = 13;
+/// Chunk tag: the months of drought left ([`DisasterState::encode`]).
+pub const CHUNK_DISASTERS: u8 = 14;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_REWARDS;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_DISASTERS;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -97,7 +103,16 @@ const RULES2_ENERGY: u8 = 0b10;
 const RULES2_ECONOMY: u8 = 0b100;
 /// Bit 3 of the second byte of the rules chunk: the rewards and deals (`Extensions::rewards`).
 const RULES2_REWARDS: u8 = 0b1000;
-const RULES2_KNOWN: u8 = RULES2_SERVICES | RULES2_ENERGY | RULES2_ECONOMY | RULES2_REWARDS;
+/// Bit 4 of the second byte of the rules chunk: the extended disasters (`Extensions::disasters2`).
+const RULES2_DISASTERS: u8 = 0b1_0000;
+/// Bit 5 of the second byte of the rules chunk: the highways (`Extensions::highways`).
+const RULES2_HIGHWAYS: u8 = 0b10_0000;
+const RULES2_KNOWN: u8 = RULES2_SERVICES
+    | RULES2_ENERGY
+    | RULES2_ECONOMY
+    | RULES2_REWARDS
+    | RULES2_DISASTERS
+    | RULES2_HIGHWAYS;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -153,6 +168,16 @@ pub struct Extensions {
     pub reward_state: RewardState,
     /// What the last year paid: runtime state, never saved, ignored when comparing.
     pub reward_report: RewardReport,
+    /// The SimCity 3000 disasters (docs/game-design-v13.md).
+    pub disasters2: bool,
+    /// The months of drought left (see [`disasters2`]).
+    pub disaster_state: DisasterState,
+    /// The last disaster: runtime state, never saved, ignored when comparing.
+    pub disaster_report: DisasterReport,
+    /// The highways (docs/game-design-v13.md).
+    pub highways: bool,
+    /// The highway tiles (kept only while `highways` is on; see [`highways`]).
+    pub highway_list: HighwayList,
 }
 
 impl Extensions {
@@ -170,6 +195,8 @@ impl Extensions {
             || self.energy
             || self.economy
             || self.rewards
+            || self.disasters2
+            || self.highways
     }
 
     /// The bytes of the rules chunk: none when no rule is on, the flags byte, and the second
@@ -178,7 +205,9 @@ impl Extensions {
         let second = (if self.services { RULES2_SERVICES } else { 0 })
             | (if self.energy { RULES2_ENERGY } else { 0 })
             | (if self.economy { RULES2_ECONOMY } else { 0 })
-            | (if self.rewards { RULES2_REWARDS } else { 0 });
+            | (if self.rewards { RULES2_REWARDS } else { 0 })
+            | (if self.disasters2 { RULES2_DISASTERS } else { 0 })
+            | (if self.highways { RULES2_HIGHWAYS } else { 0 });
         match (self.rules_flags(), second) {
             (0, 0) => Vec::new(),
             (flags, 0) => vec![flags],
@@ -225,7 +254,7 @@ pub(crate) struct LoadedExtensions {
 /// left out). Only written when [`Simulation::needs_extension_block`].
 pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
-    let chunks: [(u8, Vec<u8>); 12] = [
+    let chunks: [(u8, Vec<u8>); 14] = [
         (CHUNK_RULES, ext.rules_bytes()),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
@@ -238,6 +267,8 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
         (CHUNK_ENERGY, ext.energy_state.encode()),
         (CHUNK_ECONOMY, ext.economy_state.encode()),
         (CHUNK_REWARDS, ext.reward_state.encode()),
+        (CHUNK_HIGHWAYS, ext.highway_list.encode()),
+        (CHUNK_DISASTERS, ext.disaster_state.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -316,6 +347,10 @@ pub(crate) fn decode_chunks(
             }
             CHUNK_ECONOMY => loaded.extensions.economy_state = EconomyState::decode(bytes)?,
             CHUNK_REWARDS => loaded.extensions.reward_state = RewardState::decode(bytes)?,
+            CHUNK_HIGHWAYS => {
+                loaded.extensions.highway_list = HighwayList::decode(bytes, width, height)?
+            }
+            CHUNK_DISASTERS => loaded.extensions.disaster_state = DisasterState::decode(bytes)?,
             _ => return Err("unknown extension chunk"),
         }
     }
@@ -344,6 +379,8 @@ fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> 
             ext.energy = bytes.get(1).is_some_and(|b| b & RULES2_ENERGY != 0);
             ext.economy = bytes.get(1).is_some_and(|b| b & RULES2_ECONOMY != 0);
             ext.rewards = bytes.get(1).is_some_and(|b| b & RULES2_REWARDS != 0);
+            ext.disasters2 = bytes.get(1).is_some_and(|b| b & RULES2_DISASTERS != 0);
+            ext.highways = bytes.get(1).is_some_and(|b| b & RULES2_HIGHWAYS != 0);
             Ok(())
         }
         _ => Err("rules chunk is not 1 or 2 bytes"),
@@ -400,6 +437,8 @@ impl Simulation {
             || !self.extensions.energy_state.is_empty()
             || self.extensions.economy_state != EconomyState::default()
             || !self.extensions.reward_state.is_empty()
+            || !self.extensions.highway_list.is_empty()
+            || !self.extensions.disaster_state.is_empty()
     }
 
     /// Applies a checked block (a loaded file).
@@ -414,6 +453,8 @@ impl Simulation {
         self.repair_energy();
         self.repair_economy();
         self.repair_rewards();
+        self.repair_highways();
+        self.repair_disasters();
     }
 
     /// Empties the networks, which belong to the map being replaced. The switches stay.
@@ -433,6 +474,9 @@ impl Simulation {
         self.extensions.economy_state = EconomyState::default();
         self.extensions.reward_state = RewardState::default();
         self.extensions.reward_report = RewardReport::default();
+        self.extensions.highway_list = HighwayList::default();
+        self.extensions.disaster_state = DisasterState::default();
+        self.extensions.disaster_report = DisasterReport::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -454,6 +498,8 @@ impl Simulation {
         let electricity = energy::monthly_balance(self);
         let finance = economy::monthly_balance(self);
         let prizes = rewards::monthly_balance(self);
+        let calamities = disasters2::monthly_balance(self);
+        let upkeep = highways::monthly_balance(self);
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
             .saturating_add(transit::monthly_balance(self))
@@ -463,6 +509,8 @@ impl Simulation {
             .saturating_add(electricity)
             .saturating_add(finance)
             .saturating_add(prizes)
+            .saturating_add(calamities)
+            .saturating_add(upkeep)
             .saturating_sub(fares);
         if net != 0 {
             self.spend(net);
@@ -566,11 +614,13 @@ impl Simulation {
         if !self.extensions_active() {
             return t;
         }
-        if self.extensions.agents {
+        let t = if self.extensions.agents {
             // measured load replaces the statistical density (the agents rewrite the map too)
-            return agents::traffic(self, x, y, t);
-        }
-        transit::traffic(self, x, y, t)
+            agents::traffic(self, x, y, t)
+        } else {
+            transit::traffic(self, x, y, t)
+        };
+        highways::traffic(self, x, y, t)
     }
 
     /// Hook: one step of the simulated cars. Called at the top of `simulate` (`simulate.rs`),
@@ -608,6 +658,8 @@ impl Simulation {
         }
         services::valves(self);
         economy::valves(self);
+        self.repair_highways();
+        disasters2::valves(self);
     }
 
     /// Hook: whether a zone of `kind` at `pos` may grow (immigration). Called at the top of
@@ -771,11 +823,14 @@ mod tests {
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
             chunk(1, &[0b1000_0000]),
             chunk(1, &[0b1000_0000, 1]),
-            chunk(1, &[1, 0b1_0000]),
+            chunk(1, &[1, 0b100_0000]),
             chunk(12, &[0, 1, 0]),
             chunk(12, &[0, 0, 0, 0]),
             chunk(12, &[0, 0b10_0000, 0, 0]),
-            chunk(13, &[0, 1, 0, 0]),
+            chunk(15, &[0, 1, 0, 0]),
+            chunk(13, &[0, 0]),
+            chunk(14, &[0, 0]),
+            chunk(14, &[0, 13]),
             chunk(10, &[0, 1]),
             chunk(10, &[0, 1, 0, 80, 0, 0, 0, 5]),
             chunk(10, &[0, 1, 0, 1, 0, 1, 0]),
