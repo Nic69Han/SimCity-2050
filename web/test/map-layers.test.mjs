@@ -14,7 +14,7 @@ function layer(name, on, log) {
 
 describe("the page's layers", () => {
   test("the water and metro layers, in this order, each well formed; the list cannot be changed", () => {
-    assert.deepEqual(MAP_LAYERS.map((l) => l.name), ["densities", "coverage", "waste", "water", "transit", "structures", "vehicles"]);
+    assert.deepEqual(MAP_LAYERS.map((l) => l.name), ["densities", "wealth", "coverage", "waste", "water", "transit", "structures", "vehicles"]);
     for (const l of MAP_LAYERS) {
       assert.equal(typeof l.visible, "function", l.name);
       assert.equal(typeof l.draw, "function", l.name);
