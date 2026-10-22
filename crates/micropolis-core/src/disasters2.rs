@@ -44,14 +44,7 @@ pub(crate) use rules::{monthly_balance, valves};
 pub use rules::{DisasterResult, STATS_SIZE};
 pub use state::{DisasterReport, DisasterState};
 
-pub use crate::message::MESSAGE_RIOTS_REPORTED;
-
-/// Message: a UFO crossed the city (x, y: where it came from).
-pub const MESSAGE_UFO: i16 = 59;
-/// Message: a meteor fell (x, y: the crater).
-pub const MESSAGE_METEOR: i16 = 60;
-/// Message: a drought begins (no position).
-pub const MESSAGE_DROUGHT: i16 = 61;
+pub use crate::message::{MESSAGE_DROUGHT, MESSAGE_METEOR, MESSAGE_RIOTS_REPORTED, MESSAGE_UFO};
 
 /// Kind of disaster for [`trigger_disaster`](crate::simulation::Simulation::trigger_disaster).
 pub const KIND_RIOT: i32 = 1;
