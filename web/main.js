@@ -27,6 +27,8 @@ import * as wasteUi from "./waste-ui.js";
 import * as servicesUi from "./services-ui.js";
 import * as energyUi from "./energy-ui.js";
 import * as economyUi from "./economy-ui.js";
+import * as rewardsUi from "./rewards-ui.js";
+import * as newsUi from "./news-ui.js";
 
 // ?mock=1 uses the dev-only fake engine (web/dev-mock.js); the wasm package is loaded otherwise.
 const MOCK = new URLSearchParams(location.search).has("mock");
@@ -279,7 +281,7 @@ await init();
 city = new City(1);
 // Feature modules (messages, budget…): each exports setup(api) / update(api) and checks that the
 // engine has the methods it needs. `update` runs after every redraw.
-const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound, ordinancesUi, waterUi, transitUi, dealsUi, agentsUi, structuresUi, zoningUi, wasteUi, servicesUi, energyUi, economyUi];
+const features = [messages, budgetUi, overlays, saves, advisors, tutorial, sound, ordinancesUi, waterUi, transitUi, dealsUi, agentsUi, structuresUi, zoningUi, wasteUi, servicesUi, energyUi, economyUi, rewardsUi, newsUi];
 const featureApi = {
   city: () => city,
   $,
