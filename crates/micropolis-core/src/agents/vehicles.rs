@@ -65,10 +65,17 @@ impl Car {
 
     /// Drives one tick on a tile of load `load`; moves to the next tile when a tile is covered.
     pub fn advance(&mut self, load: u8) {
+        self.advance_scaled(load, 1);
+    }
+
+    /// Like [`advance`](Self::advance) with the speed multiplied by `mul` (a highway tile). The
+    /// speed stays at most one tile per tick (`mul * MAX_SPEED <= TILE_16`), so the car never
+    /// skips a tile.
+    pub fn advance_scaled(&mut self, load: u8, mul: u32) {
         if self.arrived() {
             return;
         }
-        self.progress += speed_at(load);
+        self.progress += (speed_at(load) * mul).min(TILE_16);
         if self.progress >= TILE_16 {
             self.progress -= TILE_16;
             self.at += 1;
