@@ -7,6 +7,10 @@ use crate::agents::transport::WALK_RADIUS;
 use crate::energy::{
     GENRE_FUSION, GENRE_GAS, GENRE_HYDRO, GENRE_MICROWAVE, GENRE_OIL, GENRE_SOLAR, GENRE_WIND,
 };
+use crate::rewards::{
+    GENRE_ARCH, GENRE_CASINO, GENRE_CITY_HALL, GENRE_COURTHOUSE, GENRE_MAYOR_HOUSE,
+    GENRE_MISSILE_BASE, GENRE_STATE_PRISON, GENRE_STATUE, GENRE_TOXIC_DUMP,
+};
 use crate::services::{
     GENRE_CLINIC, GENRE_COLLEGE, GENRE_HOSPITAL, GENRE_LIBRARY, GENRE_MUSEUM, GENRE_PRISON,
     GENRE_SCHOOL,
@@ -84,9 +88,19 @@ const fn public(genre: u8, size: (i32, i32), cost: i32, upkeep: i32, radius: i32
     }
 }
 
+/// A special deal (docs/game-design-v12.md): free, needs power for its income; its drawbacks and
+/// income are in [`crate::rewards::DEALS`].
+const fn special_deal(genre: u8, side: i32) -> Kind {
+    Kind {
+        flags: FLAG_POWER,
+        ..kind(genre, (side, side), 0, 0)
+    }
+}
+
 /// The buildings, in genre order (genres 1-3 of v0.4, 10-12 of v0.5, 13 of v0.6, 20-23 of v0.8,
-/// 30-36 of v0.9, 40-46 of v0.10: the power plants, whose power is in [`crate::energy::PLANTS`]).
-pub const CATALOG: [Kind; 25] = [
+/// 30-36 of v0.9, 40-46 of v0.10: the power plants, whose power is in [`crate::energy::PLANTS`], 50-54 and 60-63 of
+/// v0.12: the rewards and the special deals, see [`crate::rewards`]).
+pub const CATALOG: [Kind; 34] = [
     amenity(kind(GENRE_PARK, (2, 2), 300, 5), 0, 6, 12),
     amenity(kind(GENRE_PLAZA, (1, 1), 100, 2), FLAG_POWER, 4, 6),
     amenity(
@@ -130,6 +144,15 @@ pub const CATALOG: [Kind; 25] = [
     },
     kind(GENRE_MICROWAVE, (3, 3), 15_000, 100),
     kind(GENRE_FUSION, (4, 4), 40_000, 150),
+    amenity(kind(GENRE_MAYOR_HOUSE, (2, 2), 0, 0), 0, 6, 20),
+    amenity(kind(GENRE_CITY_HALL, (3, 3), 0, 0), 0, 8, 25),
+    amenity(kind(GENRE_STATUE, (1, 1), 0, 0), 0, 5, 15),
+    amenity(kind(GENRE_COURTHOUSE, (3, 3), 0, 0), 0, 8, 20),
+    amenity(kind(GENRE_ARCH, (2, 2), 0, 0), 0, 10, 30),
+    special_deal(GENRE_CASINO, 3),
+    special_deal(GENRE_STATE_PRISON, 4),
+    special_deal(GENRE_TOXIC_DUMP, 4),
+    special_deal(GENRE_MISSILE_BASE, 4),
 ];
 
 /// The catalog entry of `genre`, if it exists.

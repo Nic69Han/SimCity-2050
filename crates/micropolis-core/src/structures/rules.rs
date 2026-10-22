@@ -139,7 +139,11 @@ impl Simulation {
             .iter()
             .copied()
             .filter(|s| {
-                !rules || !self.is_intact(s) || self.is_orphan_service(s) || self.is_orphan_plant(s)
+                !rules
+                    || !self.is_intact(s)
+                    || self.is_orphan_service(s)
+                    || self.is_orphan_plant(s)
+                    || self.is_orphan_reward(s)
             })
             .collect();
         self.drop_structures(&doomed)
@@ -187,7 +191,7 @@ impl Simulation {
     }
 
     /// Every tile of the footprint still holds a surface tile (the list says whose it is).
-    fn is_intact(&self, s: &Structure) -> bool {
+    pub(crate) fn is_intact(&self, s: &Structure) -> bool {
         s.tiles()
             .iter()
             .all(|&(x, y)| self.tile(x, y).is_some_and(|t| is_surface(t & LOMASK)))
@@ -225,6 +229,7 @@ impl Simulation {
         if !self.structure_rules()
             || (is_service_genre(genre) && !self.service_rules())
             || (is_plant_genre(genre) && !self.energy_rules())
+            || !self.reward_allows(genre)
             || list.len() >= MAX_STRUCTURES
             || !self.fits_on_map(kind, x, y)
         {

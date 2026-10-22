@@ -146,7 +146,7 @@ fn buildings_round_trip() {
 #[test]
 fn the_buildings_chunk_follows_the_deals_chunk_in_tag_order() {
     assert_eq!(CHUNK_STRUCTURES, 6);
-    assert_eq!(CHUNK_MAX_TAG, micropolis_core::extensions::CHUNK_ECONOMY);
+    assert_eq!(CHUNK_MAX_TAG, micropolis_core::extensions::CHUNK_REWARDS);
     let file = file_of(&with_buildings());
     let chunks = &file[block_at() + 4..];
     assert_eq!(chunks[0], CHUNK_RULES);

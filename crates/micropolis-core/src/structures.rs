@@ -244,13 +244,13 @@ mod tests {
             genres,
             [
                 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42,
-                43, 44, 45, 46
+                43, 44, 45, 46, 50, 51, 52, 53, 54, 60, 61, 62, 63
             ]
         );
         for k in &CATALOG {
             assert_eq!(kind_of(k.genre), Some(k));
             assert_eq!(k.surface(), SURFACE_TILE);
-            assert!(k.width > 0 && k.height > 0 && k.cost > 0 && k.upkeep >= 0);
+            assert!(k.width > 0 && k.height > 0 && k.cost >= 0 && k.upkeep >= 0);
             assert!(k.bonus <= LAND_VALUE_CAP && k.radius >= 0);
         }
         for g in [0, 4, 9, 14, 19, 24, 255] {
