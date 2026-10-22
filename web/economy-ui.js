@@ -9,6 +9,7 @@ import {
   bondLine, offerLabel, goodsLines, incomeText, ruleNote, issueMessage, repayMessage, taxMessage, NO_BONDS_TEXT,
   ISSUE_LABEL, GENRES, CLASSES, MAX_TAX_RATE,
 } from "./economy-model.js";
+import { setWealthView } from "./map-layer-wealth-model.js";
 
 let panel = null;
 let ui = null;
@@ -79,14 +80,22 @@ function build(api) {
   box.onchange = () => onRuleChange(api, box);
   const label = el("label", { for: "economy-rules", class: "economy-switch" });
   label.append(box, el("span", {}, "Économie détaillée"));
+  // «Voir la richesse»: the 2D layer (map-layer-wealth.js) tints the zones by wealth class
+  const view = el("input", { type: "checkbox", id: "economy-wealth-view" });
+  view.onchange = () => {
+    setWealthView(view.checked);
+    api.redraw();
+  };
+  const viewLabel = el("label", { for: "economy-wealth-view", class: "economy-switch" });
+  viewLabel.append(view, el("span", {}, "Voir la richesse sur la carte"));
   const note = el("p", { id: "economy-note", class: "economy-note" });
   const taxes = buildTaxTable(api);
   const bonds = buildBonds(api);
   const goods = el("ul", { id: "economy-goods", class: "economy-goods", "aria-label": "Marchandises" });
   const status = el("p", { id: "economy-status", class: "economy-status", "aria-live": "polite" });
-  panel.replaceChildren(el("h2", { id: "economy-heading" }, "Économie"), label, note, taxes.table, bonds.block, goods, status);
+  panel.replaceChildren(el("h2", { id: "economy-heading" }, "Économie"), label, viewLabel, note, taxes.table, bonds.block, goods, status);
   panel.setAttribute("aria-labelledby", "economy-heading");
-  return { box, note, taxes, bonds, goods, status, keys: {} };
+  return { box, view, viewLabel, note, taxes, bonds, goods, status, keys: {} };
 }
 
 // A tax change: the page reads the input, the engine decides (set_tax_rate returns a boolean), and the input shows the
@@ -179,6 +188,11 @@ export function update(api) {
   if (!ui) ui = build(api);
   const on = readRulesOn(city);
   if (ui.box.checked !== on) ui.box.checked = on;
+  ui.viewLabel.hidden = !on;
+  if (!on && ui.view.checked) {
+    ui.view.checked = false;
+    setWealthView(false);
+  }
   writeTaxes(city, on);
   writeBonds(api, city, on);
   writeGoods(city);

@@ -5,6 +5,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import * as ui from "../economy-ui.js";
+import { wealthViewState } from "../map-layer-wealth-model.js";
 import * as M from "../economy-model.js";
 import { MockCity, MOCK_TOOLS } from "./mock-engine.mjs";
 import { MAX_BONDS, MOCK_TAX_START, TAX_INCOME_PER_POINT } from "./mock-economy.mjs";
@@ -112,6 +113,25 @@ describe("the panel, the switch and the note", () => {
     assert.equal(city.economy_rules(), true);
     assert.deepEqual(api.reliefBox.events, ["change"]);
     assert.equal(note(panel).textContent, M.ruleNote(true));
+  });
+
+  test("«Voir la richesse» shows only with the rule on, sets the wealth view and redraws; the rule off clears it", () => {
+    const city = new MockCity(1, { economy: true });
+    const { api, panel } = setupPage(city);
+    const view = byId(panel, "economy-wealth-view");
+    const viewLabel = panel.find((n) => n.attributes.for === "economy-wealth-view")[0];
+    assert.equal(viewLabel.hidden, true, "hidden while the rule is off");
+    city.set_economy_rules(true);
+    ui.update(api);
+    assert.equal(viewLabel.hidden, false);
+    view.checked = true;
+    view.onchange();
+    assert.equal(wealthViewState().show, true);
+    assert.equal(api.redraws, 1);
+    city.set_economy_rules(false);
+    ui.update(api);
+    assert.equal(view.checked, false);
+    assert.equal(wealthViewState().show, false);
   });
 
   test("without the relief box the switch redraws the map instead", () => {
