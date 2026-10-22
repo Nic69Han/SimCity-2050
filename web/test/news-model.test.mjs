@@ -20,8 +20,9 @@ describe("headlines of a change", () => {
     assert.deepEqual(headlines(snap({ population: 12000 }), snap({ population: 12000 })), []);
   });
 
-  test("a new year: «Nouvelle année : 1 912»", () => {
-    assert.deepEqual(norm(headlines(snap({ year: 1911 }), snap({ year: 1912 }))), ["Nouvelle année : 1 912"]);
+  test("a new year: «Nouvelle année : 1912»", () => {
+    assert.equal(TEXT.year(2050), "Nouvelle année : 2050", "a year is never grouped");
+    assert.deepEqual(norm(headlines(snap({ year: 1911 }), snap({ year: 1912 }))), ["Nouvelle année : 1912"]);
     assert.deepEqual(headlines(snap({ year: null }), snap({ year: 1912 })), [], "a missing year gives no headline");
   });
 
@@ -70,7 +71,7 @@ describe("headlines of a change", () => {
       snap({ year: 1912, population: 11000, rewardsUnlocked: [51], offersProposed: [60], funds: -1, powerShortage: true }),
     );
     assert.deepEqual(norm(out), [
-      "Nouvelle année : 1 912",
+      "Nouvelle année : 1912",
       "La ville passe les 10 000 habitants !",
       "Récompense débloquée : Hôtel de ville",
       "Un pétitionnaire propose un casino",

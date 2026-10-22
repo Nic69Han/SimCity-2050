@@ -1,8 +1,8 @@
 // News ticker, the words (docs/game-design-v12.md): the headlines that a change of the city's state makes, and the short
 // queue the ticker shows. Pure: no DOM and no engine call, so node:test can check it. news-ui.js reads the snapshots.
 //
-// A snapshot (one per update, read by news-ui.js): { year, population, funds, rewardsUnlocked: [genre],
-// offersProposed: [genre], powerShortage }. A number that is missing (null, undefined, NaN) disables the headline that
+// A snapshot (one per update, read by news-ui.js): { year, month, population, funds, rewardsUnlocked: [genre],
+// offersProposed: [genre], powerShortage }. The month is read by news-ui.js only (a jump back in time starts again). A number that is missing (null, undefined, NaN) disables the headline that
 // needs it. The first snapshot (prev null) only sets the baseline: it makes no headline.
 
 import { formatInt } from "./budget-text.js";
@@ -20,7 +20,8 @@ export const OFFER_PHRASES = Object.freeze({
 
 // The French headlines (the texts of the tests and of the page).
 export const TEXT = Object.freeze({
-  year: (year) => `Nouvelle année : ${formatInt(year)}`,
+  // A year is never grouped in French: «1912», not «1 912».
+  year: (year) => `Nouvelle année : ${Math.trunc(year)}`,
   population: (n) => `La ville passe les ${formatInt(n)} habitants !`,
   reward: (genre) => `Récompense débloquée : ${nameOf(genre)}`,
   offer: (genre) => `Un pétitionnaire propose ${OFFER_PHRASES[genre] ?? nameOf(genre)}`,

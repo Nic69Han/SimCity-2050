@@ -7,17 +7,31 @@ import { MockCity } from "./mock-engine.mjs";
 
 const norm = (s) => s.replace(/[  ]/g, " ");
 
-/** A page with the ticker and the given engine; `ready` and the city can change between updates. */
+/** A page with the ticker and the given engine; `ready` and the city can change between updates. `desc` is what
+ * api.describe() returns (the selector's label and the seed), and it can change between updates too. */
 function setupPage(city, { ready = true } = {}) {
   const ticker = { hidden: false, textContent: "", updates: 0 };
+  const desc = { label: "Ville A", seed: null };
   const api = {
     city: () => api.current,
     $: (id) => (id === "news-ticker" ? ticker : null),
     isReady: () => ready,
+    describe: () => ({ ...desc }),
     current: city,
   };
   ui.setup(api);
-  return { api, ticker };
+  return { api, ticker, desc };
+}
+
+/** A city whose year, month, population and funds are read from `state`: the same object, another state on a load. */
+function cityWithState(state) {
+  const city = new MockCity(1, { rewards: true });
+  city.set_reward_rules(true);
+  city.year = () => state.year;
+  city.month = () => state.month;
+  city.population = () => state.population;
+  city.funds = () => state.funds;
+  return city;
 }
 
 // The ticker's text as the viewer reads it, once the page redrew.
@@ -171,5 +185,89 @@ describe("the snapshot", () => {
     assert.equal(s.year, 1900);
     assert.equal(s.funds, 20000);
     assert.equal(s.powerShortage, false);
+  });
+});
+
+describe("a load into the same city object", () => {
+  // main.js creates one City and loads every save, sample and new city into it: only the state changes.
+  test("another city in the same object (label changed): no headline, the ticker stays hidden", () => {
+    const state = { year: 1900, month: 0, population: 0, funds: 20000 };
+    const city = cityWithState(state);
+    const { api, ticker, desc } = setupPage(city);
+    ui.update(api);
+    Object.assign(state, { year: 1972, month: 3, population: 53000, funds: -500 });
+    city.mock_unlock_reward(53);
+    desc.label = "Ville B";
+    ui.update(api);
+    assert.equal(ticker.hidden, true);
+    assert.equal(shown(ticker), null);
+  });
+
+  test("a year jump of more than one, the same label: starts again, no headline", () => {
+    const state = { year: 1900, month: 0, population: 0, funds: 20000 };
+    const city = cityWithState(state);
+    const { api, ticker } = setupPage(city);
+    ui.update(api);
+    Object.assign(state, { year: 1972, population: 53000, funds: -500 });
+    ui.update(api);
+    assert.equal(ticker.hidden, true);
+  });
+
+  test("the month goes back in the same year: starts again", () => {
+    const state = { year: 1912, month: 5, population: 0, funds: 100 };
+    const city = cityWithState(state);
+    const { api, ticker } = setupPage(city);
+    ui.update(api);
+    Object.assign(state, { month: 2, funds: -10 });
+    ui.update(api);
+    assert.equal(ticker.hidden, true);
+  });
+
+  test("control: the month goes forward in the same year, the funds go red: the headline shows", () => {
+    const state = { year: 1912, month: 5, population: 0, funds: 100 };
+    const city = cityWithState(state);
+    const { api, ticker } = setupPage(city);
+    ui.update(api);
+    Object.assign(state, { month: 6, funds: -10 });
+    ui.update(api);
+    assert.equal(shown(ticker), "La ville est dans le rouge");
+  });
+
+  test("control: the next year (+1) with the same label is news: «Nouvelle année : 1912», never grouped", () => {
+    const state = { year: 1911, month: 11, population: 0, funds: 100 };
+    const city = cityWithState(state);
+    const { api, ticker } = setupPage(city);
+    ui.update(api);
+    Object.assign(state, { year: 1912, month: 0 });
+    ui.update(api);
+    assert.equal(shown(ticker), "Nouvelle année : 1912");
+  });
+
+  test("a new seed (a random city) in the same object: starts again, no headline", () => {
+    const state = { year: 1900, month: 0, population: 0, funds: 100 };
+    const city = cityWithState(state);
+    const { api, ticker, desc } = setupPage(city);
+    ui.update(api);
+    desc.seed = 7;
+    state.funds = -5;
+    ui.update(api);
+    assert.equal(ticker.hidden, true);
+  });
+
+  test("after a load the old queue is gone: only the headline of the new city's change shows", () => {
+    const state = { year: 1900, month: 0, population: 0, funds: 20000 };
+    const city = cityWithState(state);
+    const { api, ticker, desc } = setupPage(city);
+    ui.update(api);
+    city.mock_unlock_reward(50);
+    ui.update(api);
+    assert.equal(shown(ticker), "Récompense débloquée : Résidence du maire");
+    desc.label = "Ville B";
+    Object.assign(state, { population: 0 });
+    ui.update(api);
+    assert.equal(ticker.hidden, true, "the load hides the ticker");
+    state.population = 10500;
+    ui.update(api);
+    assert.equal(shown(ticker), "La ville passe les 10 000 habitants !");
   });
 });
