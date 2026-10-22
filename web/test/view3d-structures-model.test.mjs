@@ -21,6 +21,8 @@ test("the record layout and the kinds are the ones of the contract", () => {
     PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
     SCHOOL: 30, COLLEGE: 31, LIBRARY: 32, MUSEUM: 33, CLINIC: 34, HOSPITAL: 35, PRISON: 36,
     GAS: 40, OIL: 41, WIND: 42, SOLAR: 43, HYDRO: 44, MICROWAVE: 45, FUSION: 46,
+    MAYOR_HOUSE: 50, CITY_HALL: 51, STATUE: 52, COURTHOUSE: 53, ARCH: 54,
+    CASINO: 60, STATE_PRISON: 61, TOXIC_DUMP: 62, MISSILE_BASE: 63,
   });
   assert.deepEqual(KINDS, ["slab", "tree", "fountain", "obelisk", "block"]);
   assert.equal(Object.keys(CAPACITY).length, KINDS.length);
