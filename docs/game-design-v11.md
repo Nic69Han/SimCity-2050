@@ -87,9 +87,9 @@ Haight, qui a des habitants), unitaires des modules, adaptateur, `web/test/wasm-
   difficulté `DIFFICULTY_PCT` = [140, 120, 80]. Une valeur de terrain 0..=250 par zone, lue au bloc de son centre.
 * **Taux** : neuf octets 0..=`RATE_MAX` (20). Tant que le joueur n'en a fixé aucun, les neuf suivent `city_tax`
   (`custom` = faux, rien d'écrit) ; le premier `set_zone_tax_rate` fige les neuf au taux courant puis change celui
-  demandé. Règle allumée, le taux unique du budget ne change plus la recette, seulement la référence de la demande.
+  demandé. Règle allumée, une fois un taux fixé (`custom`), le taux unique du budget ne change plus la recette, seulement la référence de la demande.
 * **Demande** : taux moyen d'un genre pondéré par la population de ses zones (arrondi au plus proche) ; poussée =
-  `TAX_TABLE[taux unique + niveau] - TAX_TABLE[taux moyen + niveau]` (mêmes indices bornés que le classique), bornée à
+  `TAX_TABLE[taux moyen + niveau] - TAX_TABLE[taux unique + niveau]` (mêmes indices bornés que le classique ; c'est le signe qui fait fuir la demande quand le taux est élevé, `TAX_TABLE` baissant avec le taux : la formule du contrat l'avait inversé), bornée à
   ±`VALVE_TAX_LIMIT` (300) par appel, puis valve ramenée dans sa plage classique (±2 000 / ±1 500 / ±1 500) ; une
   valve plafonnée (`*_cap`) ne devient pas positive. Genre sans population : pas de poussée.
 * **Obligations** : `Vec<Bond>` (`montant`, `permille`, `années`), au plus `MAX_BONDS` (10). Le taux se fige à

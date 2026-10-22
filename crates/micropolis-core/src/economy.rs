@@ -14,8 +14,8 @@
 //!   population is on the residential scale of the classic code (residents x 8: a commercial or
 //!   industrial zone counts [`TIER_POPULATION`](crate::waste::TIER_POPULATION) per tier), so the
 //!   `/ 8` brings it back to the `total_pop x land value / 120` of the classic formula. Hook
-//!   `ext_tax_fund`; with the rule on the single rate of the budget no longer changes the income.
-//! * **Demand** ([`month`]): per kind, the valve gets `TAX_TABLE[single rate] - TAX_TABLE[mean
+//!   `ext_tax_fund`; with the rule on and a rate set (`custom`), the single rate of the budget no longer changes the income.
+//! * **Demand** ([`month`]): per kind, the valve gets `TAX_TABLE[mean rate] - TAX_TABLE[single
 //!   rate]` (the rates weighted by zone population, plus the game level like the classic code),
 //!   within +-[`VALVE_TAX_LIMIT`] per call and never past the classic valve ranges.
 //! * **Bonds** ([`bonds`]): at most [`MAX_BONDS`] of [`BOND_AMOUNT`] dollars; the rate (per

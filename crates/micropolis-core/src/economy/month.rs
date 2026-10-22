@@ -148,3 +148,16 @@ mod tests {
         assert_eq!(moved(-50, 20, 2_000, true), -30);
     }
 }
+
+#[cfg(test)]
+mod sign_tests {
+    use super::tax_push;
+
+    #[test]
+    fn a_mean_rate_over_the_single_rate_lowers_demand() {
+        assert!(tax_push(7, Some(15), 0) < 0);
+        assert!(tax_push(15, Some(7), 0) > 0);
+        assert_eq!(tax_push(7, Some(7), 0), 0);
+        assert_eq!(tax_push(7, None, 0), 0);
+    }
+}
