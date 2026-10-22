@@ -7,10 +7,11 @@ mod support;
 
 use micropolis_core::disasters2::*;
 use micropolis_core::events::Event;
-use micropolis_core::simulation::Simulation;
+use micropolis_core::simulation::{Simulation, CITYTIMES_PER_MONTH};
 use micropolis_core::tile::{
-    ANIMBIT, BURNBIT, FIRE, HOUSE, LASTFIRE, LOMASK, RESBASE, RIVER, RUBBLE, ZONEBIT,
+    ANIMBIT, BULLBIT, BURNBIT, FIRE, HOUSE, LASTFIRE, LOMASK, RESBASE, RIVER, RUBBLE, ZONEBIT,
 };
+use micropolis_core::tool::{EditingTool, ToolResult};
 use support::{file_of, run, state, HAIGHT};
 
 fn haight() -> Simulation {
@@ -264,6 +265,51 @@ fn a_meteor_spares_the_water_of_its_crater() {
     assert!(s.tiles.iter().all(|&t| t == RIVER));
 }
 
+#[test]
+fn after_a_meteor_every_left_over_zone_tile_can_be_bulldozed() {
+    for seed in 0..4i32 {
+        let mut s = on(Simulation::new(12, 12));
+        s.rng = micropolis_core::rng::Rng::new(seed);
+        for cx in [1, 4, 7, 10] {
+            for cy in [1, 4, 7, 10] {
+                for dx in -1..=1 {
+                    for dy in -1..=1 {
+                        let t = if (dx, dy) == (0, 0) {
+                            (RESBASE + 4) | ZONEBIT | BURNBIT
+                        } else {
+                            HOUSE | BURNBIT
+                        };
+                        s.set_tile(cx + dx, cy + dy, t);
+                    }
+                }
+            }
+        }
+        s.total_funds = 1_000_000;
+        assert_eq!(s.trigger_disaster(KIND_METEOR), DisasterResult::Done);
+        for x in 0..12 {
+            for y in 0..12 {
+                let t = s.tile(x, y).unwrap();
+                let building = (RESBASE..RESBASE + 30).contains(&(t & LOMASK)) && t & ZONEBIT == 0;
+                if !building {
+                    continue;
+                }
+                let has_centre = (-1..=1).any(|dx| {
+                    (-1..=1).any(|dy| s.tile(x + dx, y + dy).is_some_and(|c| c & ZONEBIT != 0))
+                });
+                if has_centre {
+                    continue; // still part of a standing zone
+                }
+                assert!(
+                    t & BULLBIT != 0,
+                    "orphan without BULLBIT at {x},{y}: {t} (seed {seed})"
+                );
+                let r = s.tool_down(EditingTool::Bulldozer, x, y);
+                assert_ne!(r, ToolResult::Failed, "{x},{y}");
+            }
+        }
+    }
+}
+
 // ---- drought ---------------------------------------------------------------------------------
 
 #[test]
@@ -286,9 +332,64 @@ fn a_drought_lasts_its_months_and_does_not_add_up() {
     );
     s.enable_disasters = false; // nothing new at the pass
     s.ext_monthly_balance();
-    assert_eq!(s.disaster2_stats()[0], 0, "over after one pass");
-    s.ext_monthly_balance();
+    assert_eq!(
+        s.disaster2_stats()[0],
+        i32::from(DROUGHT_MONTHS),
+        "a tax pass does not count months"
+    );
+}
+
+/// Lets `months` game months go by, running the valves hook after each.
+fn pass_months(s: &mut Simulation, months: i64) {
+    for _ in 0..months {
+        s.city_time += i64::from(CITYTIMES_PER_MONTH);
+        s.ext_valves();
+    }
+}
+
+#[test]
+fn a_drought_triggered_mid_year_shows_11_months_after_one_and_ends_after_12() {
+    let mut s = on(field());
+    s.city_time = 5 * i64::from(CITYTIMES_PER_MONTH) + 1; // mid-year, mid-month
+    s.ext_valves();
+    s.trigger_disaster(KIND_DROUGHT);
+    s.ext_valves();
+    assert_eq!(s.disaster2_stats()[0], 12, "same month");
+    pass_months(&mut s, 1);
+    assert_eq!(s.disaster2_stats()[0], 11);
+    pass_months(&mut s, 10);
+    assert_eq!(s.disaster2_stats()[0], 1);
+    pass_months(&mut s, 1);
+    assert_eq!(s.disaster2_stats()[0], 0, "over after 12 months");
+    pass_months(&mut s, 3);
     assert_eq!(s.disaster2_stats()[0], 0);
+}
+
+#[test]
+fn a_drought_in_a_city_with_no_residents_also_ends_after_12_months() {
+    let mut s = Simulation::new(30, 30);
+    s.set_water_rules(true);
+    s.set_disaster2_rules(true);
+    assert_eq!(s.trigger_disaster(KIND_DROUGHT), DisasterResult::Done);
+    assert!(s.water().is_weak());
+    pass_months(&mut s, 11);
+    assert_eq!(s.disaster2_stats()[0], 1);
+    pass_months(&mut s, 1);
+    assert_eq!(s.disaster2_stats()[0], 0);
+    assert!(!s.water().is_weak(), "pumps restored");
+}
+
+#[test]
+fn a_jump_of_the_clock_never_counts_more_than_the_drought_has() {
+    let mut s = on(field());
+    s.trigger_disaster(KIND_DROUGHT);
+    s.city_time += 10_000;
+    s.ext_valves();
+    assert_eq!(s.disaster2_stats()[0], 0);
+    s.trigger_disaster(KIND_DROUGHT);
+    s.city_time = 0; // a loaded older file: no negative count
+    s.ext_valves();
+    assert_eq!(s.disaster2_stats()[0], 12);
 }
 
 #[test]
@@ -333,8 +434,7 @@ fn a_drought_halves_the_reach_of_the_pumps_then_restores_it() {
         s.water().is_fed(30, 10) && !s.water().is_fed(60, 10),
         "weaker pumps"
     );
-    s.enable_disasters = false;
-    s.ext_monthly_balance(); // the drought ends
+    pass_months(&mut s, i64::from(DROUGHT_MONTHS)); // the drought ends
     assert_eq!(reach(&s), 64);
     assert!(s.water().is_fed(60, 10), "restored");
     // without the water rule the pumps are not touched

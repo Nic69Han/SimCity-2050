@@ -4,12 +4,13 @@ use super::{draw, MESSAGE_METEOR};
 use crate::disasters::{random_fire, random_rubble};
 use crate::relief::is_water;
 use crate::simulation::Simulation;
+use crate::tile::ZONEBIT;
 
 /// Side of the crater, in tiles.
 pub const CRATER_SIDE: i32 = 3;
 
 /// Drops a meteor: a drawn centre (the whole crater stays on the map), classic rubble on every
-/// tile of the 3 x 3 crater that is not water, and a classic fire on the centre (water spared too).
+/// tile (a zone centre first goes through `start_fire_in_zone`, so the rest of its zone can be bulldozed) of the 3 x 3 crater that is not water, and a classic fire on the centre (water spared too).
 /// Returns the centre.
 pub fn start(sim: &mut Simulation) -> (i32, i32) {
     let (w, h) = sim.world_size();
@@ -19,6 +20,10 @@ pub fn start(sim: &mut Simulation) -> (i32, i32) {
         for y in cy - r..=cy + r {
             if sim.tile(x, y).is_some_and(is_water) {
                 continue;
+            }
+            if let Some(t) = sim.tile(x, y).filter(|t| t & ZONEBIT != 0) {
+                // a zone centre burns like in the classic fire: the whole footprint is bulldozable
+                sim.start_fire_in_zone(x, y, t);
             }
             let tile = if (x, y) == (cx, cy) {
                 random_fire(&mut sim.rng)

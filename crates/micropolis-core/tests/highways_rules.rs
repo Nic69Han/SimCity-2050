@@ -89,6 +89,11 @@ fn a_bridge_a_rail_crossing_and_bare_ground_are_refused() {
     s.set_tile(3, 3, HBRIDGE);
     s.set_tile(4, 3, HRAILROAD);
     s.set_tile(5, 3, ROADS);
+    // bridges that carry traffic (the classic `do_road` turns them into tiles 80.., 144..)
+    for (i, t) in [80, 81, 144].into_iter().enumerate() {
+        s.set_tile(10 + i as i32, 3, t);
+        assert_eq!(s.place_highway(10 + i as i32, 3), ToolResult::Failed, "{t}");
+    }
     for (x, y) in [(3, 3), (4, 3), (6, 3), (-2, 3), (3, 99)] {
         assert_eq!(
             s.highway_preview(x, y).result,

@@ -87,7 +87,7 @@ précisions et choix sont ici.
 | `RIOT_CRIME_MIN`, `RIOT_APPROVAL_MAX` | 120, 40 | condition de l'émeute au hasard (`crime_average` ≥, `city_yes` <) |
 | `RIOT_FIRES`, `RIOT_RADIUS`, `RIOT_TRIES_PER_FIRE` | 6, 6, 8 | feux, rayon (carré), essais par feu (au plus 48 tirages de position) |
 | `UFO_LENGTH` | 20 | tuiles de la bande |
-| `DROUGHT_MONTHS`, `DROUGHT_VALVE`, `DROUGHT_PUMP_DIV`, `MONTHS_PER_PASS` | 12, 150, 2, 12 | sécheresse |
+| `DROUGHT_MONTHS`, `DROUGHT_VALVE`, `DROUGHT_PUMP_DIV` | 12, 150, 2 | sécheresse |
 | `HIGHWAY_COST`, `HIGHWAY_UPKEEP`, `MAX_HIGHWAY_TILES` | 25, 1, 4096 | autoroutes |
 | `HIGHWAY_TRAFFIC_DIV`, `HIGHWAY_SPEED_MUL` | 2, 2 | circulation divisée, vitesse des voitures multipliée |
 | `CHUNK_HIGHWAYS`, `CHUNK_DISASTERS`, `CHUNK_MAX_TAG` | 13, 14, 14 | morceaux de sauvegarde |
@@ -100,13 +100,13 @@ centre de l'émeute, départ de l'OVNI, centre du cratère. La page doit ajouter
 `web/messages-text.js`.
 
 ### Choix de conception
-* **Hasard.** `ext_monthly_balance` appelle, règle allumée seulement, `disasters2::monthly_balance` : la sécheresse en
-  cours perd `MONTHS_PER_PASS` mois, puis, si `enable_disasters`, un tirage par type dans l'ordre émeute (seulement si la
+* **Hasard.** `ext_monthly_balance` appelle, règle allumée seulement, `disasters2::monthly_balance` : si `enable_disasters`, un tirage par type dans l'ordre émeute (seulement si la
   condition tient), OVNI, météorite, sécheresse (seulement s'il n'y en a pas en cours). Règle éteinte, ou catastrophes non
   permises : aucun tirage (testé : même suite du générateur que le moteur classique).
-* **Passage annuel.** Un passage de `ext_monthly_balance` = un an = 12 mois (comme `energy`) : une sécheresse née à un
-  passage finit au suivant (un an) ; **à la demande en cours d'année elle s'arrête au prochain passage** (limite connue,
-  bornée). Les mois restants sont sauvegardés (morceau 14, 2 octets, seulement s'ils ne sont pas nuls ; refusé au-delà de
+* **Durée de la sécheresse.** Un mois de sécheresse s'écoule par mois de jeu (`city_time / CITYTIMES_PER_MONTH`),
+  décompté dans `disasters2::valves` (chaque `set_valves`), indépendamment du passage annuel et de la population :
+  exactement `DROUGHT_MONTHS` mois, qu'elle naisse à un passage, à la demande ou dans une ville sans habitants. Le mois
+  du dernier décompte est de l'état d'exécution (`DisasterReport`, non sauvegardé). Les mois restants sont sauvegardés (morceau 14, 2 octets, seulement s'ils ne sont pas nuls ; refusé au-delà de
   12 ou nul).
 * **Feux et ruines classiques** : `random_fire` / `random_rubble` de `disasters.rs` (le `do_fire` du moteur les propage
   ensuite) ; l'OVNI réutilise `destroy_map_tile` du monstre (l'eau et le sol nu sont épargnés). L'émeute n'allume que des

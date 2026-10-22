@@ -22,8 +22,8 @@ const ROADS = 66, LASTROAD = 206, HBRIDGE = 64, VBRIDGE = 65, BRWH = 79;
 // A tile a highway may lie on: a classic road tile, not a bridge, not a rail crossing.
 function isRoad(tile) {
   const t = tile & LOMASK;
-  if (t < ROADS || t > LASTROAD || t === HBRIDGE || t === VBRIDGE) return false;
-  return t < BRWH || t % 16 !== BRWH % 16;
+  const k = t & 15; // the classic bridge test: k < 2 or k === 15
+  return t >= ROADS && t <= LASTROAD && k >= 2 && k !== 15;
 }
 
 describe("wasm highways", { skip: SKIP }, () => {
@@ -119,15 +119,17 @@ describe("wasm highways", { skip: SKIP }, () => {
     const pick = (pred) => tiles.findIndex((t) => pred(t & LOMASK));
     const bridge = pick((t) => t === HBRIDGE || t === VBRIDGE || t === BRWH);
     const crossing = pick((t) => t === 237 || t === 238);
-    let tested = 0;
+    // The sample city may have neither; the engine tests cover both tile by tile.
     for (const i of [bridge, crossing]) {
       if (i < 0) continue;
       const [x, y] = [Math.floor(i / h), i % h];
       assert.equal(city.place_highway(x, y), FAILED, `tile ${tiles[i] & LOMASK}`);
-      tested++;
     }
-    // The sample city may have neither; the engine tests cover both tile by tile.
-    assert.ok(tested <= 2);
+    // No tile the page offers as a road may be a bridge, with or without traffic.
+    for (let i = 0; i < tiles.length; i++) {
+      const k = (tiles[i] & LOMASK) & 15;
+      if (isRoad(tiles[i])) assert.ok(k >= 2 && k !== 15);
+    }
   });
 
   test("removing is free and leaves the road; the layer follows", () => {

@@ -20,9 +20,10 @@
 //!   the centre; message [`MESSAGE_METEOR`].
 //! * **Drought** ([`drought`]): [`DROUGHT_MONTHS`] months; while it lasts the residential valve loses
 //!   [`DROUGHT_VALVE`] at each valves computation and, with the water rule on, the reach of the
-//!   pumps is divided by [`DROUGHT_PUMP_DIV`]. Each yearly pass takes [`MONTHS_PER_PASS`] months off, so
-//!   a drought started at a pass ends at the next one; one started on demand ends at the next pass
-//!   (known limit). Message [`MESSAGE_DROUGHT`].
+//!   pumps is divided by [`DROUGHT_PUMP_DIV`]. One month goes by per game month
+//!   (`city_time`), counted in the valves hook (every `set_valves`), not at the tax pass: a drought
+//!   lasts exactly [`DROUGHT_MONTHS`] months, started at a pass, on demand or in a city without
+//!   residents. Message [`MESSAGE_DROUGHT`].
 //! * **Fires and rubble** are the classic tiles ([`random_fire`](crate::disasters::random_fire),
 //!   [`random_rubble`](crate::disasters::random_rubble)); the engine's own `do_fire` then spreads
 //!   and extinguishes them like any fire.
@@ -91,7 +92,5 @@ pub const DROUGHT_MONTHS: u16 = 12;
 pub const DROUGHT_VALVE: i16 = 150;
 /// Divisor of the reach of the pumps during a drought (with the water rule).
 pub const DROUGHT_PUMP_DIV: u32 = 2;
-/// Months a yearly pass takes off the drought.
-pub const MONTHS_PER_PASS: u16 = 12;
 /// Bytes of chunk 14.
 pub const CHUNK_SIZE: usize = 2;

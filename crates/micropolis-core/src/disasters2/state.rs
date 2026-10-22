@@ -43,6 +43,8 @@ pub struct DisasterReport {
     /// Where it struck (-1 when none or without a place).
     pub x: i32,
     pub y: i32,
+    /// Game month (`city_time / CITYTIMES_PER_MONTH`) the drought was last counted at; -1: not yet.
+    pub last_month: i64,
 }
 
 impl Default for DisasterReport {
@@ -51,6 +53,7 @@ impl Default for DisasterReport {
             last: 0,
             x: -1,
             y: -1,
+            last_month: -1,
         }
     }
 }
@@ -91,7 +94,8 @@ mod tests {
             DisasterReport {
                 last: 3,
                 x: 4,
-                y: 5
+                y: 5,
+                last_month: 9
             }
         );
     }

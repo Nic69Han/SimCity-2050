@@ -5,9 +5,9 @@
 //! hooks answer their input, every call is refused or empty and the engine is the original.
 //!
 //! * **Eligible tile**: a classic road tile, [`is_highway_road`]: the plain roads, the
-//!   intersection, the roads with a power line and the traffic variants. Not a bridge (the
-//!   `HBRIDGE`/`VBRIDGE` tiles and the bridge piece that ends each group of 16 traffic tiles), not
-//!   a rail crossing, not anything that is not a road.
+//!   intersection, the roads with a power line and the traffic variants. Not a bridge (the classic
+//!   test `(tile & 15) < 2 || (tile & 15) == 15`: the bridge tiles, their traffic variants and the
+//!   piece that ends each group of 16), not a rail crossing, not anything that is not a road.
 //! * **Cost**: [`HIGHWAY_COST`] per tile, paid at placement; taking one up is free. Upkeep:
 //!   [`HIGHWAY_UPKEEP`] per tile and per year, paid by the yearly balance (`ext_monthly_balance`).
 //!   At most [`MAX_HIGHWAY_TILES`] tiles.
@@ -33,7 +33,7 @@ pub(crate) use effects::{monthly_balance, traffic};
 pub use rules::STATS_SIZE;
 pub use state::HighwayList;
 
-use crate::tile::{Tile, BRWH, HBRIDGE, LASTROAD, LOMASK, ROADS, VBRIDGE};
+use crate::tile::{Tile, LASTROAD, LOMASK, ROADS};
 
 /// Dollars to lay one highway tile.
 pub const HIGHWAY_COST: i32 = 25;
@@ -54,18 +54,18 @@ pub const CHUNK_TILE_SIZE: usize = 4;
 /// a rail crossing (the crossings are outside the road range).
 pub fn is_highway_road(tile: Tile) -> bool {
     let t = tile & LOMASK;
-    if !(ROADS..=LASTROAD).contains(&t) || t == HBRIDGE || t == VBRIDGE {
-        return false;
-    }
-    // each group of 16 traffic tiles ends with a bridge piece (BRWH, BRWV, ...)
-    t < BRWH || t % 16 != BRWH % 16
+    // the classic bridge test (`simulate.rs`): the first two and the last tile of each group of 16
+    // road tiles are bridges, with or without traffic
+    let k = t & 15;
+    (ROADS..=LASTROAD).contains(&t) && k >= 2 && k != 15
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tile::{
-        BRWV, HRAILROAD, HROADPOWER, HTRFBASE, INTERSECTION, LTRFBASE, ROADBASE, VRAILROAD,
+        BRWH, BRWV, HRAILROAD, HROADPOWER, HTRFBASE, INTERSECTION, LTRFBASE, ROADBASE, VBRIDGE,
+        VRAILROAD,
     };
 
     #[test]
@@ -74,14 +74,34 @@ mod tests {
             ROADS,
             INTERSECTION,
             HROADPOWER,
-            LTRFBASE,
-            HTRFBASE,
+            LTRFBASE + 2,
+            HTRFBASE + 2,
             LASTROAD - 1,
         ] {
             assert!(is_highway_road(t), "{t}");
         }
         for t in [
-            ROADBASE, VBRIDGE, BRWH, BRWV, 111, 127, 143, 159, 175, 191, HRAILROAD, VRAILROAD, 0,
+            ROADBASE,
+            VBRIDGE,
+            BRWH,
+            BRWV,
+            LTRFBASE,
+            LTRFBASE + 1,
+            HTRFBASE,
+            HTRFBASE + 1,
+            80,
+            81,
+            144,
+            193,
+            111,
+            127,
+            143,
+            159,
+            175,
+            191,
+            HRAILROAD,
+            VRAILROAD,
+            0,
             240,
         ] {
             assert!(!is_highway_road(t), "{t}");

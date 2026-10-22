@@ -82,11 +82,8 @@ impl Simulation {
                 (-1, -1)
             }
         };
-        self.extensions_mut().disaster_report = super::DisasterReport {
-            last: kind as u8,
-            x: at.0,
-            y: at.1,
-        };
+        let report = &mut self.extensions_mut().disaster_report;
+        (report.last, report.x, report.y) = (kind as u8, at.0, at.1);
         Some(())
     }
 
@@ -107,14 +104,13 @@ impl Simulation {
     }
 }
 
-/// The yearly pass: the drought runs down, then each kind may happen (see the module
-/// documentation). Draws nothing and changes nothing while the rule or `enable_disasters` is off
-/// (the drought still runs down while the rule is on). Returns 0 (disasters cost nothing here).
+/// The yearly pass: each kind may happen (see the module documentation). Draws nothing and
+/// changes nothing while the rule or `enable_disasters` is off (the drought runs down in the
+/// valves hook, month by month). Returns 0 (disasters cost nothing here).
 pub(crate) fn monthly_balance(sim: &mut Simulation) -> i32 {
     if !sim.disaster2_rules() {
         return 0;
     }
-    drought::pass(sim);
     if sim.enable_disasters {
         if riot::condition(sim) && chance(sim, RIOT_CHANCE) {
             let _ = sim.start_disaster(KIND_RIOT);
