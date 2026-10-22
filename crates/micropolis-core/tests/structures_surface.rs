@@ -20,6 +20,13 @@ fn bare() -> Simulation {
     s.set_structure_rules(true);
     s.set_service_rules(true); // the service genres of the catalog need it
     s.set_energy_rules(true); // and the power plants
+    s.set_reward_rules(true); // and the rewards and deals, earned for the occasion
+    for r in micropolis_core::rewards::REWARDS {
+        s.extensions_mut().reward_state.unlock(r.genre);
+    }
+    for d in micropolis_core::rewards::DEALS {
+        s.extensions_mut().reward_state.set_answer(d.genre, 2);
+    }
     s
 }
 

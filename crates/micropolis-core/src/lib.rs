@@ -38,6 +38,7 @@ pub mod ordinances;
 pub mod position;
 pub mod relief;
 pub mod relief_rules;
+pub mod rewards;
 pub mod rng;
 pub mod services;
 pub mod simulation;
