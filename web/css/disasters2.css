@@ -1,0 +1,10 @@
+/* Catastrophes et autoroutes: styles of web/disasters2-ui.js (docs/game-design-v13.md). */
+#disasters2-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#disasters2-panel .disasters2-section { margin: .4rem 0; }
+#disasters2-panel .disasters2-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#disasters2-panel .disasters2-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#disasters2-panel .disasters2-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
+#disasters2-panel .disasters2-triggers { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0; }
+#disasters2-panel .disasters2-trigger { min-height: 2rem; padding: .2rem .7rem; }
+#disasters2-panel .disasters2-status { margin: .3rem 0; font-size: .9rem; }
+#disasters2-panel .disasters2-stats { margin: .3rem 0; padding-left: 1.2rem; font-size: .9rem; }
