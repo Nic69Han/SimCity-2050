@@ -8,6 +8,8 @@ import * as underground from "./view3d-underground.js";
 import * as vehicles from "./view3d-vehicles.js";
 import * as structures from "./view3d-structures.js";
 import * as farms from "./view3d-farms.js";
+import * as highways from "./view3d-highways.js";
+import * as sprites from "./view3d-sprites.js";
 
 // `heavy` layers cost the most to draw (many triangles, a running animation loop).
 export const LAYERS = Object.freeze([
@@ -17,7 +19,9 @@ export const LAYERS = Object.freeze([
   Object.freeze({ name: "underground", module: underground, heavy: false }),
   Object.freeze({ name: "structures", module: structures, heavy: false }),
   Object.freeze({ name: "farms", module: farms, heavy: false }),
+  Object.freeze({ name: "highways", module: highways, heavy: false }),
   Object.freeze({ name: "vehicles", module: vehicles, heavy: false }),
+  Object.freeze({ name: "sprites", module: sprites, heavy: false }),
 ]);
 
 // The layer modules for a page address: with `?lite=1` (the simple 3D view, for weak devices and
