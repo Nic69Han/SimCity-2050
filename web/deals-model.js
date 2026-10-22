@@ -20,10 +20,19 @@ export const RESOURCES = Object.freeze([
   { label: "Électricité", noun: "d'électricité" },
   { label: "Eau", noun: "d'eau" },
   { label: "Déchets", noun: "de déchets" },
+  { label: "Achat d'électricité", noun: "d'électricité" },
 ]);
 
 /** The waste resource: an export, the city pays the price and the deal's income is a cost. */
 export const WASTE_RESOURCE = 2;
+/** The electricity purchase (docs/game-design-v10.md): the city pays the neighbour, like the waste export. */
+export const POWER_BUY_RESOURCE = 3;
+const PAID = new Set([WASTE_RESOURCE, POWER_BUY_RESOURCE]);
+
+/** Whether the city pays for this resource (an export or a purchase): its price is negative in the engine. */
+export function isPaid(resource) {
+  return PAID.has(Number(resource) | 0);
+}
 
 /** Numbers per record of deal_offers / active_deals (see crates/micropolis-wasm/src/deals.rs). */
 export const OFFER_LEN = 6;
@@ -97,7 +106,7 @@ export function formatUnits(n) {
  *  "100 unités de déchets par an : la ville paie 5 $ l'unité". */
 export function termsText(t) {
   const r = resourceOf(t.resource);
-  if (t.resource === WASTE_RESOURCE) {
+  if (isPaid(t.resource)) {
     return `${formatUnits(t.amount)} unités ${r.noun} par an : la ville paie ${formatMoney(Math.abs(int(t.price)))} l'unité`;
   }
   return `${formatUnits(t.amount)} unités ${r.noun} par an à ${formatMoney(t.price)} l'unité`;
@@ -110,7 +119,7 @@ export function titleText(t) {
 
 /** "Recette : 500 $ par an"; an export (resource 2) reads as a cost: "Coût : 500 $ par an". */
 export function incomeText(income, resource = 0) {
-  if (resource === WASTE_RESOURCE) return `Coût : ${formatMoney(Math.abs(int(income)))} par an`;
+  if (isPaid(resource)) return `Coût : ${formatMoney(Math.abs(int(income)))} par an`;
   return `Recette : ${formatMoney(income)} par an`;
 }
 

@@ -17,6 +17,7 @@
 use crate::agents::{self, Fleet};
 use crate::deals::DealList;
 use crate::densities::{DensityList, Farms};
+use crate::energy::EnergyState;
 use crate::position::Position;
 use crate::services::{ServiceCache, ServiceState};
 use crate::simulation::Simulation;
@@ -25,7 +26,7 @@ use crate::traffic::ZoneType;
 use crate::transit::TransitNetwork;
 use crate::waste::WasteState;
 use crate::water::WaterNetwork;
-use crate::{deals, densities, ordinances, services, structures, transit, waste, water};
+use crate::{deals, densities, energy, ordinances, services, structures, transit, waste, water};
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
 pub const CHUNK_RULES: u8 = 1;
@@ -45,8 +46,10 @@ pub const CHUNK_DENSITIES: u8 = 7;
 pub const CHUNK_WASTE: u8 = 8;
 /// Chunk tag: the EQ and the life expectancy ([`ServiceState::encode`]).
 pub const CHUNK_SERVICES: u8 = 9;
+/// Chunk tag: the ages of the power plants ([`EnergyState::encode`]).
+pub const CHUNK_ENERGY: u8 = 10;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_SERVICES;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_ENERGY;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -79,7 +82,9 @@ const RULES_KNOWN: u8 = RULES_WATER
 /// (`Extensions::services`). The byte is written only when one of its bits is set, so a city
 /// without those rules keeps the one-byte chunk (or none) it always had.
 const RULES2_SERVICES: u8 = 0b01;
-const RULES2_KNOWN: u8 = RULES2_SERVICES;
+/// Bit 1 of the second byte of the rules chunk: the energy (`Extensions::energy`).
+const RULES2_ENERGY: u8 = 0b10;
+const RULES2_KNOWN: u8 = RULES2_SERVICES | RULES2_ENERGY;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -120,6 +125,10 @@ pub struct Extensions {
     pub service_state: ServiceState,
     /// What the last monthly pass measured: runtime state, never saved, ignored when comparing.
     pub service_cache: ServiceCache,
+    /// The energy (docs/game-design-v10.md). Acts only while `structures` is on too.
+    pub energy: bool,
+    /// The ages of the power plants (see [`energy`]).
+    pub energy_state: EnergyState,
 }
 
 impl Extensions {
@@ -134,12 +143,14 @@ impl Extensions {
             || self.densities
             || self.waste
             || self.services
+            || self.energy
     }
 
     /// The bytes of the rules chunk: none when no rule is on, the flags byte, and the second
     /// byte only when it is not 0.
     fn rules_bytes(&self) -> Vec<u8> {
-        let second = if self.services { RULES2_SERVICES } else { 0 };
+        let second = (if self.services { RULES2_SERVICES } else { 0 })
+            | (if self.energy { RULES2_ENERGY } else { 0 });
         match (self.rules_flags(), second) {
             (0, 0) => Vec::new(),
             (flags, 0) => vec![flags],
@@ -186,7 +197,7 @@ pub(crate) struct LoadedExtensions {
 /// left out). Only written when [`Simulation::needs_extension_block`].
 pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
-    let chunks: [(u8, Vec<u8>); 9] = [
+    let chunks: [(u8, Vec<u8>); 10] = [
         (CHUNK_RULES, ext.rules_bytes()),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
@@ -196,6 +207,7 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
         (CHUNK_DENSITIES, ext.density_zones.encode()),
         (CHUNK_WASTE, ext.waste_state.encode(sim.world_size().1)),
         (CHUNK_SERVICES, ext.service_state.encode()),
+        (CHUNK_ENERGY, ext.energy_state.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -269,6 +281,9 @@ pub(crate) fn decode_chunks(
             }
             CHUNK_TRANSIT => loaded.transit = TransitNetwork::decode(bytes, width, height)?,
             CHUNK_SERVICES => loaded.extensions.service_state = ServiceState::decode(bytes)?,
+            CHUNK_ENERGY => {
+                loaded.extensions.energy_state = EnergyState::decode(bytes, width, height)?
+            }
             _ => return Err("unknown extension chunk"),
         }
     }
@@ -294,6 +309,7 @@ fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> 
             ext.densities = flags & RULES_DENSITIES != 0;
             ext.waste = flags & RULES_WASTE != 0;
             ext.services = bytes.get(1).is_some_and(|b| b & RULES2_SERVICES != 0);
+            ext.energy = bytes.get(1).is_some_and(|b| b & RULES2_ENERGY != 0);
             Ok(())
         }
         _ => Err("rules chunk is not 1 or 2 bytes"),
@@ -347,6 +363,7 @@ impl Simulation {
             || !self.extensions.density_zones.is_empty()
             || !self.extensions.waste_state.is_empty()
             || self.extensions.service_state != ServiceState::default()
+            || !self.extensions.energy_state.is_empty()
     }
 
     /// Applies a checked block (a loaded file).
@@ -358,6 +375,7 @@ impl Simulation {
         self.repair_densities();
         self.recompute_farms();
         self.repair_waste();
+        self.repair_energy();
     }
 
     /// Empties the networks, which belong to the map being replaced. The switches stay.
@@ -373,6 +391,7 @@ impl Simulation {
         self.extensions.waste_report = waste::WasteReport::default();
         self.extensions.service_state = ServiceState::default();
         self.extensions.service_cache = ServiceCache::default();
+        self.extensions.energy_state = EnergyState::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -391,12 +410,14 @@ impl Simulation {
         }
         let fares = self.take_transport_income();
         let garbage = waste::monthly_balance(self);
+        let electricity = energy::monthly_balance(self);
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
             .saturating_add(transit::monthly_balance(self))
             .saturating_add(deals::monthly_balance(self))
             .saturating_add(structures::monthly_balance(self))
             .saturating_add(garbage)
+            .saturating_add(electricity)
             .saturating_sub(fares);
         if net != 0 {
             self.spend(net);
@@ -428,7 +449,12 @@ impl Simulation {
                 self,
                 x,
                 y,
-                waste::pollution(self, x, y, ordinances::pollution(self, x, y, p)),
+                waste::pollution(
+                    self,
+                    x,
+                    y,
+                    energy::pollution(self, x, y, ordinances::pollution(self, x, y, p)),
+                ),
             ),
         )
     }
@@ -466,7 +492,7 @@ impl Simulation {
         if !self.extensions_active() {
             return 0;
         }
-        self.waste_power_sources()
+        self.waste_power_sources() + self.energy_power_sources()
     }
 
     /// Hook: traffic density `t` (0..=255) of the block at world tile `(x, y)`. Called by
@@ -513,6 +539,9 @@ impl Simulation {
         }
         if self.waste_rules() {
             self.repair_waste();
+        }
+        if self.energy_rules() {
+            self.repair_energy();
         }
         services::valves(self);
     }
@@ -678,7 +707,11 @@ mod tests {
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
             chunk(1, &[0b1000_0000]),
             chunk(1, &[0b1000_0000, 1]),
-            chunk(1, &[1, 0b10]),
+            chunk(1, &[1, 0b100]),
+            chunk(10, &[0, 1]),
+            chunk(10, &[0, 1, 0, 80, 0, 0, 0, 5]),
+            chunk(10, &[0, 1, 0, 1, 0, 1, 0]),
+            chunk(11, &[0, 1, 0, 1, 0, 1, 0, 5]),
             chunk(1, &[1, 0]),
             chunk(1, &[1, 1, 1]),
             chunk(9, &[1]),

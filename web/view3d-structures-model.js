@@ -9,15 +9,18 @@
 // (grey block with a tall chimney), 22 recycling centre (low green shed), 23 waste-to-energy (grey block,
 // blue roof slab, chimney) (docs/game-design-v08.md); 30-36 public services (docs/game-design-v09.md:
 // school, college, library with columns, museum, clinic and hospital with a red cross, prison with a low
-// wall); any other genre is a plain grey block.
+// wall); 40-46 power plants (docs/game-design-v10.md: gas, oil, wind, solar, hydro, microwave, fusion);
+// any other genre is a plain grey block.
 // Only the kinds below are meshes: the thin pieces of a building (roof, walls, columns, cross arms) are
 // "slab" boxes, its bodies are "block" boxes.
 import { tileCentreY } from "./view3d-model.js";
+import { ENERGY_COLORS, energyBuilders } from "./view3d-structures-energy.js";
 
 export const RECORD = 6;
 export const GENRE = Object.freeze({
   PARK: 1, SQUARE: 2, MONUMENT: 3, LANDFILL: 20, INCINERATOR: 21, RECYCLING: 22, WASTE_TO_ENERGY: 23,
   SCHOOL: 30, COLLEGE: 31, LIBRARY: 32, MUSEUM: 33, CLINIC: 34, HOSPITAL: 35, PRISON: 36,
+  GAS: 40, OIL: 41, WIND: 42, SOLAR: 43, HYDRO: 44, MICROWAVE: 45, FUSION: 46,
 });
 export const SHAPES = Object.freeze({ SLAB: "slab", TREE: "tree", FOUNTAIN: "fountain", OBELISK: "obelisk", BLOCK: "block" });
 export const KINDS = Object.freeze(Object.values(SHAPES));
@@ -51,6 +54,8 @@ export const MUSEUM = Object.freeze({ height: 0.6 }); // wide white block
 export const CLINIC = Object.freeze({ height: 0.7, cross: Object.freeze({ arm: 0.5, thick: 0.16, height: 0.04 }) });
 export const HOSPITAL = Object.freeze({ height: 1.8, cross: Object.freeze({ arm: 1.0, thick: 0.3, height: 0.05 }) });
 export const PRISON = Object.freeze({ height: 0.9, inset: 0.25, wall: Object.freeze({ height: 0.35, thick: 0.1 }) });
+// Power plants (genres 40-46): web/view3d-structures-energy.js.
+export { GAS, OIL, WIND, SOLAR, HYDRO, MICROWAVE, FUSION } from "./view3d-structures-energy.js";
 
 export const COLORS = Object.freeze({
   park: "#5cb85c", tree: "#1b5e20", square: "#e8dcc0", fountain: "#90caf9",
@@ -59,6 +64,7 @@ export const COLORS = Object.freeze({
   shed: "#66bb6a", plant: "#9e9e9e", roof: "#1e88e5",
   beige: "#e6d3a8", schoolRoof: "#c62828", white: "#f5f5f0", libraryStone: "#a59f94", column: "#d8d3c8",
   cross: "#d32f2f", prison: "#4f5358", prisonWall: "#7a7e85",
+  ...ENERGY_COLORS,
 });
 
 // Colour of a hex string as 0..1 components (the instance colour format).
@@ -168,10 +174,19 @@ function dumpBoxes(s, top) {
     place(s.x + fx * s.w, top + DUMP.box / 2, s.y + fz * s.h, DUMP.boxSize, DUMP.box, DUMP.boxSize, COLORS.dumpBox));
 }
 
+// A thin square stack of `width` x `height`, centred at (x, z) and standing on `top`.
+function stackAt(x, z, top, { width, height }, hex) {
+  return place(x, top + height / 2, z, width, height, width, hex);
+}
+
+// A stack `inset` in from the east and north edges of the footprint, standing on `top`.
+function cornerStack(s, top, { width, height, inset }, hex) {
+  return stackAt(s.x + s.w - inset, s.y + inset, top, { width, height }, hex);
+}
+
 // A tall thin chimney at the corner of the footprint, standing on `top`.
 function chimney(s, top) {
-  return place(s.x + s.w - CHIMNEY.inset, top + CHIMNEY.height / 2, s.y + CHIMNEY.inset,
-    CHIMNEY.width, CHIMNEY.height, CHIMNEY.width, COLORS.chimney);
+  return cornerStack(s, top, CHIMNEY, COLORS.chimney);
 }
 
 const WASTE_BUILDERS = Object.freeze({
@@ -273,7 +288,10 @@ const SERVICE_BUILDERS = Object.freeze({
   },
 });
 
-const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS });
+
+const ENERGY_BUILDERS = energyBuilders({ GENRE, SHAPES, COLORS, place, body, stackAt, cornerStack, cx, cz });
+
+const BUILDERS_ALL = Object.freeze({ ...BUILDERS, ...WASTE_BUILDERS, ...SERVICE_BUILDERS, ...ENERGY_BUILDERS });
 
 export function partsOf(s, base) {
   const build = BUILDERS_ALL[s.genre] ?? block;

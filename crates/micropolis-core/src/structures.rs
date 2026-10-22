@@ -242,7 +242,10 @@ mod tests {
         let genres: Vec<u8> = CATALOG.iter().map(|k| k.genre).collect();
         assert_eq!(
             genres,
-            [1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33, 34, 35, 36]
+            [
+                1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42,
+                43, 44, 45, 46
+            ]
         );
         for k in &CATALOG {
             assert_eq!(kind_of(k.genre), Some(k));
@@ -265,6 +268,12 @@ mod tests {
             .map(|k| k.genre)
             .collect();
         assert_eq!(needing_a_rail, [GENRE_STATION]);
+        let needing_water: Vec<u8> = CATALOG
+            .iter()
+            .filter(|k| k.needs_water)
+            .map(|k| k.genre)
+            .collect();
+        assert_eq!(needing_water, [crate::energy::GENRE_HYDRO]);
     }
 
     #[test]

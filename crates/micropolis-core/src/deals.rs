@@ -42,6 +42,14 @@
 //!   treatment (`waste`), not by [`settle`]: a waste deal has no surplus to cover, never breaks and
 //!   leaves the list only through [`Simulation::cancel_deal`] (penalty: half the monthly cost) or
 //!   when the waste rules go off.
+//! * **Buying electricity** (docs/game-design-v10.md): resource 3, [`RESOURCE_POWER_BUY`], offers
+//!   [`POWER_OFFER_BASE`]`..`[`TOTAL_OFFER_COUNT`], offered and signed only while the energy rules
+//!   act. `amount` is the power tiles added to the grid and `price` the dollars paid per tile at
+//!   each tax collection (`energy`); both are positive in the engine and the deal is really a
+//!   cost, like the waste one. There is no surplus to cover and no break; it leaves the list
+//!   through [`Simulation::cancel_deal`] (penalty: half the cost of one collection) or when the
+//!   energy rules go off. It is not in [`Simulation::power_capacity`]: bought power is never
+//!   sold again.
 
 use crate::extensions::Extensions;
 use crate::simulation::{Simulation, NOWHERE};
@@ -56,16 +64,21 @@ pub const RESOURCE_ELECTRICITY: u8 = 0;
 pub const RESOURCE_WATER: u8 = 1;
 /// Resource 2: garbage (units per month), which the city pays the neighbour to take.
 pub const RESOURCE_WASTE: u8 = 2;
+/// Resource 3: electricity bought from the neighbour (units: tiles of power), which the city
+/// pays for.
+pub const RESOURCE_POWER_BUY: u8 = 3;
 /// Resources sold for money: electricity and water.
 pub const RESOURCE_COUNT: usize = 2;
-/// Every resource of a deal, the garbage included.
-pub const ALL_RESOURCE_COUNT: usize = 3;
+/// Every resource of a deal, the garbage and the bought electricity included.
+pub const ALL_RESOURCE_COUNT: usize = 4;
 /// Classic offers on the table: one per neighbour and sold resource.
 pub const OFFER_COUNT: usize = NEIGHBOUR_COUNT * RESOURCE_COUNT;
 /// Index of the first waste offer (the one of the north neighbour).
 pub const WASTE_OFFER_BASE: usize = OFFER_COUNT;
-/// Every offer, the waste ones included.
-pub const TOTAL_OFFER_COUNT: usize = OFFER_COUNT + NEIGHBOUR_COUNT;
+/// Index of the first offer of electricity to buy (the one of the north neighbour).
+pub const POWER_OFFER_BASE: usize = WASTE_OFFER_BASE + NEIGHBOUR_COUNT;
+/// Every offer, the waste and the electricity-to-buy ones included.
+pub const TOTAL_OFFER_COUNT: usize = POWER_OFFER_BASE + NEIGHBOUR_COUNT;
 /// Most deals at a time (one per offer).
 pub const MAX_DEALS: usize = TOTAL_OFFER_COUNT;
 /// Power tiles a coal plant supplies (`COAL_POWER_STRENGTH` of `power.rs`).
@@ -104,6 +117,10 @@ pub const OFFERS: [[(i32, i32); RESOURCE_COUNT]; NEIGHBOUR_COUNT] = [
 /// neighbour.
 pub const WASTE_OFFERS: [(i32, i32); NEIGHBOUR_COUNT] = [(60, 3), (80, 2), (100, 4), (120, 2)];
 
+/// Base amount (power tiles) and base price (dollars per tile and tax collection) of the offer
+/// of electricity of each neighbour, which the city buys.
+pub const POWER_OFFERS: [(i32, i32); NEIGHBOUR_COUNT] = [(100, 2), (150, 2), (200, 3), (250, 2)];
+
 /// Results of [`Simulation::accept_deal`] (and the codes the page gets).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
@@ -132,6 +149,11 @@ pub struct Deal {
 }
 
 impl Deal {
+    /// Whether the city pays the neighbour for this deal (garbage, electricity bought).
+    pub fn is_cost(&self) -> bool {
+        offer_is_cost(self.resource)
+    }
+
     /// Dollars per year: `amount * price`, at most `i32::MAX` (a cost for the waste resource).
     pub fn yearly_income(&self) -> i32 {
         (i64::from(self.amount) * i64::from(self.price)).min(i64::from(i32::MAX)) as i32
@@ -260,9 +282,12 @@ pub fn offer_for(index: usize, population: i64, years: i64) -> Option<Deal> {
     let (neighbour, resource, (base_amount, base_price)) = if index < OFFER_COUNT {
         let (n, r) = (index / RESOURCE_COUNT, index % RESOURCE_COUNT);
         (n, r as u8, OFFERS[n][r])
-    } else {
+    } else if index < POWER_OFFER_BASE {
         let n = index - WASTE_OFFER_BASE;
         (n, RESOURCE_WASTE, WASTE_OFFERS[n])
+    } else {
+        let n = index - POWER_OFFER_BASE;
+        (n, RESOURCE_POWER_BUY, POWER_OFFERS[n])
     };
     let amount = i64::from(base_amount) * (tier_of(population) + 1);
     let price = i64::from(base_price) * (100 + years.clamp(0, PRICE_DRIFT_YEARS)) / 100;
@@ -303,6 +328,11 @@ pub fn settle(list: &DealList, raw: [i64; RESOURCE_COUNT]) -> (i64, [bool; MAX_D
         }
     }
     (net, kept)
+}
+
+/// Whether the city pays for the resource (garbage, electricity bought) instead of selling it.
+fn offer_is_cost(resource: u8) -> bool {
+    resource == RESOURCE_WASTE || resource == RESOURCE_POWER_BUY
 }
 
 /// Penalty for cancelling a deal.
@@ -360,7 +390,8 @@ impl Simulation {
 
     /// Generating capacity in power tiles: [`COAL_POWER_UNITS`] per coal plant and
     /// [`NUCLEAR_POWER_UNITS`] per nuclear plant on the map (a scan of the plant centre tiles),
-    /// plus that of the working waste-to-energy plants.
+    /// plus that of the working waste-to-energy plants and of the plants of the energy rules,
+    /// less what the worn classic plants lost. The electricity bought is not in it.
     pub fn power_capacity(&self) -> i64 {
         let mut coal = 0i64;
         let mut nuclear = 0i64;
@@ -373,7 +404,8 @@ impl Simulation {
                 }
             }
         }
-        coal * COAL_POWER_UNITS + nuclear * NUCLEAR_POWER_UNITS + self.waste_power_capacity()
+        let own = coal * COAL_POWER_UNITS + nuclear * NUCLEAR_POWER_UNITS;
+        (own + self.waste_power_capacity() + self.energy_power_delta()).max(0)
     }
 
     /// Power tiles the last power scan energised.
@@ -402,7 +434,7 @@ impl Simulation {
             return [0; RESOURCE_COUNT];
         }
         let mut out = self.raw_surplus();
-        for d in self.deals().iter().filter(|d| d.resource != RESOURCE_WASTE) {
+        for d in self.deals().iter().filter(|d| !d.is_cost()) {
             out[usize::from(d.resource)] -= i64::from(d.amount);
         }
         out
@@ -422,14 +454,18 @@ impl Simulation {
             return DealResult::RulesOff;
         }
         let list = &self.extensions().deal_list;
-        let is_waste = offer.resource == RESOURCE_WASTE;
-        if is_waste && !self.waste_rules() {
+        let off = match offer.resource {
+            RESOURCE_WASTE => !self.waste_rules(),
+            RESOURCE_POWER_BUY => !self.energy_active(),
+            _ => false,
+        };
+        if off {
             DealResult::RulesOff
         } else if list.has(offer.neighbour, offer.resource) {
             DealResult::Already
         } else if list.len() >= MAX_DEALS {
             DealResult::Full
-        } else if !is_waste
+        } else if !offer_is_cost(offer.resource)
             && self.deal_surplus()[usize::from(offer.resource)] < i64::from(offer.amount)
         {
             DealResult::NoSurplus
@@ -514,8 +550,9 @@ mod tests {
     fn waste_offers_follow_the_classic_ones_and_keep_the_classic_indexes() {
         assert_eq!(
             (OFFER_COUNT, WASTE_OFFER_BASE, TOTAL_OFFER_COUNT),
-            (8, 8, 12)
+            (8, 8, 16)
         );
+        assert_eq!(POWER_OFFER_BASE, 12);
         assert_eq!(MAX_DEALS, TOTAL_OFFER_COUNT);
         for i in 0..OFFER_COUNT {
             assert_ne!(offer_for(i, 0, 0).unwrap().resource, RESOURCE_WASTE);
@@ -525,6 +562,42 @@ mod tests {
         assert_eq!((d.neighbour, d.resource, d.amount, d.price), (3, 2, 240, 2));
         let d = offer_for(10, 0, 0).unwrap();
         assert_eq!((d.neighbour, d.resource, d.amount, d.price), (2, 2, 100, 4));
+    }
+
+    #[test]
+    fn power_offers_follow_the_waste_ones_and_are_costs() {
+        for i in POWER_OFFER_BASE..TOTAL_OFFER_COUNT {
+            let d = offer_for(i, 0, 0).unwrap();
+            assert_eq!(d.resource, RESOURCE_POWER_BUY);
+            assert_eq!(usize::from(d.neighbour), i - POWER_OFFER_BASE);
+            assert!(d.is_cost() && d.amount > 0 && d.price > 0);
+        }
+        // south neighbour, tier 3 quadruples the amount; 50 years of drift: +50 % on the price
+        let d = offer_for(14, 50_000, 60).unwrap();
+        assert_eq!((d.neighbour, d.amount, d.price), (2, 800, 4));
+        assert_eq!(offer_for(TOTAL_OFFER_COUNT, 0, 0), None);
+        assert!(!offer_for(0, 0, 0).unwrap().is_cost());
+        assert!(offer_for(WASTE_OFFER_BASE, 0, 0).unwrap().is_cost());
+    }
+
+    #[test]
+    fn a_power_deal_needs_the_energy_rules_and_leaves_the_sale_surplus_alone() {
+        let mut s = sim();
+        assert_eq!(s.accept_deal(POWER_OFFER_BASE), DealResult::RulesOff);
+        s.set_energy_rules(true);
+        assert_eq!(s.accept_deal(POWER_OFFER_BASE), DealResult::RulesOff);
+        s.set_structure_rules(true);
+        let before = s.deal_surplus();
+        assert_eq!(s.accept_deal(POWER_OFFER_BASE), DealResult::Done);
+        assert_eq!(s.accept_deal(POWER_OFFER_BASE), DealResult::Already);
+        assert_eq!(s.deal_surplus(), before, "bought power is never sold again");
+        assert_eq!(s.energy_bought(), 100);
+        let paid = s.cancel_deal(0);
+        assert_eq!(paid, DealResult::Done);
+        assert_eq!(s.energy_bought(), 0);
+        assert_eq!(s.accept_deal(POWER_OFFER_BASE + 1), DealResult::Done);
+        s.set_energy_rules(false);
+        assert!(s.deals().is_empty());
     }
 
     #[test]
@@ -744,7 +817,7 @@ mod tests {
         let mut bad_neighbour = good.clone();
         bad_neighbour[0] = 4;
         let mut bad_resource = good.clone();
-        bad_resource[1] = 3;
+        bad_resource[1] = 4;
         let mut zero_amount = good.clone();
         zero_amount[2..6].copy_from_slice(&0i32.to_be_bytes());
         let mut huge_price = good.clone();

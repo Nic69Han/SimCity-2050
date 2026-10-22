@@ -11,6 +11,7 @@ mod agents;
 mod budget;
 mod deals;
 mod densities;
+mod energy;
 mod messages;
 mod ordinances;
 mod overlays;

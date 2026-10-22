@@ -19,11 +19,16 @@
 //!   adapter shows `price` and `yearly_income` **negated** (a negative number is a cost); the
 //!   engine keeps them positive. `amount` is the units taken per month. `cancel_penalty` stays the
 //!   positive number of dollars paid.
+//! * Energy (docs/game-design-v10.md): resource 3 = electricity bought, offers 12..=15 (north to west),
+//!   listed only while the energy rules act (energy and extended buildings on). Offers 8..=11 stay
+//!   the garbage ones: with the energy rules on they are listed even if the waste rules are off
+//!   (so that the indexes never move) and refused with -1 in that case. Like garbage, the city
+//!   *pays*: `price` and `yearly_income` are negative, `amount` is the power tiles added to the grid.
 //! * `surplus() -> Int32Array`: `[electricity, water]`, the free surplus (capacity - used - signed
 //!   deals; negative when a deal is not covered); `[0, 0]` with the rule off.
 
 use crate::City;
-use micropolis_core::deals::{settle, Deal, OFFER_COUNT, RESOURCE_WASTE, TOTAL_OFFER_COUNT};
+use micropolis_core::deals::{settle, Deal, OFFER_COUNT, POWER_OFFER_BASE, TOTAL_OFFER_COUNT};
 use wasm_bindgen::prelude::*;
 
 /// Values per record of `deal_offers`.
@@ -36,8 +41,8 @@ fn clamp(v: i64) -> i32 {
 }
 
 fn terms(d: &Deal) -> [i32; 5] {
-    // the city pays for its garbage to be taken: a cost is shown negative
-    let sign = if d.resource == RESOURCE_WASTE { -1 } else { 1 };
+    // the city pays for its garbage to be taken and for electricity bought: a cost is shown negative
+    let sign = if d.is_cost() { -1 } else { 1 };
     [
         i32::from(d.neighbour),
         i32::from(d.resource),
@@ -70,8 +75,10 @@ impl City {
         if !self.sim.deals_rules() {
             return out;
         }
-        let shown = if self.sim.waste_rules() {
+        let shown = if self.sim.energy_active() {
             TOTAL_OFFER_COUNT
+        } else if self.sim.waste_rules() {
+            POWER_OFFER_BASE
         } else {
             OFFER_COUNT
         };
@@ -135,7 +142,7 @@ mod tests {
         assert_eq!(offers.len(), 8 * super::OFFER_LEN);
         assert_eq!(&offers[..5], &[0, 0, 100, 5, 500]);
         assert_eq!(offers[5], -3, "no power, no surplus");
-        for bad in [-1, 12, i32::MAX, i32::MIN] {
+        for bad in [-1, 16, i32::MAX, i32::MIN] {
             assert_eq!(city.accept_deal(bad), 0, "{bad}");
             assert_eq!(city.cancel_deal(bad), 0, "{bad}");
         }
@@ -153,6 +160,27 @@ mod tests {
         assert_eq!(city.cancel_deal(0), 1);
         city.set_waste_rules(false);
         assert_eq!(city.deal_offers().len(), 8 * super::OFFER_LEN);
+        city.set_energy_rules(true);
+        assert_eq!(
+            city.deal_offers().len(),
+            8 * super::OFFER_LEN,
+            "needs structures too"
+        );
+        city.sim.set_structure_rules(true);
+        let offers = city.deal_offers();
+        assert_eq!(offers.len(), 16 * super::OFFER_LEN);
+        let e = &offers[12 * super::OFFER_LEN..13 * super::OFFER_LEN];
+        assert_eq!(e, &[0, 3, 100, -2, -200, 1], "electricity bought: a cost");
+        assert_eq!(
+            offers[8 * super::OFFER_LEN + 5],
+            -1,
+            "garbage offer: waste rules off"
+        );
+        assert_eq!(city.accept_deal(12), 1);
+        assert_eq!(city.active_deals(), vec![0, 3, 100, -2, -200, 1, 100]);
+        city.set_energy_rules(false);
+        assert!(city.active_deals().is_empty());
+        city.sim.set_structure_rules(false);
         city.sim.set_tile(3, 3, POWERPLANT | ZONEBIT);
         assert_eq!(city.surplus(), vec![700, 0]);
         assert_eq!(city.deal_offers()[5], 1);
