@@ -7,6 +7,7 @@ import { railFindings, railOf } from "./advisors-rail.js";
 import { wasteFindings, wasteOf } from "./waste-model.js";
 import { servicesFindings } from "./advisors-services.js";
 import { energyFindings } from "./advisors-energy.js";
+import { economyFindings } from "./advisors-economy.js";
 
 export const SEVERITY = Object.freeze({ OK: "ok", ATTENTION: "attention", URGENT: "urgent" });
 export const SEVERITY_LABEL = Object.freeze({ ok: "Tout va bien", attention: "Attention", urgent: "Urgent" });
@@ -172,7 +173,8 @@ function financesAdvice(s) {
   const rate = num(s.taxRate);
   const drop = trend(s.moneyHistory);
   const taxVotes = votesOf(s.problems, PROBLEM.TAXES);
-  if (funds === null && cash === null && taxVotes === null) return null;
+  const econ = economyFindings(s);
+  if (funds === null && cash === null && taxVotes === null && econ.length === 0) return null;
   const costs = ordinanceCosts(s);
   const retire = costs.top ? ` Ou retirez l'ordonnance « ${costs.top.label} » (${formatMoney(costs.top.cost)} par an).` : "";
   const raise = (rate !== null && rate < TAX_HIGH
@@ -198,6 +200,7 @@ function financesAdvice(s) {
   if (ts) {
     f.push(finding(ts, "Les habitants se plaignent des impôts.", rate !== null && rate > 0 ? `Baissez l'impôt de ${TAX_STEP} points si les caisses le permettent.` : "Surveillez la trésorerie."));
   }
+  f.push(...econ);
   const shown = funds !== null ? `Trésorerie saine : ${formatMoney(funds)}` : "Les comptes sont équilibrés";
   const a = advisor("finances", f, finding(SEVERITY.OK, `${shown}.`, "Gardez le cap : investissez dans de nouvelles zones."));
   const notes = financeNotes(s, costs);
@@ -392,7 +395,7 @@ function environmentAdvice(s) {
  *   moneyHistory, pollutionHistory,           // City.history(3|5, 0), oldest first
  *   // extended rules, each only when the engine has the API (advisors.js readSnapshot); a block is
  *   // ignored unless its switch in `rules` is exactly true:
- *   rules: { water, transit, deals, agents }, // booleans: water_rules, transit_rules, deals_rules, agent_rules
+ *   rules: { water, transit, deals, agents, services, energy, economy }, // booleans: water_rules, transit_rules, deals_rules, agent_rules, ...
  *   water: { pumps, pipes, watered, dry },    // City.water_stats
  *   transit: { stations, tunnels, lines, served },  // City.transit_stats
  *   ordinances: [{ key, label, active, cost, crime, pollution }],  // cost per year, effects in percent
@@ -403,6 +406,7 @@ function environmentAdvice(s) {
  *   waste: { accumulated, landfillLeft, landfills },  // City.waste_stats and the landfills, read with the waste rule
  *   services: { eq, life, students, schoolPlaces, patients, carePlaces, ... },  // services-model.js decodeStats, read with the services rule
  *   energy: { production, consumption, endOfLife, ... },  // energy-model.js decodeStats, read with the energy rule
+ *   economy: { shortage, taxRates, bondCount },  // economy-model.js readEconomy (goods short, the nine rates, bonds in force), read with the economy rule
  * }
  * Returns [{ id, title, severity, diagnosis, action }] sorted by severity (urgent first), then ORDER.
  * An advisor whose data is absent is left out. Total: any input (null, wrong types) gives an array.

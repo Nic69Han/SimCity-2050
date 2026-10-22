@@ -1,0 +1,13 @@
+/* economy: styles of web/economy-ui.js (docs/game-design-v11.md). */
+#economy-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#economy-panel h3 { margin: .5rem 0 .2rem; font-size: 1rem; }
+#economy-panel .economy-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#economy-panel .economy-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#economy-panel .economy-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
+#economy-panel .economy-taxes { border-collapse: collapse; width: 100%; font-size: .9rem; }
+#economy-panel .economy-taxes th, #economy-panel .economy-taxes td { padding: .2rem .3rem; text-align: left; vertical-align: top; }
+#economy-panel .economy-taxes input { width: 4.5rem; }
+#economy-panel .economy-income { display: block; color: var(--muted); font-size: .8rem; }
+#economy-panel .economy-bond-list, #economy-panel .economy-goods { margin: .3rem 0; padding-left: 1.2rem; font-size: .9rem; }
+#economy-panel .economy-issue { margin-top: .3rem; }
+#economy-panel .economy-status { min-height: 1.2em; margin: .3rem 0; font-size: .9rem; }
