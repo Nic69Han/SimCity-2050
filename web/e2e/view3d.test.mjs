@@ -25,6 +25,9 @@ async function colourCount(page) {
   // a page screenshot clipped to the canvas: an element screenshot waits for the element to be
   // "stable", which never happens while the day/night animation draws (and is slow without a GPU)
   // (the box is read in the page: locator.boundingBox waits for the busy page's main thread and times out)
+  // the panels make the page taller than the window: bring the canvas on screen, or the clip is partly blank
+  // (scrolled in the page: the locator would wait for a "stable" canvas, never true while it animates)
+  await page.evaluate(() => document.getElementById("map3d").scrollIntoView({ block: "nearest" }));
   const box = await page.evaluate(() => {
     const r = document.getElementById("map3d").getBoundingClientRect();
     return { x: r.x, y: r.y, width: r.width, height: r.height };
