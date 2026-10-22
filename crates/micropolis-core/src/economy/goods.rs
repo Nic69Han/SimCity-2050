@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn the_zones_make_two_and_use_three_per_unit() {
+    fn the_zones_make_two_and_use_two_per_unit() {
         let zones = [
             zone(KIND_INDUSTRIAL, 16),
             zone(KIND_INDUSTRIAL, 8),
@@ -147,7 +147,7 @@ mod tests {
             zone(1, 999),
         ];
         let g = Goods::of_zones(&zones);
-        assert_eq!((g.produced, g.consumed), (48, 30));
+        assert_eq!((g.produced, g.consumed), (48, 20));
         assert_eq!(Goods::of_zones(&[]), Goods::default());
     }
 

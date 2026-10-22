@@ -39,7 +39,7 @@ stocké : fichier identique octet pour octet, moteur identique au C++ (comparais
   (arrondi entier, toujours ≥ 1 $). Rembourser coûte le montant et retire l'obligation ; refusé sans les fonds.
   Éteindre la règle rembourse tout ce qui peut l'être puis oublie le reste (documenté, testé).
 * **Marchandises** (par an) : production = Σ population industrielle × `GOODS_PER_IND` (= 2) ; consommation =
-  Σ population commerciale × `GOODS_PER_COM` (= 3). Surplus vendu `GOODS_EXPORT_PRICE` (= 1 $) l'unité, manque
+  Σ population commerciale × `GOODS_PER_COM` (= 2, ramené de 3 à l'intégration : une ville équilibrée ne doit pas payer d'importations chaque année). Surplus vendu `GOODS_EXPORT_PRICE` (= 1 $) l'unité, manque
   acheté `GOODS_IMPORT_PRICE` (= 2 $). Si le manque dépasse `SHORTAGE_PCT` (= 50) % de la consommation, la valve
   commerciale baisse de `SHORTAGE_VALVE` (= 200) l'année suivante.
 * API wasm (`crates/micropolis-wasm/src/economy.rs`) :

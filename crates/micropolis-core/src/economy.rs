@@ -84,7 +84,7 @@ pub const BOND_STEP_PERMILLE: i32 = 10;
 /// Goods one unit of industrial population makes in a year.
 pub const GOODS_PER_IND: i64 = 2;
 /// Goods one unit of commercial population uses in a year.
-pub const GOODS_PER_COM: i64 = 3;
+pub const GOODS_PER_COM: i64 = 2;
 /// Dollars earned per unit of goods exported.
 pub const GOODS_EXPORT_PRICE: i64 = 1;
 /// Dollars paid per unit of goods imported.
