@@ -28,6 +28,7 @@ pub mod zone;
 
 pub mod deals;
 pub mod densities;
+pub mod economy;
 pub mod energy;
 pub mod events;
 pub mod extensions;
