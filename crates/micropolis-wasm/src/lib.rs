@@ -17,6 +17,7 @@ mod messages;
 mod ordinances;
 mod overlays;
 mod relief;
+mod rewards;
 mod saves;
 mod services;
 mod sizes;

@@ -149,7 +149,7 @@ fn two_loads_of_an_economy_file_play_the_same() {
 
 #[test]
 fn the_economy_chunk_has_tag_11_and_is_the_last_one() {
-    assert_eq!((CHUNK_ECONOMY, CHUNK_MAX_TAG), (11, 11));
+    assert_eq!((CHUNK_ECONOMY, CHUNK_MAX_TAG), (11, 12));
     let tags = tags_of(&file_of(&with_economy()));
     assert_eq!(tags.last(), Some(&CHUNK_ECONOMY));
     assert!(tags.windows(2).all(|w| w[0] < w[1]));

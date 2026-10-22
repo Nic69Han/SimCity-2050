@@ -62,3 +62,53 @@ Comparaisons C++ identiques ; règle éteinte = moteur d'origine ; déblocages (
 offres (proposition, acceptation, refus définitif, recette annuelle seulement bâtiment debout et alimenté), barrières
 de pose, inconvénients mesurés ; sauvegarde aller-retour ; e2e : activer la règle, voir une récompense débloquée sur
 la ville d'exemple et la poser ; tous les tests verts ; relecture.
+
+## Cœur des récompenses (chantier livré)
+Code : `crates/micropolis-core/src/rewards.rs` (genres, tables `REWARDS` et `DEALS`, `Drawback`, `RewardReport`) et
+`rewards/` (`state` déblocages et réponses, sauvegarde ; `rules` interrupteur, listes, `answer_offer`, barrière de
+pose ; `month` bilan annuel ; `effects` inconvénients) ; catalogue dans `structures/catalog.rs` ; adaptateur
+`crates/micropolis-wasm/src/rewards.rs`. Tests : `tests/rewards_rules.rs`, `tests/rewards_save.rs`, unitaires des
+modules, adaptateur, `web/test/wasm-rewards.test.mjs` (ville Haight : plus de 40 000 habitants).
+
+* **Interrupteur** : `Extensions::rewards`, bit 3 du second octet des règles (`RULES2_REWARDS`) ; agit seulement si
+  `structures` l'est aussi (`reward_active`). Éteint (défaut) : les crochets rendent leur entrée, le bilan ne fait
+  rien, les listes sont vides, les statistiques nulles, `answer_offer` rend 0, la pose des genres 50-63 est `Failed` ;
+  test « règle allumée sur 2 400 pas = même ville » (tuiles, fonds, cartes de criminalité, valeur du terrain,
+  pollution, générateur), comparaisons `compare-*.sh` inchangées. L'éteindre retire les bâtiments 50-63 sans
+  remboursement (`repair_structures` les voit orphelins) et oublie déblocages et réponses.
+* **Population et satisfaction** : population = `get_population()` (habitants, `(res + 8 (com + ind)) × 20`),
+  satisfaction = `city_yes`. Seuils : tables du contrat, mesurés un à un (juste en dessous, juste au seuil, population
+  sans satisfaction).
+* **Écart voulu au contrat** : allumer la règle lance une fois la vérification des déblocages et des offres, pour qu'une
+  ville qui qualifie déjà le voie tout de suite (sinon il faut attendre jusqu'à un an de jeu) ; le bilan annuel
+  (`ext_monthly_balance`, une fois par collecte) la refait. Rien n'est payé hors du bilan.
+* **Récompenses** (50-54) : entrées `amenity` du catalogue (coût 0, entretien 0, sans électricité) ; la valeur du terrain
+  passe par `structures::land_value` (décroissance linéaire, plafond commun `LAND_VALUE_CAP` = 40). Le déblocage est un bit
+  qui ne se retire jamais. « Déjà posée » = un bâtiment de ce genre debout : démolie, elle peut être reposée.
+* **Accords** (60-63) : `answer_offer` n'accepte que l'état « proposée » (retour 1, 0 règle éteinte, -1 sinon) ; accepter
+  autorise une pose ; refuser est définitif (la proposition ne revient jamais, même population plus haute). Les entrées du
+  catalogue exigent l'électricité (`FLAG_POWER`) : `structure_works` = alimenté. Recette annuelle versée au bilan
+  tant que le bâtiment est debout et alimenté (`reward_stats()[1]` = dernière année, état d'exécution non sauvegardé).
+  Un accord accepté mais non construit ne rapporte rien.
+* **Inconvénients** (`ext_crime`, `ext_pollution`, `ext_land_value`, appliqués en dernier de la chaîne pour que le
+  commissariat ou l'éducation ne les effacent pas) : `montant × (rayon + 1 − d) / (rayon + 1)`, `d` = distance de
+  Manhattan à l'emprise, nul au-delà du rayon, sommés sur les bâtiments ; les balayages bornent ensuite comme le
+  classique (criminalité 0..=250, pollution 0..=255, valeur 1..=250). Ils agissent tant que le bâtiment est debout,
+  alimenté ou non (un mauvais voisin l'est aussi dans le noir). Test sur les cartes balayées : changées près du
+  bâtiment, identiques loin.
+* **Barrière de pose** (`place_structure`, `structure_preview`) : `reward_allows` → `Failed` si la règle est éteinte, si
+  le genre n'est pas débloqué / accepté, ou s'il en est déjà un debout ; les autres genres ne sont pas touchés. Au
+  chargement et à chaque contrôle (`repair_structures`) un bâtiment que l'état n'autorise pas est retiré.
+* **Sauvegarde** : morceau 12 (`CHUNK_REWARDS`, `CHUNK_MAX_TAG` = 12), 4 octets (`CHUNK_SIZE`) : déblocages 16 bits (bit =
+  genre − 50), réponses 16 bits (2 bits par offre, offre = genre − 60), écrit seulement s'il n'est pas nul. Refusé
+  (`cty_bad_extension`) : longueur autre que 4, bit de déblocage au-delà du genre 54, bit de réponse au-delà de l'offre
+  63, morceau nul ; règle éteinte, l'état lu est oublié. Règle éteinte et rien de stocké : fichier identique octet pour
+  octet.
+* **API wasm** : table du contrat, sans écart ; `rewards()` et `special_offers()` sont vides, `reward_stats()` nul, règle
+  éteinte. `reward_stats()[0]` est `city_yes`.
+* **Constantes** : `REWARD_BASE` 50, `DEAL_BASE` 60, `ANSWER_NONE/PROPOSED/ACCEPTED/REFUSED` 0..3, `CHUNK_SIZE` 4,
+  `STATS_SIZE` 4 ; seuils, recettes et inconvénients dans `REWARDS` et `DEALS`.
+* **Bornes** : aucune boucle sans borne (deux tables, liste des bâtiments `MAX_STRUCTURES` = 256, emprise) ; aucun
+  tirage aléatoire ; le plafond de la liste arrête aussi les récompenses (testé).
+* **Limites connues** : une offre proposée n'expire pas ; les chiffres de `reward_stats()[1]` ne sont pas
+  sauvegardés (0 après chargement jusqu'au bilan suivant).

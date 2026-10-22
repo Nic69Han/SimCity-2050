@@ -20,6 +20,7 @@ use crate::densities::{DensityList, Farms};
 use crate::economy::EconomyState;
 use crate::energy::EnergyState;
 use crate::position::Position;
+use crate::rewards::{RewardReport, RewardState};
 use crate::services::{ServiceCache, ServiceState};
 use crate::simulation::Simulation;
 use crate::structures::StructureList;
@@ -28,7 +29,8 @@ use crate::transit::TransitNetwork;
 use crate::waste::WasteState;
 use crate::water::WaterNetwork;
 use crate::{
-    deals, densities, economy, energy, ordinances, services, structures, transit, waste, water,
+    deals, densities, economy, energy, ordinances, rewards, services, structures, transit, waste,
+    water,
 };
 
 /// Chunk tag: the water and transit rule switches (one flags byte).
@@ -53,8 +55,10 @@ pub const CHUNK_SERVICES: u8 = 9;
 pub const CHUNK_ENERGY: u8 = 10;
 /// Chunk tag: the tax rates, the bonds and the goods ([`EconomyState::encode`]).
 pub const CHUNK_ECONOMY: u8 = 11;
+/// Chunk tag: the unlocked rewards and the answers to the offers ([`RewardState::encode`]).
+pub const CHUNK_REWARDS: u8 = 12;
 /// Largest tag this reader knows; any bigger tag is refused.
-pub const CHUNK_MAX_TAG: u8 = CHUNK_ECONOMY;
+pub const CHUNK_MAX_TAG: u8 = CHUNK_REWARDS;
 /// Bytes of a chunk header: tag (1), length (4).
 pub const CHUNK_HEADER_SIZE: usize = 5;
 /// Bytes of the length that opens the block.
@@ -91,7 +95,9 @@ const RULES2_SERVICES: u8 = 0b01;
 const RULES2_ENERGY: u8 = 0b10;
 /// Bit 2 of the second byte of the rules chunk: the economy (`Extensions::economy`).
 const RULES2_ECONOMY: u8 = 0b100;
-const RULES2_KNOWN: u8 = RULES2_SERVICES | RULES2_ENERGY | RULES2_ECONOMY;
+/// Bit 3 of the second byte of the rules chunk: the rewards and deals (`Extensions::rewards`).
+const RULES2_REWARDS: u8 = 0b1000;
+const RULES2_KNOWN: u8 = RULES2_SERVICES | RULES2_ENERGY | RULES2_ECONOMY | RULES2_REWARDS;
 
 /// The switches of the extended rules. Everything off by default.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -140,6 +146,13 @@ pub struct Extensions {
     pub economy: bool,
     /// The tax rates, the bonds and the goods (see [`economy`]).
     pub economy_state: EconomyState,
+    /// The rewards and special deals (docs/game-design-v12.md). Acts only while `structures` is
+    /// on too.
+    pub rewards: bool,
+    /// The unlocked rewards and the answers to the offers (see [`rewards`]).
+    pub reward_state: RewardState,
+    /// What the last year paid: runtime state, never saved, ignored when comparing.
+    pub reward_report: RewardReport,
 }
 
 impl Extensions {
@@ -156,6 +169,7 @@ impl Extensions {
             || self.services
             || self.energy
             || self.economy
+            || self.rewards
     }
 
     /// The bytes of the rules chunk: none when no rule is on, the flags byte, and the second
@@ -163,7 +177,8 @@ impl Extensions {
     fn rules_bytes(&self) -> Vec<u8> {
         let second = (if self.services { RULES2_SERVICES } else { 0 })
             | (if self.energy { RULES2_ENERGY } else { 0 })
-            | (if self.economy { RULES2_ECONOMY } else { 0 });
+            | (if self.economy { RULES2_ECONOMY } else { 0 })
+            | (if self.rewards { RULES2_REWARDS } else { 0 });
         match (self.rules_flags(), second) {
             (0, 0) => Vec::new(),
             (flags, 0) => vec![flags],
@@ -210,7 +225,7 @@ pub(crate) struct LoadedExtensions {
 /// left out). Only written when [`Simulation::needs_extension_block`].
 pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
     let ext = sim.extensions();
-    let chunks: [(u8, Vec<u8>); 11] = [
+    let chunks: [(u8, Vec<u8>); 12] = [
         (CHUNK_RULES, ext.rules_bytes()),
         (CHUNK_ORDINANCES, ordinances::encode(ext)),
         (CHUNK_WATER, sim.water().encode()),
@@ -222,6 +237,7 @@ pub(crate) fn encode_block(sim: &Simulation) -> Vec<u8> {
         (CHUNK_SERVICES, ext.service_state.encode()),
         (CHUNK_ENERGY, ext.energy_state.encode()),
         (CHUNK_ECONOMY, ext.economy_state.encode()),
+        (CHUNK_REWARDS, ext.reward_state.encode()),
     ];
     let mut body = Vec::new();
     for (tag, bytes) in chunks.iter().filter(|(_, b)| !b.is_empty()) {
@@ -299,6 +315,7 @@ pub(crate) fn decode_chunks(
                 loaded.extensions.energy_state = EnergyState::decode(bytes, width, height)?
             }
             CHUNK_ECONOMY => loaded.extensions.economy_state = EconomyState::decode(bytes)?,
+            CHUNK_REWARDS => loaded.extensions.reward_state = RewardState::decode(bytes)?,
             _ => return Err("unknown extension chunk"),
         }
     }
@@ -326,6 +343,7 @@ fn decode_rules(bytes: &[u8], ext: &mut Extensions) -> Result<(), &'static str> 
             ext.services = bytes.get(1).is_some_and(|b| b & RULES2_SERVICES != 0);
             ext.energy = bytes.get(1).is_some_and(|b| b & RULES2_ENERGY != 0);
             ext.economy = bytes.get(1).is_some_and(|b| b & RULES2_ECONOMY != 0);
+            ext.rewards = bytes.get(1).is_some_and(|b| b & RULES2_REWARDS != 0);
             Ok(())
         }
         _ => Err("rules chunk is not 1 or 2 bytes"),
@@ -381,6 +399,7 @@ impl Simulation {
             || self.extensions.service_state != ServiceState::default()
             || !self.extensions.energy_state.is_empty()
             || self.extensions.economy_state != EconomyState::default()
+            || !self.extensions.reward_state.is_empty()
     }
 
     /// Applies a checked block (a loaded file).
@@ -394,6 +413,7 @@ impl Simulation {
         self.repair_waste();
         self.repair_energy();
         self.repair_economy();
+        self.repair_rewards();
     }
 
     /// Empties the networks, which belong to the map being replaced. The switches stay.
@@ -411,6 +431,8 @@ impl Simulation {
         self.extensions.service_cache = ServiceCache::default();
         self.extensions.energy_state = EnergyState::default();
         self.extensions.economy_state = EconomyState::default();
+        self.extensions.reward_state = RewardState::default();
+        self.extensions.reward_report = RewardReport::default();
     }
 
     /// Hook: the running costs and revenues of the extended rules, paid once per tax
@@ -431,6 +453,7 @@ impl Simulation {
         let garbage = waste::monthly_balance(self);
         let electricity = energy::monthly_balance(self);
         let finance = economy::monthly_balance(self);
+        let prizes = rewards::monthly_balance(self);
         let net = ordinances::monthly_balance(self)
             .saturating_add(water::monthly_balance(self))
             .saturating_add(transit::monthly_balance(self))
@@ -439,6 +462,7 @@ impl Simulation {
             .saturating_add(garbage)
             .saturating_add(electricity)
             .saturating_add(finance)
+            .saturating_add(prizes)
             .saturating_sub(fares);
         if net != 0 {
             self.spend(net);
@@ -463,7 +487,12 @@ impl Simulation {
         if !self.extensions_active() {
             return z;
         }
-        services::crime(self, x, y, ordinances::crime(self, x, y, z))
+        rewards::crime(
+            self,
+            x,
+            y,
+            services::crime(self, x, y, ordinances::crime(self, x, y, z)),
+        )
     }
 
     /// Hook: pollution `p` (0..=255) of the block at world tile `(x, y)`. Called by
@@ -473,7 +502,7 @@ impl Simulation {
         if !self.extensions_active() {
             return p;
         }
-        services::pollution(
+        let p = services::pollution(
             self,
             x,
             y,
@@ -488,7 +517,8 @@ impl Simulation {
                     energy::pollution(self, x, y, ordinances::pollution(self, x, y, p)),
                 ),
             ),
-        )
+        );
+        rewards::pollution(self, x, y, p)
     }
 
     /// Hook: land value `v` (1..=250) of the block at world tile `(x, y)`. Called by
@@ -498,7 +528,7 @@ impl Simulation {
         if !self.extensions_active() {
             return v;
         }
-        services::land_value(
+        let v = services::land_value(
             self,
             x,
             y,
@@ -513,7 +543,8 @@ impl Simulation {
                     transit::land_value(self, x, y, ordinances::land_value(self, x, y, v)),
                 ),
             ),
-        )
+        );
+        rewards::land_value(self, x, y, v)
     }
 
     /// Hook: the power sources of the extended buildings. Called at the start of
@@ -740,7 +771,11 @@ mod tests {
             cat(&[chunk(1, &[1]), chunk(1, &[1])]),
             chunk(1, &[0b1000_0000]),
             chunk(1, &[0b1000_0000, 1]),
-            chunk(1, &[1, 0b1000]),
+            chunk(1, &[1, 0b1_0000]),
+            chunk(12, &[0, 1, 0]),
+            chunk(12, &[0, 0, 0, 0]),
+            chunk(12, &[0, 0b10_0000, 0, 0]),
+            chunk(13, &[0, 1, 0, 0]),
             chunk(10, &[0, 1]),
             chunk(10, &[0, 1, 0, 80, 0, 0, 0, 5]),
             chunk(10, &[0, 1, 0, 1, 0, 1, 0]),

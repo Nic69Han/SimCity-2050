@@ -1,0 +1,24 @@
+/* rewards: styles of web/rewards-ui.js (docs/game-design-v12.md); the news ticker of web/news-ui.js shares this file. */
+#rewards-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#rewards-panel h3 { margin: .6rem 0 .2rem; font-size: 1rem; }
+#rewards-panel .rewards-switch { display: flex; gap: .5rem; align-items: center; font-weight: 600; }
+#rewards-panel .rewards-switch input { margin: 0; width: 1.1rem; height: 1.1rem; }
+#rewards-panel .rewards-note { margin: .3rem 0; color: var(--muted); font-size: .9rem; }
+#rewards-panel .rewards-list, #rewards-panel .offers-list, #rewards-panel .rewards-stats {
+  margin: .3rem 0; padding-left: 1.2rem; font-size: .9rem;
+}
+#rewards-panel .offer { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+#rewards-panel .offer-buttons { display: inline-flex; gap: .4rem; }
+#rewards-panel .offer-buttons button { min-height: 2rem; padding: .2rem .7rem; }
+
+/* news ticker (web/news-ui.js): one line under the header, the newest headline only. */
+.news-ticker {
+  margin: .4rem 16px 0;
+  padding: .3rem .7rem;
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  font-size: .9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
