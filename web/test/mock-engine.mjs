@@ -57,6 +57,13 @@
 //     rate times 100 per case; bonds issue at 10 000 $ (the funds rise) up to 10, at 3,0 % plus 1,0 % per bond in
 //     force; repay_bond refuses an unknown index or missing funds; goods_stats is MOCK_GOODS with the shortage flag
 //     set by set_mock_shortage(flag) (a test hook, not in the engine contract). Mock-economy.mjs holds the state.
+//   - rewards (docs/game-design-v12.md; `rewards: true`): reward_rules() is off by default and after a new city or a
+//     load; switching it off forgets the unlocks and the answers. Off: rewards() and special_offers() are empty,
+//     answer_offer returns 0 and reward_stats() is four zeros. On: rewards() lists the five genres 50-54 (locked
+//     until a test hook unlocks them), special_offers() the four genres 60-63 (state 0 until a test hook proposes
+//     them), answer_offer accepts or refuses a proposed offer (1, else -1), reward_stats() is [72, income of the
+//     accepted offers, unlocked, accepted]. Test hooks, not in the contract: mock_unlock_reward(genre),
+//     mock_place_reward(genre), mock_propose_offer(genre). Mock-rewards.mjs holds the state.
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -67,6 +74,7 @@ import {
 import { MOCK_WASTE_STRUCTURES, wasteStatsOf } from "./mock-waste.mjs";
 import { ENERGY_METHODS, energyStatsOf, powerPlantsOf } from "./mock-energy.mjs";
 import { ECONOMY_METHODS, MockEconomy } from "./mock-economy.mjs";
+import { REWARD_METHODS, MockRewards } from "./mock-rewards.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -206,6 +214,7 @@ export class MockCity {
   #servRules = false; // public services switch (City.service_rules)
   #energyRules = false; // energy switch (City.energy_rules)
   #econ = new MockEconomy(); // economy state (City.economy_rules and the methods after it)
+  #rewards = new MockRewards(); // rewards state (City.reward_rules and the methods after it)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -215,7 +224,7 @@ export class MockCity {
   // methods are hidden (own properties set to undefined), as in an engine built before the buildings.
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
-    densities = false, waste = false, services = false, energy = false, economy = false,
+    densities = false, waste = false, services = false, energy = false, economy = false, rewards = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -231,6 +240,7 @@ export class MockCity {
     if (!services) for (const name of SERVICE_METHODS) this[name] = undefined;
     if (!energy) for (const name of ENERGY_METHODS) this[name] = undefined;
     if (!economy) for (const name of ECONOMY_METHODS) this[name] = undefined;
+    if (!rewards) for (const name of REWARD_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -265,6 +275,7 @@ export class MockCity {
     this.#servRules = false;
     this.#energyRules = false;
     this.#econ.reset();
+    this.#rewards.reset();
   }
 
   #inside(x, y) {
@@ -725,6 +736,37 @@ export class MockCity {
     this.#econ.setShortage(flag);
   }
 
+  // --- rewards (docs/game-design-v12.md, contract of crates/micropolis-wasm/src/rewards.rs); present only with the
+  // constructor option `rewards: true`. The state is in mock-rewards.mjs. ---
+  reward_rules() {
+    return this.#rewards.rule();
+  }
+  set_reward_rules(on) {
+    this.#rewards.setRule(on);
+  }
+  rewards() {
+    return this.#rewards.rewards();
+  }
+  special_offers() {
+    return this.#rewards.offers();
+  }
+  answer_offer(genre, accept) {
+    return this.#rewards.answer(genre, accept);
+  }
+  reward_stats() {
+    return this.#rewards.stats();
+  }
+  // Test hooks (not in the engine contract): unlock, place and propose the rewards and offers of the mock.
+  mock_unlock_reward(genre) {
+    this.#rewards.unlock(genre);
+  }
+  mock_place_reward(genre) {
+    this.#rewards.place(genre);
+  }
+  mock_propose_offer(genre) {
+    this.#rewards.propose(genre);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -769,6 +811,7 @@ export class MockCity {
     this.#servRules = false;
     this.#energyRules = false;
     this.#econ.reset();
+    this.#rewards.reset();
   }
   take_events() {
     return 0;

@@ -29,6 +29,14 @@ export const ENERGY_NAMES = Object.freeze({
   44: "Centrale hydroélectrique", 45: "Centrale à micro-ondes", 46: "Centrale à fusion",
 });
 
+// French names of the reward genres 50-54 and the special offers 60-63 (docs/game-design-v12.md), kept apart from NAMES.
+export const REWARD_NAMES = Object.freeze({
+  50: "Résidence du maire", 51: "Hôtel de ville", 52: "Statue du maire", 53: "Palais de justice", 54: "Arc de triomphe",
+});
+export const SPECIAL_NAMES = Object.freeze({
+  60: "Casino", 61: "Prison d'État", 62: "Décharge toxique", 63: "Base de missiles",
+});
+
 // Why the buildings cannot be placed now (the page shows it as the button's reason).
 export const RULE_OFF_MESSAGE = "Activez les bâtiments étendus pour construire.";
 export const IN_3D_MESSAGE =
@@ -52,7 +60,8 @@ export function readStructureRules(city) {
 
 // French name of a genre; an unknown genre (a later engine) gets its number.
 export function nameOf(genre) {
-  return NAMES[genre] ?? SERVICE_NAMES[genre] ?? ENERGY_NAMES[genre] ?? `Bâtiment n° ${genre}`;
+  return NAMES[genre] ?? SERVICE_NAMES[genre] ?? ENERGY_NAMES[genre] ?? REWARD_NAMES[genre] ?? SPECIAL_NAMES[genre] ??
+    `Bâtiment n° ${genre}`;
 }
 
 // Decodes the catalog records into { genre, width, height, cost, upkeep, flags, radius, effect }.
