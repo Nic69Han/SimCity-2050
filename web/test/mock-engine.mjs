@@ -64,6 +64,10 @@
 //     them), answer_offer accepts or refuses a proposed offer (1, else -1), reward_stats() is [72, income of the
 //     accepted offers, unlocked, accepted]. Test hooks, not in the contract: mock_unlock_reward(genre),
 //     mock_place_reward(genre), mock_propose_offer(genre). Mock-rewards.mjs holds the state.
+//   - extended disasters (docs/game-design-v13.md; `disasters2: true`) and highways (`highways: true`): rules,
+//     states and methods in mock-disasters2.mjs and mock-highways.mjs. Off by default and after a new city or a
+//     load. The mock places a highway only on a road tile (MOCK_ROAD) for HIGHWAY_COST dollars; it never demolishes
+//     a road. Test hooks, not in the contract: mock_set_drought(months).
 //   - new_random_city(seed) regenerates the map from the seed (same seed, same map), resets
 //     the funds to the start value, and resets speed to 3 and disasters to on, as the wasm
 //     adapter does (simInit defaults); the page must push its own settings back afterwards
@@ -75,6 +79,8 @@ import { MOCK_WASTE_STRUCTURES, wasteStatsOf } from "./mock-waste.mjs";
 import { ENERGY_METHODS, energyStatsOf, powerPlantsOf } from "./mock-energy.mjs";
 import { ECONOMY_METHODS, MockEconomy } from "./mock-economy.mjs";
 import { REWARD_METHODS, MockRewards } from "./mock-rewards.mjs";
+import { HIGHWAY_METHODS, MockHighways, MOCK_ROAD, HIGHWAY_COST, RESULT_FAILED, RESULT_OK, RESULT_NO_MONEY } from "./mock-highways.mjs";
+import { DISASTER2_METHODS, MockDisasters2 } from "./mock-disasters2.mjs";
 
 export const RESULT = Object.freeze({ NO_MONEY: -2, NEED_BULLDOZE: -1, FAILED: 0, OK: 1 });
 
@@ -215,6 +221,8 @@ export class MockCity {
   #energyRules = false; // energy switch (City.energy_rules)
   #econ = new MockEconomy(); // economy state (City.economy_rules and the methods after it)
   #rewards = new MockRewards(); // rewards state (City.reward_rules and the methods after it)
+  #hw = new MockHighways(); // highways state (City.highway_rules and the methods after it)
+  #dis = new MockDisasters2(); // extended disasters state (City.disaster2_rules and the methods after it)
   seed = 1;
 
   // Every successful or failed tool_down and every tool_drag, in call order.
@@ -225,6 +233,7 @@ export class MockCity {
   constructor(seed = 1, {
     width = 40, height = 30, funds = START_FUNDS, rubble = 60, structures = false, transit = false, rail = false,
     densities = false, waste = false, services = false, energy = false, economy = false, rewards = false,
+    highways = false, disasters2 = false,
   } = {}) {
     this.#width = width;
     this.#height = height;
@@ -241,6 +250,8 @@ export class MockCity {
     if (!energy) for (const name of ENERGY_METHODS) this[name] = undefined;
     if (!economy) for (const name of ECONOMY_METHODS) this[name] = undefined;
     if (!rewards) for (const name of REWARD_METHODS) this[name] = undefined;
+    if (!highways) for (const name of HIGHWAY_METHODS) this[name] = undefined;
+    if (!disasters2) for (const name of DISASTER2_METHODS) this[name] = undefined;
   }
 
   // Map from a seed: a lake in the top-left corner, then rubble patches. Deterministic.
@@ -276,6 +287,8 @@ export class MockCity {
     this.#energyRules = false;
     this.#econ.reset();
     this.#rewards.reset();
+    this.#hw.reset();
+    this.#dis.reset();
   }
 
   #inside(x, y) {
@@ -767,6 +780,68 @@ export class MockCity {
     this.#rewards.propose(genre);
   }
 
+  // --- highways (docs/game-design-v13.md, contract of crates/micropolis-wasm/src/highways.rs); present only with the
+  // constructor option `highways: true`. The state is in mock-highways.mjs. ---
+  highway_rules() {
+    return this.#hw.rule();
+  }
+  set_highway_rules(on) {
+    this.#hw.setRule(on);
+  }
+  // Dry run of place_highway: { result, cost }, as the engine would decide, without changing state.
+  #highwayVerdict(x, y) {
+    const none = { result: RESULT_FAILED, cost: 0 };
+    if (!this.#hw.rule() || !this.#inside(x, y) || this.#get(x, y) !== MOCK_ROAD || this.#hw.has(x, y)) return none;
+    if (this.#funds < HIGHWAY_COST) return { result: RESULT_NO_MONEY, cost: HIGHWAY_COST };
+    return { result: RESULT_OK, cost: HIGHWAY_COST };
+  }
+  // Int32Array [code, cost] like tool_preview: the cost is 0 unless the placement is allowed or short of money.
+  highway_preview(x, y) {
+    const v = this.#highwayVerdict(x, y);
+    return Int32Array.of(v.result, v.result === RESULT_FAILED ? 0 : v.cost);
+  }
+  place_highway(x, y) {
+    const v = this.#highwayVerdict(x, y);
+    if (v.result === RESULT_OK) {
+      this.#funds -= v.cost;
+      this.#hw.add(x, y);
+    }
+    return v.result;
+  }
+  // 1 when a highway was taken up on (x, y), else 0 (rule off, no highway there). No refund.
+  remove_highway(x, y) {
+    if (!this.#hw.rule() || !this.#hw.remove(x, y)) return RESULT_FAILED;
+    return RESULT_OK;
+  }
+  // One byte per tile, index x * height + y like tiles(): 1 for a highway.
+  highway_layer() {
+    return this.#hw.layer(this.#width, this.#height);
+  }
+  // [tiles, yearly upkeep]; zeros while the rule is off (the rule off removes every highway).
+  highway_stats() {
+    return this.#hw.stats();
+  }
+
+  // --- extended disasters (docs/game-design-v13.md, contract of crates/micropolis-wasm/src/disasters2.rs); present
+  // only with the constructor option `disasters2: true`. The state is in mock-disasters2.mjs. ---
+  disaster2_rules() {
+    return this.#dis.rule();
+  }
+  set_disaster2_rules(on) {
+    this.#dis.setRule(on);
+  }
+  trigger_disaster(kind) {
+    return this.#dis.trigger(kind, this.#width, this.#height);
+  }
+  // [drought months left, last kind, x, y]; -1 for no place.
+  disaster2_stats() {
+    return this.#dis.stats();
+  }
+  // Test hook (not in the engine contract): the months of drought left.
+  mock_set_drought(months) {
+    this.#dis.setDrought(months);
+  }
+
   funds() {
     return this.#funds;
   }
@@ -812,6 +887,8 @@ export class MockCity {
     this.#energyRules = false;
     this.#econ.reset();
     this.#rewards.reset();
+    this.#hw.reset();
+    this.#dis.reset();
   }
   take_events() {
     return 0;
