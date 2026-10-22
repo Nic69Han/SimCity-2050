@@ -39,7 +39,7 @@ stocké : fichier identique octet pour octet, moteur identique au C++ (comparais
   (arrondi entier, toujours ≥ 1 $). Rembourser coûte le montant et retire l'obligation ; refusé sans les fonds.
   Éteindre la règle rembourse tout ce qui peut l'être puis oublie le reste (documenté, testé).
 * **Marchandises** (par an) : production = Σ population industrielle × `GOODS_PER_IND` (= 2) ; consommation =
-  Σ population commerciale × `GOODS_PER_COM` (= 3). Surplus vendu `GOODS_EXPORT_PRICE` (= 1 $) l'unité, manque
+  Σ population commerciale × `GOODS_PER_COM` (= 2, ramené de 3 à l'intégration : une ville équilibrée ne doit pas payer d'importations chaque année). Surplus vendu `GOODS_EXPORT_PRICE` (= 1 $) l'unité, manque
   acheté `GOODS_IMPORT_PRICE` (= 2 $). Si le manque dépasse `SHORTAGE_PCT` (= 50) % de la consommation, la valve
   commerciale baisse de `SHORTAGE_VALVE` (= 200) l'année suivante.
 * API wasm (`crates/micropolis-wasm/src/economy.rs`) :
@@ -69,3 +69,53 @@ richesse) ; effets des taux sur la demande bornés et testés ; obligations (ém
 plafond, fonds) testées ; marchandises (conservation : produites + importées = consommées + exportées) testées ;
 sauvegarde aller-retour ; e2e : activer l'économie, changer un taux, émettre une obligation ; tous les tests verts ;
 relecture.
+
+## Cœur de l'économie (chantier livré)
+Code : `crates/micropolis-core/src/economy.rs` (constantes, `EconomyState`, sauvegarde) et `economy/` (`zones` zones,
+richesse, recette par case, taux moyen ; `bonds` obligations ; `goods` marchandises ; `month` crochets et bilan annuel ;
+`rules` interrupteur et appels du joueur ; `layer` couche de richesse) ; adaptateur
+`crates/micropolis-wasm/src/economy.rs`. Tests : `tests/economy_rules.rs`, `tests/economy_save.rs` (sur la ville
+Haight, qui a des habitants), unitaires des modules, adaptateur, `web/test/wasm-economy.test.mjs`.
+
+* **Interrupteur** : `Extensions::economy`, bit 2 du second octet des règles (`RULES2_ECONOMY`) ; ne demande pas
+  `structures`. Éteint (défaut) : `ext_tax_fund` rend son entrée, `ext_valves` et le bilan ne font rien, les appels
+  sont refusés (code 0 / `false`) ou vides ; test « règle éteinte puis rallumée puis éteinte = moteur d'origine » sur
+  600 pas (mêmes tuiles, fonds, valves, même fichier), comparaisons `compare-*.sh` inchangées.
+* **Unité de la population** : la population d'une zone est sur l'échelle résidentielle (habitants ; un palier C ou I
+  vaut `TIER_POPULATION` = 8). La recette d'une case est `Σ(pop × valeur du terrain) × taux × difficulté /
+  (8 × 120 × 100)` (le `/ 8` ramène à `total_pop × valeur / 120` du classique), arrondie vers le bas par case ;
+  difficulté `DIFFICULTY_PCT` = [140, 120, 80]. Une valeur de terrain 0..=250 par zone, lue au bloc de son centre.
+* **Taux** : neuf octets 0..=`RATE_MAX` (20). Tant que le joueur n'en a fixé aucun, les neuf suivent `city_tax`
+  (`custom` = faux, rien d'écrit) ; le premier `set_zone_tax_rate` fige les neuf au taux courant puis change celui
+  demandé. Règle allumée, une fois un taux fixé (`custom`), le taux unique du budget ne change plus la recette, seulement la référence de la demande.
+* **Demande** : taux moyen d'un genre pondéré par la population de ses zones (arrondi au plus proche) ; poussée =
+  `TAX_TABLE[taux moyen + niveau] - TAX_TABLE[taux unique + niveau]` (mêmes indices bornés que le classique ; c'est le signe qui fait fuir la demande quand le taux est élevé, `TAX_TABLE` baissant avec le taux : la formule du contrat l'avait inversé), bornée à
+  ±`VALVE_TAX_LIMIT` (300) par appel, puis valve ramenée dans sa plage classique (±2 000 / ±1 500 / ±1 500) ; une
+  valve plafonnée (`*_cap`) ne devient pas positive. Genre sans population : pas de poussée.
+* **Obligations** : `Vec<Bond>` (`montant`, `permille`, `années`), au plus `MAX_BONDS` (10). Le taux se fige à
+  l'émission : `BOND_BASE_PERMILLE` (30) + `BOND_STEP_PERMILLE` (10) × obligations en cours. Intérêt annuel =
+  `montant × permille / 1000`, au moins 1 $, payé au bilan avec les autres frais ; les années croissent (plafond
+  65 535). `repay_bond(index)` : n'importe quelle obligation, au montant, refusé sans les fonds. Éteindre la règle
+  rembourse, de la plus ancienne à la plus récente, ce que les fonds permettent, oublie le reste (la dette
+  disparaît), remet les taux à zéro.
+* **Marchandises** : à chaque bilan, `produites = Σ pop I × 2`, `consommées = Σ pop C × 3` ; surplus exporté à 1 $,
+  manque importé à 2 $ ; `produites + importées = consommées + exportées` (testé) ; recette nette = exportées −
+  2 × importées, ajoutée au bilan (le bilan renvoie intérêts moins recette nette). Pénurie = importées × 100 >
+  `SHORTAGE_PCT` × consommées ; elle est mémorisée et la valve commerciale perd `SHORTAGE_VALVE` (200) à chaque appel
+  de l'année suivante (jusqu'au bilan suivant). Pas de consommation sans commerce : pas de pénurie.
+* **Bilan annuel** (`ext_monthly_balance`, une fois par collecte) : enregistre recette par case et marchandises,
+  paye les intérêts, vieillit les obligations. Les impôts eux-mêmes sont encaissés par le classique via
+  `ext_tax_fund` (une ligne dans `tax_amounts`), donc la somme des neuf cases égale `tax_fund` du même instant.
+* **Sauvegarde** : morceau 11 (`CHUNK_ECONOMY`, `CHUNK_MAX_TAG` = 11), écrit seulement s'il diffère de l'état de départ
+  (`EconomyState::default()`) : drapeau `custom` (1), neuf taux (9), neuf recettes (36), marchandises 5 × i32 + pénurie
+  (21), nombre d'obligations (1) puis 8 octets par obligation. Refusé (`cty_bad_extension`) : trop court, nombre
+  > 10 ou ne correspondant pas à la longueur, drapeau > 1, taux > 20, obligation à montant ≤ 0 ou taux > 1 000 ‰,
+  compteur de marchandises négatif ; règle éteinte, tout est oublié au chargement. Les trois premiers bits du
+  second octet de règles : 1 services, 2 énergie, 4 économie.
+* **API wasm** : table du contrat, sans écart ; `bond_offer()` donne `[0, 0]` règle éteinte ou au plafond ;
+  `wealth_layer()` n'est pas nul que règle allumée ; `tax_rates()` montre le taux unique neuf fois règle éteinte.
+* **Bornes** : aucune boucle sans borne (carte, `MAX_BONDS`, neuf cases) ; aucun tirage aléatoire ; tous les
+  cumuls en `i64` ramenés en `i32` par saturation.
+* **Limites connues** : le prévisionnel du budget de la page (`tax_fund_at`) reste le calcul classique à taux unique ;
+  une sauvegarde d'une ville jouée n'est pas identique octet pour octet après rechargement dans la partie classique
+  (comportement du moteur d'origine, indépendant de l'économie), seul le bloc d'extensions l'est.

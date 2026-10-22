@@ -50,7 +50,7 @@ const MESSAGE_NUCLEAR_MELTDOWN: i16 = 43;
 const SPRITE_SHIP: i32 = 4;
 
 /// `taxTable` of `setValves` (indexed by `cityTax + gameLevel`, 0..=20).
-const TAX_TABLE: [i16; 21] = [
+pub(crate) const TAX_TABLE: [i16; 21] = [
     200, 150, 120, 100, 80, 50, 30, 0, -10, -40, -100, -150, -200, -250, -300, -350, -400, -450,
     -500, -550, -600,
 ];
@@ -815,7 +815,13 @@ impl Simulation {
             ((self.road_total as i32 + (self.rail_total as i32 * 2)) as f32 * R_LEVELS[g]) as i64;
         let base = (self.total_pop as i64 * self.land_value_average as i64) / 120;
         let tax_fund = ((base * self.city_tax as i64) as f32 * F_LEVELS[g]) as i64;
-        (police_fund, fire_fund, road_fund, tax_fund)
+        // Extended rule (inert unless the economy is on): the taxes by zone kind and wealth.
+        (
+            police_fund,
+            fire_fund,
+            road_fund,
+            self.ext_tax_fund(tax_fund),
+        )
     }
 
     /// Port of `Micropolis::collectTax`. The `doBudget()` call (budget module)
