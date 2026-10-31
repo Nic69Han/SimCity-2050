@@ -1,0 +1,41 @@
+/* Touch view and mobile layout (docs/game-design-v1.md, workstream mobile). The touch view is set by
+   web/touch.js: --view-x, --view-y (px) and --view-s (ratio) on .map-frame, and the is-zoomed class
+   while the map is enlarged. The canvases are moved and scaled from their top-left corner, so the
+   tile under a finger is still found by the rectangle input.js reads. */
+
+.map-frame { overflow: hidden; --view-x: 0px; --view-y: 0px; --view-s: 1; } /* the enlarged map is clipped by the frame */
+.map-frame.is-zoomed > #map,
+.map-frame.is-zoomed > #overlay {
+  transform: translate(var(--view-x), var(--view-y)) scale(var(--view-s));
+  transform-origin: 0 0;
+}
+
+/* Panel headings: shown on a narrow screen only (touch.js adds them, the desktop shows the panels). */
+.panel-head { display: none; margin: 0; font-size: 1rem; }
+.panel-head button {
+  width: 100%; padding: .5rem 0; text-align: left; font-weight: 600;
+  color: var(--fg); background: transparent; border: 0; border-radius: 0;
+}
+.panel-head button:hover { background: transparent; color: var(--fg); text-decoration: underline; }
+.panel-head button::after { content: "▸"; float: right; color: var(--muted); }
+.panel-head button[aria-expanded="true"]::after { content: "▾"; }
+
+@media (max-width: 700px) {
+  /* one column; the header's controls wrap onto as many rows as they need */
+  header { padding: .6rem 16px; gap: .5rem .75rem; }
+  #status { margin-left: 0; }
+  button, .btn, select, header label { min-height: 2.5rem; }
+  .map-frame { width: 100%; }
+
+  /* the palette: one horizontal strip that scrolls with a finger, no wrapping */
+  #palette { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding: .5rem 16px; }
+  #palette .tool-group { flex: none; }
+  #palette .tool-row { flex-wrap: nowrap; }
+  #palette .tool { flex: none; min-height: 2.5rem; }
+
+  /* the panels under the map: collapsed to their headings, opened by a tap on the heading */
+  .panel-head { display: block; }
+  main > section.box { padding: .25rem .75rem; }
+  main > section.box > :not(.panel-head) { display: none; }
+  main > section.box.is-open > :not(.panel-head) { display: revert; }
+}
