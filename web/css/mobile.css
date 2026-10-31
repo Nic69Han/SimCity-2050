@@ -33,9 +33,10 @@
   #palette .tool-row { flex-wrap: nowrap; }
   #palette .tool { flex: none; min-height: 2.5rem; }
 
-  /* the panels under the map: collapsed to their headings, opened by a tap on the heading */
+  /* the panels under the map: collapsed to their headings, opened by a tap on the heading. The
+     hiding is !important because the panels' own rules are id selectors (#agents-panel .agent-switch);
+     an open panel keeps its own layout. */
   .panel-head { display: block; }
   main > section.box { padding: .25rem .75rem; }
-  main > section.box > :not(.panel-head) { display: none; }
-  main > section.box.is-open > :not(.panel-head) { display: revert; }
+  main > section.box:not(.is-open) > :not(.panel-head) { display: none !important; }
 }
