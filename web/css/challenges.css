@@ -1,0 +1,17 @@
+/* challenges and share: styles of web/challenges-ui.js and web/share-ui.js (docs/game-design-v1.md). */
+#challenges-panel h2, #share-panel h2 { margin: 0 0 .3rem; font-size: 1.1rem; }
+#challenges-panel h3 { margin: .6rem 0 .2rem; font-size: 1rem; }
+#challenges-panel .challenge-list { margin: .3rem 0; padding: 0; list-style: none; }
+#challenges-panel .challenge {
+  display: grid; grid-template-columns: 1fr auto; gap: .1rem .6rem; align-items: center;
+  padding: .35rem 0; border-top: 1px solid var(--border, rgba(127, 127, 127, .3)); font-size: .9rem;
+}
+#challenges-panel .challenge strong { grid-column: 1; }
+#challenges-panel .challenge-goal, #challenges-panel .challenge-note { grid-column: 1; color: var(--muted); font-size: .85rem; }
+#challenges-panel .challenge-start { grid-column: 2; grid-row: 1 / span 3; min-height: 2rem; padding: .2rem .8rem; }
+#challenges-panel .challenge-running { margin: .5rem 0; padding: .4rem .6rem; border-left: 3px solid var(--accent); }
+#challenges-panel .challenge-progress { margin: .2rem 0; padding-left: 1.2rem; font-size: .9rem; }
+#challenges-panel .challenge-result, #share-panel .share-status { margin: .3rem 0; font-weight: 600; min-height: 1.2em; }
+#share-panel #share-button { min-height: 2rem; padding: .2rem .8rem; }
+#share-panel #share-link { display: block; box-sizing: border-box; width: 100%; margin-top: .4rem; font-size: .8rem; }
+#share-panel #share-link[hidden] { display: none; }
