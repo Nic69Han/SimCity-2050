@@ -43,10 +43,6 @@ export function t(key) {
   return translate(key, current);
 }
 
-export function currentLanguage() {
-  return current;
-}
-
 // The stored choice, or the default. A storage that throws (or is missing) gives the default.
 export function readLanguage(storage) {
   try {

@@ -4,7 +4,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyLanguage, t, translate, currentLanguage, normalizeLanguage, readLanguage, writeLanguage,
+  applyLanguage, t, translate, normalizeLanguage, readLanguage, writeLanguage,
   toggleText, setup, STORAGE_KEY,
 } from "../i18n.js";
 
@@ -80,7 +80,6 @@ test("applyLanguage sets the text of a marked element and the document's lang", 
   assert.equal(applyLanguage(doc, "en"), "en");
   assert.equal(button.textContent, "Save");
   assert.equal(doc.documentElement.lang, "en");
-  assert.equal(currentLanguage(), "en");
   assert.equal(t("save"), "Save", "t() follows the language applied");
   applyLanguage(doc, "fr");
   assert.equal(button.textContent, "Enregistrer");
