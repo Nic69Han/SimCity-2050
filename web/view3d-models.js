@@ -14,6 +14,7 @@ import {
   MODEL_FILES, CATALOG, MODEL_CAPACITY, KINDS, gainOf, chooseModel, facingQuarter, usableCatalog, fitScale, writePlacement,
   createSlotTable,
 } from "./view3d-models-model.js";
+import { readLandValue, readDensity, siteAt, chunkKeys, changedChunks } from "./view3d-models-landvalue.js";
 
 const MODELS_URL = new URL("./models/", import.meta.url);
 
@@ -107,6 +108,16 @@ export function createLayer() {
   const chunkRecords = new Map(); // chunk -> [{ id, key, kind }] drawn from that chunk
   const counts = Object.fromEntries(KINDS.map((k) => [k, 0]));
   let overflow = 0;
+  let lv = null, density = null; // land value and density data read at the last update
+  let siteKeys = null; // per-chunk key of the land value tiers and density caps drawn
+
+  // Reads the land value and the density data of the city; each is null when the engine lacks it.
+  function readSites(ctx) {
+    const city = ctx.city?.();
+    const snap = ctx.snapshot();
+    lv = readLandValue(city);
+    density = snap ? readDensity(city, snap.w, snap.h) : null;
+  }
 
   // Removes what chunk c drew (the last instance fills each hole), then draws its volumes again.
   function placeChunk(ctx, c, touched) {
@@ -128,7 +139,7 @@ export function createLayer() {
       if (!catalog[v.kind]) continue; // this kind keeps its boxes
       // buildings turn their front to the road next to their zone
       const facing = snap && v.kind !== "tree" ? facingQuarter(snap.tiles, snap.w, snap.h, v.x, v.y) : -1;
-      const m = chooseModel(catalog, v, facing);
+      const m = chooseModel(catalog, v, facing, snap ? siteAt(lv, density, snap.h, v.x, v.y) : null);
       const entry = m && entries.get(m.id);
       if (!entry) continue;
       const i = entry.table.add(v.slot);
@@ -156,6 +167,7 @@ export function createLayer() {
 
   function clearAll() {
     chunkRecords.clear();
+    siteKeys = null;
     for (const entry of entries.values()) entry.table.clear();
     for (const k of KINDS) counts[k] = 0;
     overflow = 0;
@@ -165,6 +177,8 @@ export function createLayer() {
   function drawAll(ctx) {
     const grid = ctx.grid();
     if (!grid) return;
+    readSites(ctx);
+    siteKeys = chunkKeys(grid, lv, density);
     const touched = new Set();
     for (let c = 0; c < grid.count; c++) placeChunk(ctx, c, touched);
     flush(touched);
@@ -233,8 +247,15 @@ export function createLayer() {
     update(ctx, change) {
       if (!ready || disposed) return;
       if (change.fresh) clearAll();
+      const grid = ctx.grid();
+      if (!grid) return;
+      readSites(ctx);
+      const keys = chunkKeys(grid, lv, density);
+      const redraw = new Set(change.dirty); // the geometry changed, or the land value / density did
+      for (const c of changedChunks(siteKeys, keys)) redraw.add(c);
+      siteKeys = keys;
       const touched = new Set();
-      for (const c of change.dirty) placeChunk(ctx, c, touched);
+      for (const c of redraw) placeChunk(ctx, c, touched);
       flush(touched);
     },
     dispose(ctx) {

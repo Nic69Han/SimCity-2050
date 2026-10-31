@@ -44,6 +44,10 @@ export const MODEL_FILES = Object.freeze({
 });
 
 // Model ids of each kind by density level (index 0 low, 1 medium, 2 high). Trees have one level.
+// ORDER MATTERS: inside each level the ids go from the simplest to the most refined building (the
+// Kenney letter order of the kit: plain houses and sheds first, then bigger or more detailed ones).
+// chooseModel gives modest land the first third of a list, middle land the middle third, wealthy land
+// the last third (variantSlice).
 export const CATALOG = Object.freeze({
   residential: [["sub-h", "sub-i", "sub-c", "sub-a"], ["sub-k", "sub-l", "sub-r", "sub-o", "sub-s"], ["com-a", "com-h"]],
   commercial: [["com-b", "com-c", "com-d"], ["com-f", "com-h"], ["com-sky-a", "com-sky-c", "com-sky-e"]],
@@ -59,6 +63,17 @@ export const TREE_GAIN = 1.0; // the tree models are already bright green
 
 // Brightness factor of the model `id` (see MODEL_GAIN).
 export const gainOf = (id) => (CATALOG.tree.flat().includes(id) ? TREE_GAIN : MODEL_GAIN);
+
+export const TIER_COUNT = 3; // land value tiers (view3d-models-landvalue.js): modest, middle, wealthy
+
+// Range [lo, hi) of a list of n variants for a land value tier: thirds, never empty (n >= 1). A tier
+// out of 0..2 (unknown land value) gets the whole list.
+export function variantSlice(n, tier) {
+  if (!Number.isInteger(tier) || tier < 0 || tier >= TIER_COUNT) return [0, n];
+  const lo = Math.min(n - 1, Math.floor((tier * n) / TIER_COUNT));
+  const hi = Math.max(lo + 1, Math.floor(((tier + 1) * n) / TIER_COUNT));
+  return [lo, hi];
+}
 
 export const KINDS = Object.freeze(Object.keys(CATALOG));
 
@@ -128,17 +143,23 @@ export function facingQuarter(tiles, w, h, x, y) {
 }
 
 // The model of a volume: { id, quarter } where quarter (0..3) is its yaw in quarter turns. The
-// level picks the list, the tile position picks the variant. `facing` (a quarter, or -1) is the
-// yaw towards the road (facingQuarter); without it, and for trees, the yaw comes from the hash.
+// level picks the list, the land value tier picks a slice of it (variantSlice) and the tile position
+// picks the variant inside the slice. `facing` (a quarter, or -1) is the yaw towards the road
+// (facingQuarter); without it, and for trees, the yaw comes from the hash. `site` is optional,
+// { tier, cap } (view3d-models-landvalue.js siteAt): `tier` orders the variants (absent or unknown:
+// the whole list, the hash only); `cap` >= 0 is the highest density level allowed (trees ignore both).
 // Null when the catalog has no model.
-export function chooseModel(catalog, v, facing = -1) {
+export function chooseModel(catalog, v, facing = -1, site = null) {
   const levels = catalog[v.kind];
   if (!levels) return null;
-  const list = levels[Math.min(levelOf(v.kind, v.sy), levels.length - 1)];
+  let level = Math.min(levelOf(v.kind, v.sy), levels.length - 1);
+  if (v.kind !== "tree" && Number.isInteger(site?.cap) && site.cap >= 0) level = Math.min(level, site.cap);
+  const list = levels[level];
   if (!list || list.length === 0) return null;
+  const [lo, hi] = v.kind === "tree" ? [0, list.length] : variantSlice(list.length, site?.tier);
   const h = tileHash(v.x, v.y);
   const quarter = facing >= 0 && v.kind !== "tree" ? facing & 3 : (h >>> 24) & 3;
-  return { id: list[h % list.length], quarter };
+  return { id: list[lo + (h % (hi - lo))], quarter };
 }
 
 // Kinds whose models can be drawn, and the catalog restricted to the ids that loaded: a kind is
