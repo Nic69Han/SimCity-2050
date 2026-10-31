@@ -11,7 +11,7 @@
 // Read-only hook (for the tests): canvas.nightStats() returns { intensity, windows, lamps, dropped }.
 // Removed at dispose().
 import {
-  LAMP_CAPACITY, LAMP_POST_COLOUR, WINDOW, WINDOW_CAPACITY, WINDOW_DIM, WINDOW_LIT,
+  LAMP_CAPACITY, LAMP_POST_COLOUR, WINDOW_CAPACITY, WINDOW_DIM, WINDOW_LIT,
   intensityOf, lampPlacements, windowPlacements,
 } from "./view3d-night-model.js";
 import { decodeStructures, layerKey, sameKey, writeMatrix } from "./view3d-structures-model.js";
