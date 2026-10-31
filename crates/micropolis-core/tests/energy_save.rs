@@ -113,7 +113,7 @@ fn ages_and_electricity_deals_round_trip() {
 
 #[test]
 fn the_energy_chunk_has_tag_10_and_precedes_the_economy_one() {
-    assert_eq!((CHUNK_ENERGY, CHUNK_MAX_TAG), (10, 12));
+    assert_eq!((CHUNK_ENERGY, CHUNK_MAX_TAG), (10, 14));
     let (s, _) = with_energy();
     let file = file_of(&s);
     let chunks = &file[block_at() + 4..];

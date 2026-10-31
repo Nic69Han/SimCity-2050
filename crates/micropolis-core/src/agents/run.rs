@@ -10,6 +10,7 @@ use super::trips::land;
 use super::vehicle_record;
 use super::vehicles::{Car, Parked};
 use super::{Counters, MOTORISED_PCT, REFRESH_INTERVAL};
+use crate::highways::HIGHWAY_SPEED_MUL;
 use crate::map::Map;
 use crate::simulation::Simulation;
 
@@ -144,8 +145,15 @@ impl Run {
     fn drive(&mut self) {
         let (load, now) = (&self.load.tile, self.ticks);
         let (parked, counters) = (&mut self.parked, &mut self.counters);
+        let graph = &self.graph;
         self.cars.retain_mut(|c| {
-            c.advance(load[c.tile() as usize]);
+            let tile = c.tile();
+            let mul = if graph.is_fast(tile) {
+                HIGHWAY_SPEED_MUL
+            } else {
+                1
+            };
+            c.advance_scaled(load[tile as usize], mul);
             if c.arrived() {
                 land(c, now, parked, counters);
             }

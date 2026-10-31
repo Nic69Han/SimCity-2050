@@ -28,11 +28,13 @@ pub mod zone;
 
 pub mod deals;
 pub mod densities;
+pub mod disasters2;
 pub mod economy;
 pub mod energy;
 pub mod events;
 pub mod extensions;
 pub mod fileio;
+pub mod highways;
 pub mod map;
 pub mod ordinances;
 pub mod position;

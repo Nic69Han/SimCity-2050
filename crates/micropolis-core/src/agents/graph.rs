@@ -78,6 +78,8 @@ pub struct RoadGraph {
     pub jobs: Vec<u32>,
     /// Road tile indices in increasing order.
     pub roads: Vec<u32>,
+    /// One flag per tile: a highway tile (cars go faster). Empty while no highway acts.
+    fast: Vec<bool>,
 }
 
 impl RoadGraph {
@@ -89,6 +91,7 @@ impl RoadGraph {
             w,
             h,
             class,
+            fast: sim.highway_flags(),
             ..RoadGraph::default()
         };
         for (i, &c) in g.class.clone().iter().enumerate() {
@@ -137,6 +140,11 @@ impl RoadGraph {
 
     pub fn is_road(&self, i: u32) -> bool {
         self.class.get(i as usize) == Some(&CLASS_ROAD)
+    }
+
+    /// Whether tile `i` is a highway tile.
+    pub fn is_fast(&self, i: u32) -> bool {
+        self.fast.get(i as usize) == Some(&true)
     }
 
     pub fn xy(&self, i: u32) -> (i32, i32) {

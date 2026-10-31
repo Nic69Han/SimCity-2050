@@ -62,6 +62,9 @@ export const MESSAGE_TEXT = Object.freeze({
   56: "Scénario : Boston.",
   57: "Scénario : Rio de Janeiro.",
   58: "Un accord avec une ville voisine est rompu : la ville ne pouvait plus fournir.",
+  59: "Un OVNI a traversé la ville en laissant des ruines !",
+  60: "Une météorite est tombée sur la ville !",
+  61: "Sécheresse : la croissance ralentit et les pompes donnent moins d'eau.",
 });
 
 /** The French sentence of message `number`; a generic one for a number the table does not know. */
