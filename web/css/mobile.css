@@ -27,16 +27,14 @@
   button, .btn, select, header label { min-height: 2.5rem; }
   .map-frame { width: 100%; }
 
-  /* the palette: one horizontal strip that scrolls with a finger, no wrapping */
-  #palette { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; padding: .5rem 16px; }
-  #palette .tool-group { flex: none; }
-  #palette .tool-row { flex-wrap: nowrap; }
-  #palette .tool { flex: none; min-height: 2.5rem; }
+  /* the palette keeps wrapping (every tool on screen, as web/e2e/load.test.mjs checks at 390 px); its
+     groups fold (palette-groups.js) to make it short */
+  #palette .tool { min-height: 2.5rem; }
 
-  /* the panels under the map: collapsed to their headings, opened by a tap on the heading. The
-     hiding is !important because the panels' own rules are id selectors (#agents-panel .agent-switch);
-     an open panel keeps its own layout. */
+  /* the panels under the map: open, and folded to their heading by a tap on it (urgent advice stays in
+     sight). The hiding is !important because the panels' own rules are id selectors
+     (#agents-panel .agent-switch). */
   .panel-head { display: block; }
   main > section.box { padding: .25rem .75rem; }
-  main > section.box:not(.is-open) > :not(.panel-head) { display: none !important; }
+  main > section.box.is-folded > :not(.panel-head) { display: none !important; }
 }

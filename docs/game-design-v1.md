@@ -69,7 +69,9 @@ relecture.
   Entrée = clic, annonce polie) ; `prefers-reduced-motion` fige le jour et l'eau.
 * **Mobile, traduction, contribution** (Haiku) : `web/touch-model.js` + `web/touch.js` (zoom à deux doigts et
   déplacement par transformation CSS de la carte 2D, qui n'avait ni zoom ni déplacement) ; `web/css/mobile.css`
-  (une colonne sous 700 px, panneaux repliés sous leur titre, palette en bandeau défilant) ; `web/i18n.js` +
+  (une colonne sous 700 px, panneaux repliables d'un appui sur leur titre ; **écart au contrat**, décidé à l'intégration :
+  les panneaux restent ouverts par défaut, pour que les conseils urgents restent visibles, et la palette garde ses
+  lignes, tous les outils restant à l'écran, ses groupes repliables (v0.14) la raccourcissant) ; `web/i18n.js` +
   dictionnaires français et anglais (interface fixe ; limite : noms des outils et textes générés restent en
   français) ; `CONTRIBUTING.md`.
 * e2e : `web/e2e/challenges.test.mjs`, `web/e2e/share.test.mjs`, `web/e2e/finish.test.mjs` (anglais, clavier).

@@ -8,8 +8,8 @@
 //     map before the second finger keeps its effect (a tool placed on the first touch).
 // The zoom is a CSS transform of the flat canvases (#map, #overlay) inside the clipped frame;
 // the 3D view has its own camera and receives none of it.
-// Panels: on a narrow screen each panel under the map shows its heading only; a button in the
-// heading opens it (css/mobile.css). The headings are made here, once per panel.
+// Panels: on a narrow screen each panel under the map gets a fold button above its content; a tap
+// folds it to that button or opens it again (css/mobile.css). Made here, once per panel.
 import {
   createGesture, pointerDown, pointerMove, pointerUp, applyGesture, clampView, VIEW_START,
 } from "./touch-model.js";
@@ -72,17 +72,18 @@ function headOf(section) {
   return [...section.children].find((c) => c.classList.contains("panel-head")) ?? null;
 }
 
-// The heading of a panel: a button with the panel's name (its aria-label), which opens it.
+// The fold button of a panel, with the panel's name (its aria-label): it folds or opens the panel.
 function ensureHead(section) {
   if (headOf(section)) return;
   const doc = section.ownerDocument;
-  const head = doc.createElement("h2");
+  // not a heading element: the panel has its own <h2>, the head is only the fold button above it
+  const head = doc.createElement("div");
   head.classList.add("panel-head");
   const button = doc.createElement("button");
   button.type = "button";
   button.addEventListener("click", () => {
-    const open = section.classList.toggle("is-open");
-    button.setAttribute("aria-expanded", String(open));
+    const folded = section.classList.toggle("is-folded");
+    button.setAttribute("aria-expanded", String(!folded));
   });
   head.append(button);
   section.prepend(head);
@@ -94,7 +95,7 @@ function refreshHead(section) {
   if (!button) return;
   const name = section.getAttribute("aria-label") ?? "";
   if (button.textContent !== name) button.textContent = name;
-  button.setAttribute("aria-expanded", String(section.classList.contains("is-open")));
+  button.setAttribute("aria-expanded", String(!section.classList.contains("is-folded")));
 }
 
 function eachPanel(fn) {

@@ -94,22 +94,23 @@ test("setup: each panel gets one heading button named after it; other blocks get
     const heads = s.children.filter((c) => c.classList.contains("panel-head"));
     assert.equal(heads.length, 1, "one heading");
     assert.equal(heads[0].children[0].textContent, s.getAttribute("aria-label"));
-    assert.equal(heads[0].children[0].getAttribute("aria-expanded"), "false");
+    assert.equal(heads[0].children[0].getAttribute("aria-expanded"), "true", "open by default");
   }
   assert.equal(other.children.length, 0, "a block that is not a panel is left alone");
 });
 
-test("a click on a heading opens and closes its panel and sets aria-expanded", () => {
+test("a click on a heading folds and opens its panel and sets aria-expanded", () => {
   const { api, sections } = page();
   setup(api);
   const button = sections[0].children[0].children[0];
+  assert.equal(sections[0].classList.contains("is-folded"), false, "open by default");
   button.fire("click", {});
-  assert.equal(sections[0].classList.contains("is-open"), true);
-  assert.equal(button.getAttribute("aria-expanded"), "true");
-  button.fire("click", {});
-  assert.equal(sections[0].classList.contains("is-open"), false);
+  assert.equal(sections[0].classList.contains("is-folded"), true);
   assert.equal(button.getAttribute("aria-expanded"), "false");
-  assert.equal(sections[1].classList.contains("is-open"), false, "the other panel is not opened");
+  button.fire("click", {});
+  assert.equal(sections[0].classList.contains("is-folded"), false);
+  assert.equal(button.getAttribute("aria-expanded"), "true");
+  assert.equal(sections[1].classList.contains("is-folded"), false, "the other panel is not folded");
 });
 
 test("update: a heading rebuilt away by its panel comes back once, and names follow aria-label", () => {
