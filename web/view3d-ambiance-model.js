@@ -146,3 +146,23 @@ export function rippleTexture(size) {
   }
   return out;
 }
+
+// Reduced motion (prefers-reduced-motion: reduce): the view stays at full day (noon, daylight 1) and the
+// water does not move. The layer reads the preference once, when it mounts.
+export const MEDIA_REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+export const REDUCED_PHASE = 0.5; // noon: the DAY keyframe, daylight 1
+
+// What moves under a preference: the cycle (and its checkbox) and the water. Without the preference, the
+// values of the layer as they were before (a morning, the cycle on, the water moving).
+export function motionFor(reduced) {
+  return reduced === true
+    ? { cycle: REDUCED_PHASE, cycles: false, waterMoves: false }
+    : { cycle: START_PHASE, cycles: true, waterMoves: true };
+}
+
+// Whether the reduced-motion query matches. `matchMedia` is the window's function (or undefined when there
+// is no browser window: then nothing is reduced).
+export function prefersReducedMotion(matchMedia) {
+  if (typeof matchMedia !== "function") return false;
+  return matchMedia(MEDIA_REDUCED_MOTION)?.matches === true;
+}

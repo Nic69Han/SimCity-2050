@@ -6,6 +6,8 @@
 //   - the sea-level water plane (ctx.water()): an animated material, re-applied when the terrain is
 //     rebuilt (ctx.water() returns a new mesh), and restored on dispose.
 // A checkbox «Cycle jour/nuit» (on by default) in #view3d-controls pauses the day; the water moves on.
+// With prefers-reduced-motion: reduce (view3d-ambiance-model.js motionFor) the day is frozen at full day,
+// the water does not move and the checkbox is off and disabled.
 import * as model from "./view3d-ambiance-model.js";
 
 const CYCLE_LABEL = "Cycle jour/nuit";
@@ -26,14 +28,18 @@ function start(ctx) {
   const material = new THREE.MeshLambertMaterial({
     color: model.WATER_DAY, map: texture, transparent: true, opacity: 0.55, depthWrite: false,
   });
+  const win = ctx.canvas.ownerDocument.defaultView;
+  const motion = model.motionFor(model.prefersReducedMotion(win?.matchMedia?.bind(win)));
   const control = cycleControl(ctx.canvas.ownerDocument);
+  control.input.checked = motion.cycles; // reduced motion: the cycle is frozen at full day, its box off
+  control.input.disabled = !motion.cycles;
   const hostWasHidden = host.hidden;
   host.hidden = false;
   host.append(control.label);
   if (!ctx.scene.background?.isColor) ctx.scene.background = new THREE.Color();
   const s = {
     host, hostWasHidden, control, texture, material,
-    cycle: model.START_PHASE, cycling: true, water: 0,
+    cycle: motion.cycle, cycling: motion.cycles, water: 0, waterMoves: motion.waterMoves,
     sky: model.createSky(), applied: null, // applied: { mesh, original } once the water is ours
     onChange: () => { s.cycling = control.input.checked; },
   };
@@ -97,7 +103,7 @@ export function createLayer() {
     },
     frame(ctx, seconds) {
       if (s.cycling) s.cycle = model.advancePhase(s.cycle, seconds, model.DAY_SECONDS);
-      s.water = model.advancePhase(s.water, seconds, model.WATER_PERIOD_SECONDS);
+      if (s.waterMoves) s.water = model.advancePhase(s.water, seconds, model.WATER_PERIOD_SECONDS);
       applySky(ctx, s);
       s.texture.offset.set(s.water, s.water);
     },
