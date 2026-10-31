@@ -77,7 +77,7 @@ function ensureHead(section) {
   if (headOf(section)) return;
   const doc = section.ownerDocument;
   const head = doc.createElement("h2");
-  head.className = "panel-head";
+  head.classList.add("panel-head");
   const button = doc.createElement("button");
   button.type = "button";
   button.addEventListener("click", () => {
@@ -105,7 +105,10 @@ function eachPanel(fn) {
 
 export function setup(api) {
   const frame = api.$("map-frame");
-  if (!frame?.parentElement) return; // no map on the page: nothing to wire
+  if (!frame?.parentElement) {
+    state = null; // no map on the page: nothing to wire
+    return;
+  }
   state = { frame, palette: api.$("palette"), gesture: createGesture(), view: VIEW_START };
   frame.addEventListener("pointerdown", onDown, { capture: true });
   frame.addEventListener("pointermove", onMove, { capture: true });
