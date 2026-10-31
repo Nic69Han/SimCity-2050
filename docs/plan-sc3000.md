@@ -12,7 +12,8 @@ v0.1 (3D, conseillers, tutoriel, sons), v0.2 (eau, ordonnances, métro, relief j
 avec les voisins), v0.3 (voitures simulées), v0.3b (aller-retour, conseiller de la circulation), v0.4 (bâtiments
 étendus), v0.5 (bus et taxis), v0.6 (trains et métro animés), v0.7 (densités et fermes), v0.8 (déchets), v0.9
 (éducation, santé, justice), v0.10 (énergie), v0.11
-(économie), v0.12 (récompenses et accords spéciaux), v0.13 (catastrophes et grands transports), v0.14 (rendu 3D final).
+(économie), v0.12 (récompenses et accords spéciaux), v0.13 (catastrophes et grands transports), v0.14 (rendu 3D final), v1.0 (finition : défis, musique, mobile, accessibilité, anglais,
+partage, contribution).
 
 ## Jalons à venir (dans l'ordre)
 
