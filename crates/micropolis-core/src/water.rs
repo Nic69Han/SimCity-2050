@@ -23,6 +23,7 @@
 //! [`ToolResult::Failed`] and a cost of 0, and the hooks answer "may grow". No random number is
 //! drawn anywhere. Loops are bounded by the map size (each tile is queued once).
 
+use crate::disasters2::DROUGHT_PUMP_DIV;
 use crate::position::Position;
 use crate::relief::is_water;
 use crate::simulation::Simulation;
@@ -64,6 +65,8 @@ pub struct WaterNetwork {
     fed: UndergroundLayer,
     /// 1 on every tile within [`WATER_REACH`] of a fed tile.
     covered: UndergroundLayer,
+    /// A drought halves the reach of the pumps (runtime state, see [`crate::disasters2`]).
+    weak: bool,
 }
 
 impl PartialEq for WaterNetwork {
@@ -83,6 +86,7 @@ impl WaterNetwork {
             pumps: Vec::new(),
             fed: UndergroundLayer::new(width, height),
             covered: UndergroundLayer::new(width, height),
+            weak: false,
         }
     }
 
@@ -106,6 +110,7 @@ impl WaterNetwork {
             pumps: Vec::new(),
             fed: UndergroundLayer::new(width, height),
             covered: UndergroundLayer::new(width, height),
+            weak: false,
         };
         net.refresh();
         if net.pumps.len() > MAX_PUMPS {
@@ -144,6 +149,26 @@ impl WaterNetwork {
         self.covered.get(x, y) != 0
     }
 
+    /// Pipe steps a pump reaches: [`PUMP_RANGE`], divided by [`DROUGHT_PUMP_DIV`] while weak.
+    pub fn pump_range(&self) -> u32 {
+        if self.weak {
+            PUMP_RANGE / DROUGHT_PUMP_DIV
+        } else {
+            PUMP_RANGE
+        }
+    }
+
+    /// Whether a drought weakens the pumps.
+    pub fn is_weak(&self) -> bool {
+        self.weak
+    }
+
+    /// Weakens (or restores) the pumps and rebuilds the coverage.
+    pub fn set_weak(&mut self, weak: bool) {
+        self.weak = weak;
+        self.refresh();
+    }
+
     /// Rebuilds the pump list and the coverage from the layer (see the module documentation).
     pub fn refresh(&mut self) {
         let (w, h) = (self.pipes.width(), self.pipes.height());
@@ -162,7 +187,7 @@ impl WaterNetwork {
         }
         let n = (w as usize) * (h as usize);
         let sources = self.pumps.clone();
-        let fed = self.spread(&sources, n, PUMP_RANGE, true);
+        let fed = self.spread(&sources, n, self.pump_range(), true);
         for &(x, y) in &fed {
             self.fed.set(x, y, 1);
         }

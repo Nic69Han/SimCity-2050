@@ -216,7 +216,7 @@ fn a_bad_block_is_cty_bad_extension() {
     let good = file_of(&full(w, h));
     let n = (w * h) as usize;
     let refused = [
-        ("unknown tag", chunk(13, &[1])),
+        ("unknown tag", chunk(15, &[1])),
         ("tag 8 is not known here", chunk(8, &[1])),
         ("tag zero", chunk(0, &[])),
         (
@@ -234,7 +234,7 @@ fn a_bad_block_is_cty_bad_extension() {
         ),
         (
             "unknown flag in the second byte",
-            chunk(CHUNK_RULES, &[1, 0b1_0000]),
+            chunk(CHUNK_RULES, &[1, 0b100_0000]),
         ),
         ("empty second byte", chunk(CHUNK_RULES, &[1, 0])),
         ("rules too long", chunk(CHUNK_RULES, &[1, 1, 1])),

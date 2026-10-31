@@ -74,6 +74,12 @@ pub const MESSAGE_LAST: i16 = 57;
 // sent while the extended rules are off.
 /// A deal with a neighbouring city broke: the city could no longer supply it (`deals.rs`).
 pub const MESSAGE_DEAL_BROKEN: i16 = 58;
+/// Extended rules (docs/game-design-v13.md): a UFO crossed the city (x, y: where it came from).
+pub const MESSAGE_UFO: i16 = 59;
+/// Extended rules (docs/game-design-v13.md): a meteor fell (x, y: the crater).
+pub const MESSAGE_METEOR: i16 = 60;
+/// Extended rules (docs/game-design-v13.md): a drought begins (no position).
+pub const MESSAGE_DROUGHT: i16 = 61;
 
 /// `CC_METROPOLIS` as a numeric class (`CityClass` has no ordering).
 const CC_METROPOLIS: u8 = CityClass::Metropolis as u8;

@@ -143,7 +143,7 @@ fn unlocks_answers_and_buildings_round_trip() {
 
 #[test]
 fn the_rewards_chunk_has_tag_12_holds_four_bytes_and_is_the_last_one() {
-    assert_eq!((CHUNK_REWARDS, CHUNK_MAX_TAG, CHUNK_SIZE), (12, 12, 4));
+    assert_eq!((CHUNK_REWARDS, CHUNK_MAX_TAG, CHUNK_SIZE), (12, 14, 4));
     let file = file_of(&with_rewards());
     let tags = tags_of(&file);
     assert_eq!(tags.last(), Some(&CHUNK_REWARDS));

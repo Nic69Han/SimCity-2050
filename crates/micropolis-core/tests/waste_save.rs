@@ -116,8 +116,8 @@ fn piles_fills_and_waste_deals_round_trip() {
 fn the_waste_chunk_has_tag_8_and_follows_the_densities_chunk() {
     assert_eq!(
         (CHUNK_WASTE, CHUNK_MAX_TAG),
-        (8, 12),
-        "the rewards chunk (v0.12) is the last"
+        (8, 14),
+        "the disasters chunk (v0.13) is the last"
     );
     let (s, _) = with_waste();
     let file = file_of(&s);
