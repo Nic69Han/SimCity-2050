@@ -7,6 +7,9 @@
 import * as model from "./view3d-perf-model.js";
 
 const AUTO_LABEL = "Qualité automatique";
+// The text shown in the strip: short, so the strip stays small on a phone (the full name is the box's
+// accessible name and the label's tooltip).
+const AUTO_SHORT = "Auto";
 
 // options (for the tests): now() in ms, devicePixelRatio() in device pixels per CSS pixel.
 export function createLayer(options = {}) {
@@ -79,6 +82,8 @@ function autoControl(doc) {
   input.type = "checkbox";
   input.className = "view3d-cycle-box";
   input.checked = true;
-  label.append(input, ` ${AUTO_LABEL}`);
+  input.setAttribute?.("aria-label", AUTO_LABEL);
+  label.title = AUTO_LABEL;
+  label.append(input, ` ${AUTO_SHORT}`);
   return { label, input };
 }

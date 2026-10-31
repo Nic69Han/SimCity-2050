@@ -48,3 +48,21 @@ Comparaisons C++ inchangées (aucun fichier du moteur touché) ; choix des modè
 nuit testée (intensité, nombre de fenêtres et de réverbères, capacités), adaptation de la résolution testée
 (hystérésis, bornes, intervalle) ; e2e : la vue 3D de nuit allume des fenêtres (`canvas.nightStats()`), la palette se
 replie ; tous les tests verts ; relecture.
+
+## Livré (intégration)
+* **Modèles** (Sonnet) : `web/view3d-models-landvalue.js` (paliers de valeur du terrain lus dans `overlay(1)`,
+  plafonds de densité, clé par morceau) ; `chooseModel(catalog, v, facing, site)` prend un tiers de la liste des
+  variantes selon le palier (le hachage ne départage plus qu'à l'intérieur), plafonne le niveau selon la densité ; la
+  couche redessine les morceaux dont la clé change. L'ordre des variantes du catalogue suit l'ordre des lettres des
+  kits Kenney (du plus simple au plus soigné), à revoir par un œil d'artiste.
+* **Nuit** (Haiku) : `web/view3d-night.js` + modèle : fenêtres des volumes (selon la hauteur), fenêtres des bâtiments
+  étendus alimentés, réverbères toutes les `LAMP_SPACING` tuiles de route (dans l'ordre des tuiles, pas le long des
+  routes : limite connue), intensité `1 - daylight` ; crochet `canvas.nightStats()`.
+* **Fluidité** (Haiku) : `web/view3d-perf.js` + modèle (fenêtre glissante, hystérésis, bornes) ; case « Auto »
+  (nom complet « Qualité automatique » en info-bulle et nom accessible, pour garder la bande de la caméra étroite sur
+  un téléphone). **Écart au contrat** : la couche fait partie des couches lourdes, absente de la vue simple
+  (`?lite=1`) ; changer la résolution sur un rendu logiciel lent bloquait la vue simple, qui sert aux appareils
+  modestes et aux tests.
+* **Palette** (Haiku) : `web/palette-groups.js` + modèle ; titres de groupes repliables, groupe de l'outil choisi
+  ouvert et non repliable, état gardé dans `localStorage` (repli sans stockage), tout ouvert par défaut.
+* e2e : `web/e2e/render-final.test.mjs`.

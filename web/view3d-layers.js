@@ -25,7 +25,8 @@ export const LAYERS = Object.freeze([
   Object.freeze({ name: "vehicles", module: vehicles, heavy: false }),
   Object.freeze({ name: "sprites", module: sprites, heavy: false }),
   Object.freeze({ name: "night", module: night, heavy: false }),
-  Object.freeze({ name: "perf", module: perf, heavy: false }),
+  // adaptive quality acts on the full view, whose scenery is what costs (the simple view keeps its ratio)
+  Object.freeze({ name: "perf", module: perf, heavy: true }),
 ]);
 
 // The layer modules for a page address: with `?lite=1` (the simple 3D view, for weak devices and

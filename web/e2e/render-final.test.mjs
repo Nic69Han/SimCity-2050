@@ -1,7 +1,7 @@
 // End-to-end: the final 3D rendering (docs/game-design-v14.md) on the real wasm engine. The simple 3D
-// view of the sample city mounts the night layer (windows and street lamps placed, dark in daytime) and
-// the adaptive quality layer («Qualité automatique» on); the tool palette folds a group and opens it
-// again when one of its tools is chosen.
+// view of the sample city mounts the night layer (windows and street lamps placed, dark in daytime), the
+// full view the adaptive quality layer («Qualité automatique» on); the tool palette folds a group and opens
+// it again, and the group of the chosen tool stays open.
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { launchBrowser, openPage, assertNoErrors, selectTool, pollUntil, shot } from "./helpers.mjs";
@@ -47,11 +47,22 @@ describe("final 3D rendering", () => {
       const night = await stats(page, "nightStats");
       assert.ok(night.lamps > 0, "street lamps placed");
       assert.equal(night.intensity, 0, "no daylight cycle in the simple view: lights off");
-      await page.waitForFunction(() => typeof document.getElementById("map3d").perfStats === "function");
+      assert.equal(await stats(page, "perfStats"), null, "the simple view keeps its resolution");
+      await shot(page, "render-final");
+      assertNoErrors(errors);
+    } finally {
+      await close();
+    }
+  });
+
+  test("the full view adapts its resolution («Qualité automatique» on)", { timeout: TIMEOUT }, async () => {
+    const { page, errors, close } = await openPage(browser);
+    try {
+      await page.locator("#view3d").click();
+      await page.waitForFunction(() => typeof document.getElementById("map3d").perfStats === "function", null, { timeout: 60000 });
       const perf = await stats(page, "perfStats");
       assert.equal(perf.auto, true);
       assert.ok(perf.pixelRatio > 0);
-      await shot(page, "render-final");
       assertNoErrors(errors);
     } finally {
       await close();

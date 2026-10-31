@@ -79,7 +79,8 @@ describe("the «Qualité automatique» control", () => {
     const label = host.children[1];
     assert.equal(label.children[0].type, "checkbox");
     assert.equal(label.children[0].checked, true);
-    assert.equal(label.text.trim(), "Qualité automatique");
+    assert.equal(label.text.trim(), "Auto", "short in the strip");
+    assert.equal(label.title, "Qualité automatique", "the full name as the tooltip");
     layer.dispose(ctx);
     assert.equal(host.children.length, 1, "only our checkbox goes");
     assert.equal(host.hidden, false, "the container stays shown while another control is in it");
