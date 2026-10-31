@@ -1,0 +1,7 @@
+/* Collapsible palette groups (web/palette-groups.js): the title button of each group and its caret. */
+.tool-group-title { font: inherit; font-size: .8rem; color: var(--muted); background: none; border: 0; padding: 0; margin: 0 0 .2rem; cursor: pointer; }
+.tool-group-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tool-group-caret { display: inline-block; margin-left: .25rem; transition: transform .15s; }
+.tool-group-title[aria-expanded="false"] .tool-group-caret { transform: rotate(-90deg); }
+.tool-group-title[aria-disabled="true"] { cursor: default; }
+.tool-row[hidden] { display: none; }

@@ -5,6 +5,7 @@
 import { ToolStroke, attachPointer, tileAt } from "./input.js";
 import { formatZoneStatus } from "./query.js";
 import { extraCatalog, extraCalls, extraLabel, extraBlockedReason, isExtraTool } from "./extra-tools.js";
+import { foldPaletteGroups } from "./palette-groups.js";
 
 export const TILE_PX = 8; // canvas pixels per tile (same as main.js)
 
@@ -416,6 +417,7 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
   });
 
   const ui = buildPalette(palette, catalog, (id) => select(id));
+  const folds = foldPaletteGroups(palette); // collapsible groups (palette-groups.js)
 
   // Why tool `id` cannot be selected now ("" when it can). Only extra tools have a condition.
   function blockedReason(id) {
@@ -432,6 +434,7 @@ export function setupTools({ city, canvas, overlay, palette, message, queryPanel
     }
     activeId = id;
     ui.select(id);
+    folds.sync();
     surface.canvas.style.cursor = id === null ? "" : "crosshair";
     surface.setTool?.(id !== null);
     say("");
