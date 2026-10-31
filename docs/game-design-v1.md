@@ -54,3 +54,24 @@ identique, refus au-delà de la taille) ; gestes et curseur clavier testés (mod
 les clés présentes dans les deux langues) ; musique testée (modèle pur, rien avant un geste) ; e2e : gagner un défi
 simple, partager puis rouvrir une ville, passer en anglais, parcourir la carte au clavier ; tous les tests verts ;
 relecture.
+
+## Livré (intégration)
+* **Défis et partage** (Sonnet) : `web/challenges-model.js` (8 défis décrits par des données : conditions
+  `{ metric, op, target }`, genre « atteindre » ou « tenir », échéance en années ; **écart au contrat** : pas de
+  fonction `goal()`, pour afficher l'objectif en texte et tester chaque défi), `web/challenges-ui.js` (démarrage par
+  les chemins de la page, évaluation une fois par mois de jeu, meilleurs résultats gardés) ; `web/share-model.js` et
+  `web/share-ui.js` (lien `#ville=` : deflate-raw + base64url des octets de la sauvegarde, 60 000 octets compressés au
+  plus, garde contre les décompressions géantes, erreurs en français, ville inchangée). Limite : certains objectifs
+  (pollution, satisfaction, récompenses) sont des estimations à ajuster en jouant.
+* **Musique et accessibilité** (Haiku) : `web/music-model.js` + `web/music.js` (accords lents, rien avant un geste,
+  arrêt qui ferme le contexte audio ; limite : toujours les accords du jour, la page n'expose pas la lumière de la
+  vue 3D) ; `web/keyboard-map-model.js` + `web/keyboard-map.js` (curseur au clavier, Maj + flèche par 8 tuiles,
+  Entrée = clic, annonce polie) ; `prefers-reduced-motion` fige le jour et l'eau.
+* **Mobile, traduction, contribution** (Haiku) : `web/touch-model.js` + `web/touch.js` (zoom à deux doigts et
+  déplacement par transformation CSS de la carte 2D, qui n'avait ni zoom ni déplacement) ; `web/css/mobile.css`
+  (une colonne sous 700 px, panneaux repliables d'un appui sur leur titre ; **écart au contrat**, décidé à l'intégration :
+  les panneaux restent ouverts par défaut, pour que les conseils urgents restent visibles, et la palette garde ses
+  lignes, tous les outils restant à l'écran, ses groupes repliables (v0.14) la raccourcissant) ; `web/i18n.js` +
+  dictionnaires français et anglais (interface fixe ; limite : noms des outils et textes générés restent en
+  français) ; `CONTRIBUTING.md`.
+* e2e : `web/e2e/challenges.test.mjs`, `web/e2e/share.test.mjs`, `web/e2e/finish.test.mjs` (anglais, clavier).

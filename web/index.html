@@ -24,81 +24,89 @@
 <link rel="stylesheet" href="css/rewards.css">
 <link rel="stylesheet" href="css/disasters2.css">
 <link rel="stylesheet" href="css/palette-groups.css">
+<link rel="stylesheet" href="css/challenges.css">
+<link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 <header>
   <h1>SimCity 2050</h1>
-  <select id="city" aria-label="Ville">
+  <select id="city" data-i18n-label="city.label">
     <option value="haight">Haight-Ashbury</option>
     <option value="kyoto">Kyoto</option>
     <option value="yokohama">Yokohama</option>
   </select>
-  <label class="btn">Ouvrir un fichier <input id="file" type="file" accept=".cty,.mcty" hidden></label>
-  <button id="save" disabled>Enregistrer</button>
-  <button id="saves-toggle" type="button">Parties</button>
+  <label class="btn" data-i18n="file.open">Ouvrir un fichier <input id="file" type="file" accept=".cty,.mcty" hidden></label>
+  <button id="save" data-i18n="save" disabled>Enregistrer</button>
+  <button id="saves-toggle" type="button" data-i18n="saves.toggle">Parties</button>
   <button id="play" aria-pressed="false" disabled>▶ Lecture</button>
   <button id="view3d" type="button" aria-pressed="false" disabled>Vue 3D</button>
-  <label>Vitesse <input id="speed" type="range" min="1" max="3" value="2"></label>
-  <label><input id="disasters" type="checkbox"> Catastrophes</label>
+  <label data-i18n="speed">Vitesse <input id="speed" type="range" min="1" max="3" value="2"></label>
+  <label data-i18n="disasters"><input id="disasters" type="checkbox"> Catastrophes</label>
   <div id="rules-controls">
-    <label id="relief-label" title="Construire sur une pente coûte du terrassement ; les routes en pente coûtent plus cher ; outils pour relever et abaisser le terrain."><input id="relief" type="checkbox"> Règles de relief</label>
+    <label id="relief-label" data-i18n="relief" data-i18n-title="relief.title" title="Construire sur une pente coûte du terrassement ; les routes en pente coûtent plus cher ; outils pour relever et abaisser le terrain."><input id="relief" type="checkbox"> Règles de relief</label>
   </div>
   <div id="newcity" class="newcity" hidden>
-    <button id="newcity-btn" type="button">Nouvelle ville</button>
-    <label>Taille <select id="size" aria-label="Taille de la carte">
-      <option value="normal">Normal (120 × 100)</option>
-      <option value="grande">Grande (200 × 150)</option>
-      <option value="tres-grande">Très grande (300 × 250)</option>
-      <option value="custom">Personnalisée</option>
+    <button id="newcity-btn" type="button" data-i18n="newcity">Nouvelle ville</button>
+    <label data-i18n="size">Taille <select id="size" data-i18n-label="size.label">
+      <option value="normal" data-i18n="size.normal">Normal (120 × 100)</option>
+      <option value="grande" data-i18n="size.large">Grande (200 × 150)</option>
+      <option value="tres-grande" data-i18n="size.xlarge">Très grande (300 × 250)</option>
+      <option value="custom" data-i18n="size.custom">Personnalisée</option>
     </select></label>
     <span id="size-custom" hidden>
-      <label>Largeur <input id="size-w" type="number" inputmode="numeric" min="80" max="512" step="1" value="120" size="4"></label>
-      <label>Hauteur <input id="size-h" type="number" inputmode="numeric" min="67" max="512" step="1" value="100" size="4"></label>
+      <label data-i18n="size.width">Largeur <input id="size-w" type="number" inputmode="numeric" min="80" max="512" step="1" value="120" size="4"></label>
+      <label data-i18n="size.height">Hauteur <input id="size-h" type="number" inputmode="numeric" min="67" max="512" step="1" value="100" size="4"></label>
     </span>
-    <label>Graine <input id="seed" type="text" inputmode="numeric" autocomplete="off" placeholder="au hasard" size="11"></label>
+    <label data-i18n="seed">Graine <input id="seed" type="text" inputmode="numeric" autocomplete="off" data-i18n-placeholder="seed.placeholder" placeholder="au hasard" size="11"></label>
     <span id="new-msg" role="status"></span>
     <span id="save-note" role="status"></span>
   </div>
-  <div id="view-modes" role="group" aria-label="Vues de la carte" hidden></div>
+  <div id="view-modes" role="group" data-i18n-label="views.label" hidden></div>
   <div id="sound-controls" hidden></div>
+  <label data-i18n="language">Langue <select id="language">
+    <option value="fr">Français</option>
+    <option value="en">English</option>
+  </select></label>
   <span id="status" role="status">Chargement…</span>
 </header>
-<div id="news-ticker" class="news-ticker" role="status" aria-live="polite" aria-label="Actualités" hidden></div>
-<nav id="palette" aria-label="Outils de construction" hidden inert></nav>
+<div id="news-ticker" class="news-ticker" role="status" aria-live="polite" data-i18n-label="news.label" hidden></div>
+<nav id="palette" data-i18n-label="palette.label" hidden inert></nav>
 <main>
   <div id="map-frame" class="map-frame" inert>
-    <canvas id="map" aria-label="Carte de la ville"></canvas>
-    <canvas id="map3d" aria-label="Carte de la ville en 3D"></canvas>
+    <canvas id="map" data-i18n-label="map.label"></canvas>
+    <canvas id="map3d" data-i18n-label="map3d.label"></canvas>
     <canvas id="overlay" aria-hidden="true" hidden></canvas>
-    <div id="view3d-controls" role="group" aria-label="Caméra 3D" hidden></div>
+    <div id="view3d-controls" role="group" data-i18n-label="view3d.camera" hidden></div>
   </div>
-  <div id="resume-banner" class="box" role="region" aria-label="Reprendre la partie" hidden></div>
+  <div id="resume-banner" class="box" role="region" data-i18n-label="resume.label" hidden></div>
   <p id="tool-msg" role="status" aria-live="polite"></p>
   <p id="load-msg" class="alert" role="status" aria-live="polite"></p>
   <div id="query-panel" aria-live="polite" hidden></div>
   <p id="stats" aria-live="polite"></p>
-  <section id="tutorial-panel" class="box" aria-label="Premiers pas" hidden></section>
-  <section id="advisors-panel" class="box" aria-label="Conseillers" hidden></section>
-  <section id="ordinances-panel" class="box" aria-label="Ordonnances" hidden></section>
-  <section id="deals-panel" class="box" aria-label="Accords avec les voisins" hidden></section>
-  <section id="agents-panel" class="box" aria-label="Circulation simulée" hidden></section>
-  <section id="structures-panel" class="box" aria-label="Bâtiments étendus" hidden></section>
-  <section id="zoning-panel" class="box" aria-label="Densités de zonage" hidden></section>
-  <section id="waste-panel" class="box" aria-label="Déchets" hidden></section>
-  <section id="services-panel" class="box" aria-label="Services publics" hidden></section>
-  <section id="energy-panel" class="box" aria-label="Énergie" hidden></section>
-  <section id="economy-panel" class="box" aria-label="Économie" hidden></section>
-  <section id="rewards-panel" class="box" aria-label="Récompenses et accords" hidden></section>
-  <section id="disasters2-panel" class="box" aria-label="Catastrophes et autoroutes" hidden></section>
-  <section id="messages-panel" class="box" aria-label="Messages de la ville" hidden></section>
-  <section id="budget-panel" class="box" aria-label="Budget et évaluation" hidden></section>
-  <section id="saves-panel" class="box" aria-label="Parties sauvegardées" hidden></section>
+  <section id="tutorial-panel" class="box" data-i18n-label="panel.tutorial" aria-label="Premiers pas" hidden></section>
+  <section id="advisors-panel" class="box" data-i18n-label="panel.advisors" aria-label="Conseillers" hidden></section>
+  <section id="ordinances-panel" class="box" data-i18n-label="panel.ordinances" aria-label="Ordonnances" hidden></section>
+  <section id="deals-panel" class="box" data-i18n-label="panel.deals" aria-label="Accords avec les voisins" hidden></section>
+  <section id="agents-panel" class="box" data-i18n-label="panel.agents" aria-label="Circulation simulée" hidden></section>
+  <section id="structures-panel" class="box" data-i18n-label="panel.structures" aria-label="Bâtiments étendus" hidden></section>
+  <section id="zoning-panel" class="box" data-i18n-label="panel.zoning" aria-label="Densités de zonage" hidden></section>
+  <section id="waste-panel" class="box" data-i18n-label="panel.waste" aria-label="Déchets" hidden></section>
+  <section id="services-panel" class="box" data-i18n-label="panel.services" aria-label="Services publics" hidden></section>
+  <section id="energy-panel" class="box" data-i18n-label="panel.energy" aria-label="Énergie" hidden></section>
+  <section id="economy-panel" class="box" data-i18n-label="panel.economy" aria-label="Économie" hidden></section>
+  <section id="rewards-panel" class="box" data-i18n-label="panel.rewards" aria-label="Récompenses et accords" hidden></section>
+  <section id="disasters2-panel" class="box" data-i18n-label="panel.disasters2" aria-label="Catastrophes et autoroutes" hidden></section>
+  <section id="challenges-panel" class="box" data-i18n-label="panel.challenges" aria-label="Défis" hidden></section>
+  <section id="share-panel" class="box" data-i18n-label="panel.share" aria-label="Partager la ville" hidden></section>
+  <section id="messages-panel" class="box" data-i18n-label="panel.messages" aria-label="Messages de la ville" hidden></section>
+  <section id="budget-panel" class="box" data-i18n-label="panel.budget" aria-label="Budget et évaluation" hidden></section>
+  <section id="saves-panel" class="box" data-i18n-label="panel.saves" aria-label="Parties sauvegardées" hidden></section>
   <details id="legend-box" class="box" open>
-    <summary>Légende des couleurs</summary>
+    <summary data-i18n="legend.title">Légende des couleurs</summary>
     <ul id="legend" class="legend"></ul>
   </details>
   <details id="help-box" class="box" hidden>
-    <summary>Raccourcis clavier</summary>
+    <summary data-i18n="shortcuts.title">Raccourcis clavier</summary>
     <dl id="shortcuts" class="shortcuts"></dl>
   </details>
 </main>
